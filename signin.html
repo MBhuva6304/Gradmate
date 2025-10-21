@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in — Gradmate</title>
+
+  <!-- ================================
+       BEGIN COPY: TOKEN-ALIGNED STYLES
+       (Paste this <style> block into future pages too)
+  ==================================== -->
+  <style>
+    /* Token layer (maps to tokens.md; dots -> hyphens).
+       TIP: if you change tokens.md, mirror the values here. */
+    :root{
+      /* Brand */
+      --color-brand-primary-400: #0069FF;   /* primary button */
+      --color-focus-ring: #2563EB;
+
+      /* Neutrals / surfaces / text */
+      --color-surface-canvas: #F9FAFB;
+      --color-surface-card:   #FFFFFF;
+      --color-border-default: #E5E7EB;
+      --color-text-primary:   #111827;
+      --color-text-secondary: #4B5563;
+      --color-text-inverse:   #FFFFFF;
+
+      /* Error */
+      --color-semantic-error-600:#DC2626;
+
+      /* Typography (scaled down a bit) */
+      --font-sans: Skia, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
+      --size-h1: 1.75rem;   /* was 2rem */
+      --size-body: 1rem;    /* 16px */
+      --size-cta: 1rem;     /* was 1.125rem */
+
+      /* Spacing & shape (scaled down) */
+      --space-16:16px; --space-24:24px; --space-32:32px; --space-40:32px; /* cap reduced */
+      --radius-card:24px; --radius-field:12px;
+      --shadow-card: 0 4px 6px rgba(0,0,0,0.08);
+      --field-h: 48px;     /* was 56px */
+      --card-max: 640px;   /* was 720px */
+    }
+
+    /* Base */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:var(--color-surface-canvas);
+      color:var(--color-text-primary);
+      font:400 var(--size-body)/1.5 var(--font-sans);
+    }
+    a{color:var(--color-brand-primary-400); text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* Layout */
+    .wrap{min-height:100%; display:grid; place-items:center; padding:var(--space-24)}
+    .card{
+      width:100%; max-width:var(--card-max);
+      background:var(--color-surface-card);
+      border:1px solid var(--color-border-default);
+      border-radius:var(--radius-card);
+      box-shadow:var(--shadow-card);
+      padding:clamp(var(--space-24), 3vw, var(--space-32)); /* tighter */
+    }
+
+    /* Header */
+    .head{display:flex; justify-content:center; align-items:center; gap:12px; margin-bottom:8px}
+    .logo{
+      width:60px; height:60px; border-radius:14px; /* smaller */
+      border:1px solid #D1D5DB;
+      background:linear-gradient(180deg,#614de0 0%, #2d6cdf 100%);
+      display:grid; place-items:center
+    }
+    .logo span{font-weight:800; font-size:34px; color:#fff; line-height:1}
+    h1{margin:0; font-size:var(--size-h1); font-weight:600}
+    .helper{margin:8px 0 var(--space-16); color:var(--color-text-secondary); font-size:1rem}
+
+    /* Form */
+    form{display:grid; gap:var(--space-24)}
+    .field{display:grid; gap:8px}
+    label{font-weight:700}
+    input{
+      height:var(--field-h); width:100%; padding:0 var(--space-16);
+      border-radius:var(--radius-field);
+      border:1px solid #D1D5DB; background:#fff; font-size:.95rem; outline:none;
+    }
+    input:focus{
+      border-color:var(--color-focus-ring);
+      box-shadow:0 0 0 3px color-mix(in oklab, var(--color-focus-ring) 30%, transparent);
+    }
+
+    .row{display:flex; justify-content:space-between; align-items:center}
+    .forgot{color:var(--color-text-secondary); font-size:.95rem}
+
+    .btn{
+      height:var(--field-h); border-radius:var(--radius-field);
+      background:var(--color-brand-primary-400); border:1px solid #1f5fd8;
+      color:var(--color-text-inverse); font-weight:700; font-size:var(--size-cta);
+      display:grid; place-items:center; cursor:pointer;
+    }
+    .btn:focus-visible{outline:2px solid var(--color-focus-ring); outline-offset:2px}
+
+    /* Error (toggle by removing aria-hidden) */
+    .error{display:none; margin:8px 0; color:var(--color-semantic-error-600); font-weight:600}
+    .error[aria-hidden="false"]{display:block}
+
+    /* Small responsive tweak */
+    @media (max-width:520px){ .logo{width:56px;height:56px} .logo span{font-size:30px} }
+  </style>
+  <!-- ================================
+       END COPY: TOKEN-ALIGNED STYLES
+  ==================================== -->
+</head>
+<body>
+
+  <!-- =========================================
+       BEGIN COPY: LOGIN MARKUP (use everywhere)
+  ============================================== -->
+  <main class="wrap">
+    <section class="card" aria-labelledby="login-title">
+      <header class="head">
+        <div class="logo" aria-hidden="true"><span>G</span></div>
+        <h1 id="login-title">Welcome to Gradmate</h1>
+      </header>
+
+      <p class="helper" style="text-align:center">Sign in to see your plan &amp; progress</p>
+
+      <!-- ARIA live error (toggle aria-hidden to false when needed) -->
+      <p id="login-error" class="error" role="alert" aria-live="polite" aria-hidden="true" style="text-align:center">
+        Invalid email or password
+      </p>
+
+      <form novalidate>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="username" placeholder="you@school.edu" required />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+        </div>
+
+        <div class="row">
+          <span></span>
+          <div class="forgot"><a href="#">Forgot password</a></div>
+        </div>
+
+        <button class="btn" type="submit">Sign In</button>
+      </form>
+
+      <p class="helper" style="text-align:center; margin-top:var(--space-16)">
+        No account? <a href="#"><strong>Create one</strong></a>
+      </p>
+    </section>
+  </main>
+  <!-- =========================================
+       END COPY: LOGIN MARKUP
+  ============================================== -->
+
+  <!-- (Optional) Tiny demo to show the error if fields are empty.
+       Remove in production or replace with real validation. -->
+  <script>
+    document.querySelector('form').addEventListener('submit', function (e) {
+      const email = document.getElementById('email').value.trim();
+      const pass  = document.getElementById('password').value.trim();
+      if (!email || !pass) {
+        e.preventDefault();
+        document.getElementById('login-error').setAttribute('aria-hidden','false');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reset Password — Gradmate</title>
+
+  <style>
+    /* ===== TOKENS (mirrors your sign-in page) ===== */
+    :root{
+      --color-brand-primary-400:#0069FF;
+      --color-focus-ring:#2563EB;
+
+      --color-surface-canvas:#F9FAFB;
+      --color-surface-card:#FFFFFF;
+      --color-border-default:#E5E7EB;
+      --color-text-primary:#111827;
+      --color-text-secondary:#4B5563;
+      --color-text-inverse:#FFFFFF;
+      --color-semantic-error-600:#DC2626;
+
+      --font-sans: Skia, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
+      --size-h1:1.75rem;
+      --size-body:1rem;
+      --size-cta:1rem;
+
+      --space-8:8px; --space-16:16px; --space-24:24px; --space-32:32px;
+      --radius-card:24px; --radius-field:8px;
+      --shadow-card:0 4px 6px rgba(0,0,0,0.08);
+      --field-h:48px;
+      --card-max:640px;
+    }
+
+    /* ===== Base ===== */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--color-surface-canvas);
+      color:var(--color-text-primary);
+      font:400 var(--size-body)/1.5 var(--font-sans);
+    }
+    a{color:var(--color-brand-primary-400);text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* ===== Layout ===== */
+    .wrap{min-height:100%;display:grid;place-items:center;padding:var(--space-24)}
+    .card{
+      width:100%;max-width:var(--card-max);
+      background:var(--color-surface-card);
+      border:1px solid var(--color-border-default);
+      border-radius:var(--radius-card);
+      box-shadow:var(--shadow-card);
+      padding:clamp(var(--space-24),3vw,var(--space-32));
+    }
+
+    /* ===== Header ===== */
+    .head{display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:8px}
+    .logo{
+      width:60px;height:60px;border-radius:14px;border:1px solid #D1D5DB;
+      background:linear-gradient(180deg,#614DE0 0%, #2D6CDF 100%);
+      display:grid;place-items:center
+    }
+    .logo span{font-weight:800;font-size:34px;color:#fff;line-height:1}
+    h1{margin:0;font-size:var(--size-h1);font-weight:600}
+    .helper{margin:8px 0 var(--space-16);color:var(--color-text-secondary);text-align:center}
+
+    /* ===== Form & Components ===== */
+    form{display:grid;gap:var(--space-24)}
+    .field{display:grid;gap:2px}
+    label{font-weight:700}
+    input{
+      height:var(--field-h);width:100%;padding:0 var(--space-16);
+      border-radius:var(--radius-field);
+      border:1px solid #D1D5DB;background:#fff;font-size:.95rem;outline:none;
+    }
+    input:focus{
+      border-color:var(--color-focus-ring);
+      box-shadow:0 0 0 3px color-mix(in oklab, var(--color-focus-ring) 30%, transparent);
+    }
+
+    .row{display:flex;gap:var(--space-16);align-items:center}
+    .btn{
+      height:var(--field-h);margin-top: var(--space-8);border-radius:var(--radius-field);
+      background:var(--color-brand-primary-400);border:1px solid #1f5fd8;
+      color:var(--color-text-inverse);font-weight:700;font-size:var(--size-cta);
+      padding:0 var(--space-24);display:grid;place-items:center;cursor:pointer;
+    }
+    .btn:focus-visible{outline:2px solid var(--color-focus-ring);outline-offset:2px}
+
+    .error{display:none;margin:-8px 0 var(--space-16);color:var(--color-semantic-error-600);font-weight:600;text-align:center}
+    .error[aria-hidden="false"]{display:block}
+
+    /* Steps (progressive disclosure) */
+    [hidden]{display:none !important}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card" aria-labelledby="title">
+      <header class="head">
+        <div class="logo" aria-hidden="true"><span>G</span></div>
+        <h1 id="title">Reset your password</h1>
+      </header>
+      <p class="helper">Enter your email → verify OTP → set a new password.</p>
+
+      <!-- Error banner (toggle aria-hidden) -->
+      <p id="error" class="error" role="alert" aria-live="polite" aria-hidden="true">Something went wrong. Try again.</p>
+
+      <form id="form" novalidate>
+        <!-- STEP 1: Email -->
+        <div id="step-email">
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" type="email" autocomplete="email" placeholder="you@school.edu" required />
+          </div>
+          <button type="button" id="sendOtp" class="btn">Send OTP</button>
+        </div>
+
+        <!-- STEP 2: OTP -->
+        <div id="step-otp" hidden>
+          <div class="field">
+            <label for="otp">Enter your OTP</label>
+            <input id="otp" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6-digit code" required />
+          </div>
+          <div class="row">
+            <button type="button" id="verifyOtp" class="btn">Verify</button>
+            <a id="resend" href="#" aria-label="Resend OTP">Resend OTP</a>
+          </div>
+        </div>
+
+        <!-- STEP 3: New Password (only after OTP verified) -->
+        <div id="step-newpass" hidden>
+          <div class="field">
+            <label for="newpass">New password</label>
+            <input id="newpass" type="password" autocomplete="new-password" required />
+          </div>
+          <div class="field">
+            <label for="confirmpass">Confirm new password</label>
+            <input id="confirmpass" type="password" autocomplete="new-password" required />
+          </div>
+          <button type="submit" class="btn">Save New Password</button>
+        </div>
+      </form>
+
+      <p class="helper" style="margin-top:var(--space-16)">Remembered it? <a href="./signin.html"><strong>Back to sign in</strong></a></p>
+    </section>
+  </main>
+
+  <script>
+    // Tiny mock flow: replace with real API calls.
+    const el = (id)=>document.getElementById(id);
+    const show = (id)=>el(id).hidden=false;
+    const hide = (id)=>el(id).hidden=true;
+    const err = (msg)=>{ const e=el('error'); e.textContent=msg; e.setAttribute('aria-hidden','false'); };
+
+    hide('step-otp'); hide('step-newpass');
+
+    el('sendOtp').addEventListener('click', async () => {
+      const email = el('email').value.trim();
+      if(!email){ err('Please enter your email.'); return; }
+      el('error').setAttribute('aria-hidden','true');
+
+      // TODO: call your backend to send OTP to the email.
+      // await fetch('/api/send-otp', {method:'POST', body:JSON.stringify({email})})
+
+      // On success:
+      hide('step-email'); show('step-otp');
+      el('otp').focus();
+    });
+
+    el('verifyOtp').addEventListener('click', async () => {
+      const code = el('otp').value.trim();
+      if(code.length < 6){ err('Enter the 6-digit OTP.'); return; }
+      el('error').setAttribute('aria-hidden','true');
+
+      // TODO: verify with your backend
+      // const ok = await fetch('/api/verify-otp', {method:'POST', body:JSON.stringify({code})}).then(r=>r.ok)
+
+      const ok = true; // mock success
+      if(!ok){ err('Invalid OTP. Try again.'); return; }
+
+      hide('step-otp'); show('step-newpass');
+      el('newpass').focus();
+    });
+
+    el('resend').addEventListener('click', (e) => {
+      e.preventDefault();
+      // TODO: call resend endpoint
+      // fetch('/api/resend-otp', {method:'POST'})
+      el('error').setAttribute('aria-hidden','true');
+      alert('OTP resent (mock). Check your email.');
+    });
+
+    el('form').addEventListener('submit', (e) => {
+      const p1 = el('newpass').value;
+      const p2 = el('confirmpass').value;
+      if(!p1 || !p2 || p1 !== p2){
+        e.preventDefault();
+        err('Passwords do not match.');
+        return;
+      }
+      el('error').setAttribute('aria-hidden','true');
+      // TODO: submit new password to backend
+      // fetch('/api/save-password', {method:'POST', body:JSON.stringify({password:p1})})
+      alert('Password updated (mock). You can now sign in.');
+      // window.location.href = './signin.html'
+    });
+  </script>
+</body>
+</html>
