@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Gradmate — Dashboard</title>
+<style>
+  :root{
+    --brand:#0069FF; --brand-600:#2563EB;
+    --ip:#F59E0B; --ok:#10B981; --warn:#F59E0B; --bad:#EF4444;
+    --bg:#F9FAFB; --card:#FFFFFF; --border:#E5E7EB;
+    --text:#111827; --text2:#4B5563; --muted:#EEF2F7;
+    --shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -2px rgba(0,0,0,.06);
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+
+  /* App layout */
+  .app{display:flex;min-height:100vh;gap:20px;padding:20px}
+  .sidebar{width:280px;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;padding:8px 6px}
+  .brand-badge{width:64px;height:64px;border-radius:16px;background:linear-gradient(180deg,#614DE0,#2D6CDF);
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:34px}
+  .brand-title{font-size:28px;font-weight:700;letter-spacing:.01em}
+  .nav{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .nav a{text-decoration:none;color:var(--text);display:flex;align-items:center;gap:10px;
+    padding:12px;border-radius:12px;font-size:16px}
+  .nav a:hover{background:#F3F4F6}
+  .nav a.active{background:#E5E6E6}
+  .sidebar-footer{margin-top:auto;font-size:13px;color:#6B7280}
+
+  .main{flex:1;display:flex;flex-direction:column;gap:20px}
+  .topbar{display:flex;gap:12px;align-items:center;background:var(--card);
+    border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
+  .search{flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);
+    border-radius:10px;padding:10px 12px}
+  .search input{border:0;outline:none;font-size:14px;flex:1}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+  .btn.ghost{background:#EEF2F6;color:#111827}
+  .avatar{width:36px;height:36px;border-radius:999px;background:var(--brand);display:grid;place-items:center;color:#fff;font-weight:700}
+
+  /* Cards & layout grid */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card .hd{padding:12px 16px 0}
+  .card .bd{padding:8px 16px 16px}
+
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 0.9fr;
+    grid-template-areas:
+      "credits reqs alerts"
+      "plan   plan plan";
+    gap:20px;
+  }
+  #creditsCard{grid-area:credits}
+  #reqsCard{grid-area:reqs}
+  #alertsCard{grid-area:alerts}
+  #planCard{grid-area:plan}
+
+  /* Requirement bars (blue completed, amber in-progress—no text on amber) */
+  .bar{position:relative;height:14px;background:#EEF2F6;border-radius:999px;overflow:hidden}
+  .seg{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;
+       padding:0 6px;white-space:nowrap;border-radius:999px;font-size:12px;font-weight:800}
+  .seg.completed{left:0;background:var(--brand);color:#fff;z-index:2}
+  .seg.ip{left:0;background:var(--ip);color:transparent;z-index:1}
+  .seg.--tiny{color:transparent}
+
+  /* Donut */
+  .donut{width:220px;height:220px;position:relative;margin:auto;display:grid;place-items:center}
+  .donut svg{transform:rotate(-90deg)}
+  .donut .pct{position:absolute;font-size:36px;font-weight:800}
+
+  /* Totals under donut */
+  .totals{display:grid;gap:6px;margin-top:8px}
+  .totals .line{display:flex;align-items:center;gap:8px}
+  .dot{width:10px;height:10px;border-radius:999px;background:#E5E7EB}
+  .dot.done{background:var(--brand)}
+  .dot.ip{background:var(--ip)}
+  .muted{color:#6B7280}
+
+  /* Requirements list */
+  .req-list{display:flex;flex-direction:column;gap:14px}
+  .req-row{display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:center}
+  .req-name{font-weight:700}
+
+  /* Alerts */
+  .alert-box{border:1px solid #FEE2E2;background:#FEF2F2;color:#991B1B;border-radius:12px;padding:12px}
+  .alert-item{border:1px solid #FEE2E2;background:#FFF7F7;border-radius:12px;padding:12px;display:flex;gap:10px;align-items:flex-start}
+  .alert-icon{font-size:18px;margin-top:2px}
+  .alert-text{font-size:14px}
+  .alert-note{color:#6B7280;font-size:12px;margin-top:8px}
+
+  /* Spring plan (no bars) */
+  .plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .course{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
+  .course h4{margin:0 0 4px 0}
+  .course .sub{color:#6B7280;font-size:12px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;background:#EFF6FF;color:#1D4ED8}
+
+  @media (max-width:1280px){
+    .grid{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "credits"
+        "reqs"
+        "alerts"
+        "plan";
+    }
+    .plan-grid{grid-template-columns:1fr}
+    .req-row{grid-template-columns:1fr}
+  }
+  @media (max-width:900px){ .app{flex-direction:column} .sidebar{width:100%} }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Sidebar">
+    <div class="brand">
+      <div class="brand-badge">G</div>
+      <div class="brand-title">Gradmate</div>
+    </div>
+    <nav class="nav">
+      <a href="#" class="active" aria-current="page">🏠 Dashboard</a>
+      <a href="#">🧭 Degree Plan</a>
+      <a href="#">📚 Courses</a>
+      <a href="#">📄 Audit</a>
+      <a href="#">⚙️ Settings</a>
+    </nav>
+    <div class="sidebar-footer">BS CS • Catalog 2023</div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="search" role="search">
+        <span aria-hidden="true">🔎</span>
+        <input type="search" placeholder="Search courses, requirements, or codes (e.g., 'CS 146')" />
+      </div>
+      <button class="btn ghost">Theme</button>
+      <button class="btn">+ Add Course</button>
+      <div class="avatar" aria-label="Profile">M</div>
+    </div>
+
+    <div class="grid">
+      <!-- Credits Progress -->
+      <div class="card" id="creditsCard">
+        <div class="hd"><h2>Credits Progress</h2><div class="muted">Goal: <span id="goalUnits">120</span> units</div></div>
+        <div class="bd" style="display:grid;place-items:center">
+          <div class="donut">
+            <svg viewBox="0 0 100 100" width="220" height="220" aria-hidden="true">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#EEF2F6" stroke-width="10"/>
+              <circle id="donutIp"   cx="50" cy="50" r="42" fill="none" stroke="var(--ip)" stroke-width="10"
+                      stroke-linecap="round" stroke-dasharray="0 999"/>
+              <circle id="donutDone" cx="50" cy="50" r="42" fill="none" stroke="var(--brand)" stroke-width="10"
+                      stroke-linecap="round" stroke-dasharray="0 999"/>
+            </svg>
+            <div class="pct" id="donutPct">0%</div>
+          </div>
+
+          <!-- simple lines under the donut -->
+          <div class="totals" id="totalsLines">
+            <div class="line"><span class="dot done"></span><strong>Completed:</strong> <span id="unitsDone">—</span></div>
+            <div class="line"><span class="dot ip"></span><strong>In Progress:</strong> <span id="unitsIp">—</span></div>
+            <div class="line"><span class="dot"></span><strong>Remaining:</strong> <span id="unitsRem">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Requirements by Category -->
+      <div class="card" id="reqsCard">
+        <div class="hd"><h2>Requirements by Category</h2><div class="muted">Blue = completed • Amber = in progress</div></div>
+        <div class="bd">
+          <div class="req-list" id="reqList"></div>
+        </div>
+      </div>
+
+      <!-- Alerts & Messages -->
+      <div class="card" id="alertsCard">
+        <div class="hd"><h2>Alerts & Messages</h2></div>
+        <div class="bd">
+          <div class="alert-box">
+            <div class="alert-item">
+              <div class="alert-icon">⚠️</div>
+              <div class="alert-text">
+                <strong>Heads up:</strong> You’re short on Upper-Division Electives.
+                Add <strong>6 more units</strong>.
+                <div class="alert-note">We’ll warn when a course won’t satisfy a requirement or duplicates credit.</div>
+              </div>
+            </div>
+          </div>
+          <div style="height:10px"></div>
+          <div class="alert-item" style="border:1px solid #FEF3C7;background:#FFFBEB;color:#92400E">
+            <div class="alert-icon">⌛</div>
+            <div class="alert-text">
+              Registration priority is next month. Make sure Spring 2026 has at least 12 units.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spring 2026 Plan (no bars) -->
+      <div class="card" id="planCard">
+        <div class="hd"><h2>Spring 2026 Plan</h2><div class="muted">Draft — 16 units</div></div>
+        <div class="bd">
+          <div class="plan-grid" id="planGrid"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ===== Sample data ===== */
+const GOAL_TOTAL = 120;
+const totals = { completed: 28, inProgress: 12 };
+
+/* categories include some inProgress so amber shows when >0 */
+const categories = [
+  { name:'Major Core',            completed:12, inProgress:4, required:48 },
+  { name:'Math & Science',        completed: 8, inProgress:0, required:24 },  // (no IP => no amber)
+  { name:'General Education',     completed:14, inProgress:3, required:44 },
+  { name:'Upper-Div Electives',   completed: 5, inProgress:0, required:14 },  // (empty bar)
+];
+
+// Spring 2026 courses (simple list + fulfills tag)
+const springPlan = [
+  { code:'CS 146',  title:'Data Structures & Algorithms', units:4, fulfills:'Major Core' },
+  { code:'MATH 42', title:'Discrete Math',                units:3, fulfills:'Math & Science' },
+  { code:'CS 149',  title:'Operating Systems',            units:4, fulfills:'Major Core' },
+  { code:'ENGR 100W', title:'Engineering Reports',        units:3, fulfills:'GE Writing' },
+  { code:'PHYS 51', title:'General Physics I',            units:4, fulfills:'Math & Science' },
+  { code:'KIN 1',   title:'Wellness Activity',            units:1, fulfills:'GE Elective' },
+];
+
+/* ===== Helpers ===== */
+const clamp=(n,min,max)=>Math.max(min,Math.min(n,max));
+const pct=(c,r)=> r>0?clamp((c/r)*100,0,100):0;
+const fmt=n=>Number(n).toLocaleString();
+
+/* ===== Donut with AMBER layer under BLUE ===== */
+(function donut(){
+  document.getElementById('goalUnits').textContent = fmt(GOAL_TOTAL);
+  const done = totals.completed;
+  const ip   = totals.inProgress;
+  const rem  = Math.max(0, GOAL_TOTAL - (done + ip));
+
+  document.getElementById('unitsDone').textContent = `${fmt(done)} units`;
+  document.getElementById('unitsIp').textContent   = `${fmt(ip)} units`;
+  document.getElementById('unitsRem').textContent  = `${fmt(rem)} units`;
+
+  const percent = Math.round((done/GOAL_TOTAL)*100);
+  document.getElementById('donutPct').textContent = `${percent}%`;
+
+  const C = 2*Math.PI*42;
+  const dashIP = (Math.min(done+ip,GOAL_TOTAL)/GOAL_TOTAL)*C;
+  const dashDone = (done/GOAL_TOTAL)*C;
+  document.getElementById('donutIp').setAttribute('stroke-dasharray', `${dashIP} ${C-dashIP}`);
+  document.getElementById('donutDone').setAttribute('stroke-dasharray', `${dashDone} ${C-dashDone}`);
+})();
+
+/* ===== Requirement bars (copying audit rules) =====
+   - Amber (in-progress) shows ONLY if inProgress > 0 and extends past completed.
+   - Amber has NO text.
+   - Blue label shows ONLY when fully complete and width is decent.
+   - If completed=0 and inProgress=0 => empty bar. */
+function renderSmartBar({ completed, inProgress = 0, required }){
+  const ip = Math.max(0, inProgress);
+  const cPct = pct(completed, required);
+
+  // If nothing at all -> empty bar
+  if (completed === 0 && ip === 0) return `<div class="bar"></div>`;
+
+  // Only draw amber when there really is IP AND it extends past completed
+  let amber = '';
+  if (ip > 0) {
+    const ipPct = pct(completed + ip, required);
+    if (ipPct > cPct) {
+      amber = `<div class="seg ip" style="width:${ipPct}%"></div>`;
+    }
+  }
+
+  // Blue number only when fully complete
+  const showNumber = completed >= required && cPct >= 12;
+
+  return `
+    <div class="bar">
+      ${amber}
+      <div class="seg completed${cPct < 12 ? ' --tiny' : ''}" style="width:${cPct}%">
+        ${showNumber ? fmt(completed) : ''}
+      </div>
+    </div>
+  `;
+}
+
+/* ===== Requirements list ===== */
+(function reqs(){
+  const list=document.getElementById('reqList');
+  categories.forEach(c=>{
+    // Subtitle shows "(incl. IP)" only when IP > 0
+    const subtitle = c.inProgress > 0
+      ? `${fmt(c.completed + c.inProgress)} / ${fmt(c.required)} units `
+      : `${fmt(c.completed)} / ${fmt(c.required)} units`;
+
+    const row=document.createElement('div'); row.className='req-row';
+    row.innerHTML = `
+      <div>
+        <div class="req-name">${c.name}</div>
+        <div class="muted">${subtitle}</div>
+      </div>
+      ${renderSmartBar(c)}
+    `;
+    list.appendChild(row);
+  });
+})();
+
+/* ===== Spring 2026 Plan ===== */
+(function plan(){
+  const grid=document.getElementById('planGrid');
+  springPlan.forEach(k=>{
+    const card=document.createElement('div'); card.className='course';
+    card.innerHTML = `
+      <h4>${k.code} — ${k.title}</h4>
+      <div class="sub">${k.units} units</div>
+      <div style="margin-top:8px">
+        <span class="pill">Fulfills: ${k.fulfills}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+})();
+</script>
+</body>
+</html>
