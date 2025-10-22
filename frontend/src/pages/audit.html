@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Gradmate — Audit</title>
+<style>
+  :root{
+    --brand:#0069FF;
+    --ip:#F59E0B;          /* in-progress paint (no text) */
+    --ok:#10B981;
+    --bad:#EF4444;
+    --bg:#F9FAFB; --card:#FFFFFF; --border:#E5E7EB;
+    --text:#111827; --text2:#4B5563;
+    --shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -2px rgba(0,0,0,.06);
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+
+  /* App layout */
+  .app{display:flex;min-height:100vh;gap:20px;padding:20px}
+  .sidebar{
+    width:280px;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
+    display:flex;flex-direction:column;gap:16px
+  }
+  .brand{display:flex;align-items:center;gap:12px;padding:8px 6px}
+  .brand-badge{width:64px;height:64px;border-radius:16px;background:linear-gradient(180deg,#614DE0,#2D6CDF);
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:34px}
+  .brand-title{font-size:28px;font-weight:700;letter-spacing:.01em}
+
+  .nav{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .nav a{ text-decoration:none;color:var(--text);display:flex;align-items:center;gap:10px;
+    padding:12px;border-radius:12px;font-size:16px}
+  .nav a:hover{background:#F3F4F6}
+  .nav a.active{background:#E5E6E6}
+  .sidebar-footer{margin-top:auto;font-size:13px;color:#6B7280}
+
+  .main{flex:1;display:flex;flex-direction:column;gap:20px}
+  .topbar{display:flex;gap:12px;align-items:center;background:var(--card);
+    border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
+  .search{flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);
+    border-radius:10px;padding:10px 12px}
+  .search input{border:0;outline:none;font-size:14px;flex:1}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+  .btn.ghost{background:#EEF2F6;color:#111827}
+
+  /* Cards */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card .hd{padding:12px 16px 0}
+  .card .bd{padding:8px 16px 16px}
+
+  /* Top row: summary + quick stats side-by-side */
+  .topgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+
+  /* Chips */
+  .chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 16px}
+  .chip{min-width:110px;text-align:center;border:1px solid var(--border);border-radius:10px;padding:10px 8px;background:#F3F4F6}
+  .chip .n{font-weight:800;font-size:20px}
+  .chip .l{font-size:12px;color:var(--text2)}
+
+  /* Bars: blue completed label (only when fully-complete), optional amber without text (hidden when 0) */
+  .bar{position:relative;height:18px;background:#EEF2F6;border-radius:999px;overflow:hidden}
+  .seg{
+    position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;
+    white-space:nowrap;border-radius:999px;font-size:12px;font-weight:800;
+    padding:0; /* default: NO padding to prevent “blue dot” */
+  }
+  .seg.with-label{padding:0 6px} /* only add padding when we show text */
+  .seg.completed{left:0;background:var(--brand);color:#fff;z-index:2}
+  .seg.ip{left:0;background:var(--ip);color:transparent;z-index:1} /* no numbers in amber */
+  .seg.--tiny{color:transparent}
+
+  /* Requirement groups stacked one-by-one */
+  .req-group{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px}
+  .req-header{padding:12px;border-bottom:1px solid var(--border)}
+  .req-header h3{margin:0 0 10px 0}
+  .req-subtitle{font-size:12px;color:#6B7280;padding:0 12px 10px}
+  .subsections{display:flex;flex-direction:column;gap:10px;padding:12px}
+  .subrow{display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:center}
+  .name{font-size:14px}
+
+  /* Course rows (optional detail) */
+  .course-list{padding:0 12px 12px}
+  .course{display:grid;grid-template-columns:1fr 100px 80px 90px;gap:10px;align-items:center;
+          padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin:6px 0;background:#FAFBFC}
+  .tag{font-size:12px;border-radius:999px;padding:4px 8px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+  .tag.ok{background:#ECFDF5;color:#065F46}
+  .tag.ip{background:#FFF7ED;color:#92400E}
+  .tag.bad{background:#FEF2F2;color:#991B1B}
+  .muted{color:#6B7280;font-size:12px}
+
+  @media (max-width:1100px){
+    .topgrid{grid-template-columns:1fr}
+    .subrow{grid-template-columns:1fr}
+    .course{grid-template-columns:1fr 80px 70px 80px}
+  }
+  @media (max-width:900px){ .app{flex-direction:column} .sidebar{width:100%} }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Sidebar">
+    <div class="brand">
+      <div class="brand-badge">G</div>
+      <div class="brand-title">Gradmate</div>
+    </div>
+    <nav class="nav">
+      <a href="#">🏠 Dashboard</a>
+      <a href="#">🧭 Degree Plan</a>
+      <a href="#">📚 Courses</a>
+      <a href="#" class="active" aria-current="page">📄 Audit</a>
+      <a href="#">⚙️ Settings</a>
+    </nav>
+    <div class="sidebar-footer">BS CS Catalog 2023</div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="search" role="search">
+        <span aria-hidden="true">🔎</span>
+        <input id="searchInput" type="search" placeholder="Search requirements or courses…" />
+      </div>
+      <button class="btn">Export PDF</button>
+    </div>
+
+    <!-- Summary + Quick Stats next to each other -->
+    <div class="topgrid">
+      <div class="card">
+        <div class="hd"><h2>Audit Summary</h2></div>
+        <div class="bd">
+          <div class="bar" title="Overall progress">
+            <div class="seg ip" id="overallIp" style="display:none;"></div>
+            <div class="seg completed" id="overallDone"></div>
+          </div>
+        </div>
+        <div class="chips" id="summaryChips"></div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2>Quick Stats</h2></div>
+        <div class="bd" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><div class="muted">Standing</div><div style="font-size:28px;font-weight:800">Junior</div></div>
+          <div><div class="muted">Major</div><div style="font-weight:700">B.S. Computer Science</div></div>
+          <div><div class="muted">Catalog Year</div><div style="font-weight:700">2023–2024</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full audit, one section after another -->
+    <div id="auditColumn"></div>
+  </main>
+</div>
+
+<script>
+/* ===== Sample data ===== */
+const GOAL_TOTAL = 136;
+const auditSummary = { completed: 78, inProgress: 16, remaining: 42 }; // totals 136
+
+const auditGroups = [
+  {
+    title: "General Education",
+    subsections: [
+      { name:"A1 Oral Communication", required:3, completed:3, inProgress:0, courses:[
+        {code:"COMM 110", title:"Public Speaking", units:3, grade:"A", status:"ok"}
+      ]},
+      { name:"A2 Written Communication", required:3, completed:3, inProgress:0, courses:[
+        {code:"ENG 101", title:"Academic Writing I", units:3, grade:"B+", status:"ok"}
+      ]},
+      { name:"B1 Physical Science", required:3, completed:0, inProgress:3, courses:[
+        {code:"PHYS 100", title:"Intro Physics", units:3, grade:"IP", status:"ip"}
+      ]},
+      { name:"C1 Arts", required:3, completed:0, inProgress:0, courses:[]}, // empty
+    ]
+  },
+  {
+    title: "Lower Division Core",
+    subsections: [
+      { name:"Programming Foundations", required:8, completed:8, inProgress:0, courses:[
+        {code:"CS 111", title:"Intro to CS", units:4, grade:"A", status:"ok"},
+        {code:"CS 112", title:"OOP", units:4, grade:"A-", status:"ok"}
+      ]},
+      { name:"Discrete Structures", required:4, completed:4, inProgress:0, courses:[
+        {code:"MATH 210", title:"Discrete Math", units:4, grade:"B+", status:"ok"}
+      ]},
+      { name:"Data Structures", required:4, completed:0, inProgress:4, courses:[
+        {code:"CS 210", title:"Data Structures", units:4, grade:"IP", status:"ip"}
+      ]},
+    ]
+  },
+  {
+    title: "Upper Division Core",
+    subsections: [
+      { name:"Algorithms", required:4, completed:0, inProgress:0, courses:[]},
+      { name:"Operating Systems", required:4, completed:0, inProgress:0, courses:[]},
+      { name:"Databases", required:4, completed:4, inProgress:0, courses:[
+        {code:"CS 340", title:"Database Systems", units:4, grade:"A-", status:"ok"}
+      ]},
+      { name:"Probability & Statistics", required:3, completed:0, inProgress:3, courses:[
+        {code:"STAT 301", title:"Probability & Stats", units:3, grade:"IP", status:"ip"}
+      ]}
+    ]
+  },
+  {
+    title: "Senior Electives",
+    subsections: [
+      { name:"Approved CS Electives", required:12, completed:4, inProgress:0, courses:[
+        {code:"CS 360", title:"Networks", units:4, grade:"B", status:"ok"}
+      ]},
+    ]
+  }
+];
+
+/* ===== Helpers ===== */
+const clamp=(n,min,max)=>Math.max(min,Math.min(n,max));
+const pct=(c,r)=> r>0?clamp((c/r)*100,0,100):0;
+const fmt=n=>Number(n).toLocaleString();
+
+/* ===== Top summary bars and chips ===== */
+const chips = document.getElementById('summaryChips');
+[
+  {l:"Completed", n:auditSummary.completed},
+  {l:"In Progress", n:auditSummary.inProgress},
+  {l:"Remaining", n:auditSummary.remaining},
+  {l:"Total Units", n:GOAL_TOTAL}
+].forEach(({l,n})=>{
+  const el=document.createElement('div');
+  el.className='chip';
+  el.innerHTML=`<div class="n">${fmt(n)}</div><div class="l">${l}</div>`;
+  chips.appendChild(el);
+});
+
+const overallDone = document.getElementById('overallDone');
+const overallIp   = document.getElementById('overallIp');
+const donePct = pct(auditSummary.completed, GOAL_TOTAL);
+const ipPct   = pct(auditSummary.completed + auditSummary.inProgress, GOAL_TOTAL);
+
+// Overall completed: hide element entirely if 0 to avoid blue dot
+if (auditSummary.completed > 0){
+  const showNumber = (auditSummary.completed >= GOAL_TOTAL) && donePct >= 12;
+  overallDone.style.display = '';
+  overallDone.style.width = donePct + '%';
+  overallDone.textContent = showNumber ? fmt(auditSummary.completed) : '';
+  overallDone.classList.toggle('--tiny', donePct < 12);
+  overallDone.classList.toggle('with-label', showNumber);
+} else {
+  overallDone.style.display = 'none';
+  overallDone.textContent = '';
+}
+
+if (auditSummary.inProgress>0 && ipPct>donePct){
+  overallIp.style.display='';
+  overallIp.style.width = ipPct + '%';
+  overallIp.textContent = ''; // never show numbers in amber
+} else {
+  overallIp.style.display='none';
+  overallIp.textContent = '';
+}
+
+/* ===== Full audit, stacked one-by-one ===== */
+const auditColumn = document.getElementById('auditColumn');
+
+function renderAudit() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  auditColumn.innerHTML = '';
+
+  auditGroups.forEach(group=>{
+    const required = group.subsections.reduce((s,x)=>s+x.required,0);
+    const completed = group.subsections.reduce((s,x)=>s+x.completed,0);
+    const inProg = group.subsections.reduce((s,x)=>s+x.inProgress,0);
+
+    const wrap = document.createElement('div');
+    wrap.className='req-group';
+
+    const header = document.createElement('div');
+    header.className='req-header';
+    header.innerHTML = `
+      <h3>${group.title} (${fmt(required)})</h3>
+      <div style="margin:10px 0 0 0">
+        ${renderBar({ completed, inProgress: inProg, required, showNumberWhenComplete: true })}
+      </div>
+    `;
+
+    const subtitle = document.createElement('div');
+    subtitle.className='req-subtitle';
+    subtitle.textContent = `${fmt(Math.max(0, required - (completed + inProg)))} credits remaining in this category`;
+
+    const body = document.createElement('div');
+    body.className='subsections';
+
+    group.subsections.forEach(sec=>{
+      const hay = (sec.name + ' ' + (sec.courses?.map(c=>c.code + ' ' + c.title).join(' ')||'')).toLowerCase();
+      if (q && !hay.includes(q)) return;
+
+      const row=document.createElement('div');
+      row.className='subrow';
+      row.innerHTML = `
+        <div class="name">${sec.name} (${fmt(sec.required)})</div>
+        ${renderBar({ completed: sec.completed, inProgress: sec.inProgress, required: sec.required, showNumberWhenComplete: true })}
+      `;
+      body.appendChild(row);
+
+      const list=document.createElement('div');
+      list.className='course-list';
+      (sec.courses&&sec.courses.length?sec.courses:[
+        ...(sec.completed + sec.inProgress < sec.required
+            ? [{code:"—",title:"Course needed",units:sec.required-(sec.completed+sec.inProgress),grade:"—",status:"bad"}]
+            : [])
+      ]).forEach(c=>{
+        const item=document.createElement('div');
+        item.className='course';
+        const tagClass = c.status==='ok'?'ok':c.status==='ip'?'ip':'bad';
+        const icon = c.status==='ok'?'✔':c.status==='ip'?'●':'✖';
+        item.innerHTML = `
+          <div><strong>${c.code}</strong> — ${c.title}</div>
+          <div class="muted">${c.units} units</div>
+          <div class="muted">Grade: ${c.grade}</div>
+          <div class="tag ${tagClass}"><span>${icon}</span><span>${c.status==='ok'?'Completed':c.status==='ip'?'In Progress':'Missing'}</span></div>
+        `;
+        list.appendChild(item);
+      });
+      body.appendChild(list);
+    });
+
+    wrap.appendChild(header);
+    wrap.appendChild(subtitle);
+    wrap.appendChild(body);
+    auditColumn.appendChild(wrap);
+  });
+}
+
+/* Bar renderer
+   - If completed === 0 → DON'T render blue segment.
+   - Amber has NO text and hides when 0.
+   - Show completed number only when fully complete AND width is decent. */
+function renderBar({completed, inProgress, required, showNumberWhenComplete=false}){
+  const ip = inProgress || 0;
+  const cPct = pct(completed, required);
+  const ipPct = pct(completed + ip, required);
+  const showIp = ip > 0 && ipPct > cPct;
+
+  const isFull = completed >= required && required > 0;
+  const showNumber = showNumberWhenComplete && isFull && cPct >= 12;
+
+  // Nothing at all
+  if (completed === 0 && ip === 0){
+    return `<div class="bar"></div>`;
+  }
+
+  // Amber-only (completed = 0 but IP exists) → no blue segment rendered
+  if (completed === 0 && ip > 0){
+    return `
+      <div class="bar">
+        <div class="seg ip" style="left:0;width:${ipPct}%"></div>
+      </div>
+    `;
+  }
+
+  // Normal case (some completed)
+  return `
+    <div class="bar">
+      ${showIp?`<div class="seg ip" style="left:0;width:${ipPct}%"></div>`:''}
+      <div class="seg completed${showNumber?' with-label':''}${cPct < 12 ? ' --tiny' : ''}" style="left:0;width:${cPct}%">
+        ${showNumber ? fmt(completed) : ''}
+      </div>
+    </div>
+  `;
+}
+
+/* Search wire-up */
+document.getElementById('searchInput').addEventListener('input', renderAudit);
+
+/* Initial render */
+renderAudit();
+</script>
+</body>
+</html>

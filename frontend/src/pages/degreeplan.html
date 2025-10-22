@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Gradmate — Degree Plan</title>
+<style>
+  :root{
+    --brand:#0069FF;
+    --brand-600:#2563EB;
+    --ip:#F59E0B;                 /* In-progress color (amber) */
+    --bg:#F9FAFB; --card:#FFFFFF; --border:#E5E7EB;
+    --text:#111827; --text2:#4B5563; --muted:#EEF2F7;
+    --shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+
+  /* ========= App layout with sidebar ========= */
+  .app{display:flex;min-height:100vh;gap:20px;padding:20px}
+  .sidebar{
+    width:280px;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
+    display:flex;flex-direction:column;gap:16px
+  }
+  .brand{display:flex;align-items:center;gap:12px;padding:8px 6px}
+  .brand-badge{
+    width:64px;height:64px;border-radius:16px;background:linear-gradient(180deg,#614DE0,#2D6CDF);
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:34px
+  }
+  .brand-title{font-size:28px;font-weight:700;letter-spacing:.01em}
+
+  .nav{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .nav a{
+    text-decoration:none;color:var(--text);display:flex;align-items:center;gap:10px;
+    padding:12px;border-radius:12px;font-size:16px
+  }
+  .nav a:hover{background:#F3F4F6}
+  .nav a.active{background:#E5E6E6}
+
+  .sidebar-footer{margin-top:auto;font-size:13px;color:#6B7280}
+
+  /* ========= Main area ========= */
+  .main{flex:1;display:flex;flex-direction:column;gap:20px}
+
+  /* Topbar */
+  .topbar{display:flex;gap:12px;align-items:center;background:var(--card);
+    border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
+  .search{flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);
+    border-radius:10px;padding:10px 12px}
+  .search input{border:0;outline:none;font-size:14px;flex:1}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+  .avatar{width:36px;height:36px;border-radius:999px;background:var(--brand);display:grid;place-items:center;color:#fff;font-weight:700}
+
+  /* Content grid */
+  .grid{display:grid;grid-template-columns:400px 1fr;gap:20px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px}
+  .card .hd{padding:12px 16px 0}
+  .card .bd{padding:8px 16px 16px}
+
+  /* Stat chips */
+  .chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 16px}
+  .chip{margin-left:10px;min-width:100px;text-align:center;border:1px solid var(--border);border-radius:10px;padding:10px 8px;background:#F3F4F6}
+  .chip .n{font-weight:800;font-size:20px}
+  .chip .l{font-size:12px;color:var(--text2)}
+
+  /* ===== Bars: Completed (blue) + optional In-progress (amber, NO TEXT) ===== */
+  .bar{position:relative;height:18px;background:#EEF2F6;border-radius:999px;overflow:hidden}
+  .seg{
+    position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;
+    white-space:nowrap;border-radius:999px;font-size:12px;font-weight:800;
+    padding:0; /* default no padding to avoid “blue dot” */
+  }
+  .seg.with-label{padding:0 6px} /* only when we actually show text */
+  .seg.completed{left:0;background:var(--brand);color:#fff}
+  .seg.ip{left:0;background:var(--ip);color:transparent} /* NO NUMBER in amber */
+  .seg.--tiny{color:transparent}
+
+  /* Requirements */
+  .req-group{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px}
+  .req-header{padding:12px 12px;border-bottom:1px solid var(--border);background:#FFF}
+  .req-header h3{margin:0 0 8px 0;font-size:16px}
+  .req-subtitle{font-size:12px;color:#6B7280}
+  .subsections{display:flex;flex-direction:column;gap:10px;padding:12px}
+  .subrow{display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:center}
+  .subrow .name{font-size:14px}
+  .note{font-size:12px;color:#6B7280;margin-top:10px}
+
+  @media (max-width:1100px){
+    .grid{grid-template-columns:1fr}
+    .subrow{grid-template-columns:1fr}
+  }
+  @media (max-width:900px){
+    .app{flex-direction:column}
+    .sidebar{width:100%}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ========== Sidebar ========== -->
+  <aside class="sidebar" aria-label="Sidebar">
+    <div class="brand">
+      <div class="brand-badge">G</div>
+      <div class="brand-title">Gradmate</div>
+    </div>
+    <nav class="nav">
+      <a href="#" aria-label="Dashboard">🏠 <span>Dashboard</span></a>
+      <a href="#" class="active" aria-current="page">🧭 <span>Degree Plan</span></a>
+      <a href="#">📚 <span>Courses</span></a>
+      <a href="#">📄 <span>Audit</span></a>
+      <a href="#">⚙️ <span>Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">BS CS Catalog 2023</div>
+  </aside>
+
+  <!-- ========== Main ========== -->
+  <main class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="search" role="search">
+        <span aria-hidden="true">🔎</span>
+        <input type="search" placeholder="Search course or requirements" />
+      </div>
+      <button class="btn">+ Add Course</button>
+      <div class="avatar" aria-label="Profile">M</div>
+    </div>
+
+    <!-- Content -->
+    <div class="grid">
+      <!-- LEFT COLUMN -->
+      <div>
+        <!-- Overall progress -->
+        <div class="card">
+          <div class="hd">
+            <h2>Progress to <span id="goalLabel">136</span> Credits</h2>
+          </div>
+          <div class="bd">
+            <div class="bar" aria-label="Total credits progress" title="Blue: completed • Amber: in progress">
+              <div class="seg ip" id="overallIp" style="display:none;"></div>
+              <div class="seg completed" id="overallDone"></div>
+            </div>
+          </div>
+          <div class="chips" id="chips"></div>
+        </div>
+
+        <!-- Requirements with SUB-SECTIONS -->
+        <div class="card">
+          <div class="hd">
+            <h2>Requirements by Category</h2>
+            <div class="req-subtitle">Titles show required units. Bars show completed (blue) and, when present, in-progress (amber with no text).</div>
+          </div>
+          <div class="bd" id="reqGroups"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN (placeholder) -->
+      <div>
+        <div class="card">
+          <div class="hd" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+            <h2>Next 4 Semester Plan</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn" style="background:#EEF2F6;color:#111827">+ Add Semester</button>
+              <button class="btn" style="background:#EEF2F6;color:#111827">− Delete Semester</button>
+              <button class="btn" style="background:#EEF2F6;color:#111827">Clear All</button>
+              <button class="btn" style="background:#EEF2F6;color:#111827">Edit</button>
+              <button class="btn" style="background:#EEF2F6;color:#111827">Auto-Build</button>
+            </div>
+          </div>
+          <div class="bd"><p style="margin:0;color:#4B5563">Drag courses here later.</p></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  /* ======= DATA ======= */
+  const GOAL_TOTAL = 136;
+  const summaryCounts = { completed: 48, inProgress: 18, remaining: 54 }; // 48 + 18 + 54 = 136 ✔
+
+  const categories = [
+    {
+      title: "General Education",
+      subsections: [
+        { name: "Section A", required: 6, completed: 3 },
+        { name: "Section B", required: 6, completed: 2 },
+        { name: "Section C", required: 6, completed: 2 },
+        { name: "Section D", required: 6, completed: 1 },
+        { name: "Section E", required: 8, completed: 3 },
+        { name: "Section F", required: 8, completed: 1 },
+      ]
+    },
+    {
+      title: "Upper Division GE",
+      subsections: [
+        { name: "Section B5", required: 3, completed: 0 },
+        { name: "Section C",  required: 3, completed: 0 },
+        { name: "Section D/F",required: 3, completed: 0 },
+      ]
+    },
+    {
+      title: "Lower Division Core",
+      subsections: [
+        { name: "Pre-Major Division", required: 20, completed: 8 },
+        { name: "Lower Division Major", required: 15, completed: 6 },
+      ]
+    },
+    {
+      title: "Lower Division Elective",
+      subsections: [
+        { name: "Elective A", required: 6, completed: 3 },
+        { name: "Elective B", required: 6, completed: 1 },
+      ]
+    },
+    {
+      title: "Upper Division Core",
+      subsections: [
+        { name: "Core A", required: 11, completed: 0 },
+        { name: "Probability & Statistics", required: 3, completed: 0 },
+        { name: "Core B", required: 9, completed: 0 },
+      ]
+    },
+    {
+      title: "Senior Elective Division",
+      subsections: [
+        { name: "Senior Electives", required: 15, completed: 0 },
+      ]
+    }
+  ];
+
+  /* ======= HELPERS ======= */
+  const clamp = (n,min,max)=>Math.max(min,Math.min(n,max));
+  const pct = (c,r)=> r>0 ? clamp((c/r)*100,0,100) : 0;
+  const fmt = n => Number(n).toLocaleString();
+
+  /* ======= Distribute 18 in-progress credits across subsections ======= */
+  (function distributeInProgress(totalIP){
+    let remaining = totalIP;
+    const subs = categories.flatMap(c=>c.subsections);
+    subs.forEach(s => s.inProgress = 0);
+
+    let i = 0;
+    while(remaining > 0){
+      const s = subs[i % subs.length];
+      const room = Math.max(0, s.required - (s.completed + s.inProgress));
+      if(room > 0){
+        s.inProgress += 1;
+        remaining -= 1;
+      }
+      i++;
+      if (i > 10000) break;
+      if (subs.every(x => (x.required - (x.completed + x.inProgress)) === 0)) break;
+    }
+  })(summaryCounts.inProgress);
+
+  /* ======= SUMMARY CHIPS ======= */
+  const chips = document.getElementById('chips');
+  [{l:'Completed',n:summaryCounts.completed},
+   {l:'In Progress',n:summaryCounts.inProgress},
+   {l:'Remaining',n:summaryCounts.remaining}]
+  .forEach(({l,n})=>{
+    const el=document.createElement('div');
+    el.className='chip';
+    el.innerHTML=`<div class="n">${fmt(n)}</div><div class="l">${l}</div>`;
+    chips.appendChild(el);
+  });
+
+  /* ======= Bar renderer (same rules as audit.html) ======= */
+  function renderSmartBar({completed, inProgress, required}) {
+    const ip = inProgress || 0;
+    const cPct = pct(completed, required);
+    const ipPct = pct(completed + ip, required);
+    const showIp = ip > 0 && ipPct > cPct;
+
+    const isFull = completed >= required && required > 0;
+    const showNumber = isFull && cPct >= 12;
+
+    // Nothing at all
+    if (completed === 0 && ip === 0){
+      return `<div class="bar"></div>`;
+    }
+    // Amber-only state (no completed yet)
+    if (completed === 0 && ip > 0){
+      return `<div class="bar"><div class="seg ip" style="left:0;width:${ipPct}%"></div></div>`;
+    }
+    // Normal
+    return `
+      <div class="bar">
+        ${showIp ? `<div class="seg ip" style="left:0;width:${ipPct}%"></div>` : ''}
+        <div class="seg completed${showNumber?' with-label':''}${cPct < 12 ? ' --tiny' : ''}" style="left:0;width:${cPct}%">
+          ${showNumber ? fmt(completed) : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  /* ======= OVERALL BAR (apply same rules) ======= */
+  document.getElementById('goalLabel').textContent = fmt(GOAL_TOTAL);
+  (function setOverall(){
+    const overallDone = document.getElementById('overallDone');
+    const overallIp   = document.getElementById('overallIp');
+
+    const donePct = pct(summaryCounts.completed, GOAL_TOTAL);
+    const ipPct   = pct(summaryCounts.completed + summaryCounts.inProgress, GOAL_TOTAL);
+
+    // Hide blue entirely if 0 to avoid “dot”
+    if (summaryCounts.completed > 0){
+      const isFull = summaryCounts.completed >= GOAL_TOTAL;
+      const showNumber = isFull && donePct >= 12;
+      overallDone.style.display = '';
+      overallDone.style.width = donePct + '%';
+      overallDone.textContent = showNumber ? fmt(summaryCounts.completed) : '';
+      overallDone.classList.toggle('--tiny', donePct < 12);
+      overallDone.classList.toggle('with-label', showNumber);
+    } else {
+      overallDone.style.display = 'none';
+      overallDone.textContent = '';
+    }
+
+    if (summaryCounts.inProgress>0 && ipPct>donePct){
+      overallIp.style.display='';
+      overallIp.style.width = ipPct + '%';
+      overallIp.textContent = ''; // never numbers in amber
+    } else {
+      overallIp.style.display='none';
+      overallIp.textContent = '';
+    }
+  })();
+
+  /* ======= RENDER CATEGORIES + SUB-SECTIONS ======= */
+  const container = document.getElementById('reqGroups');
+
+  categories.forEach(cat=>{
+    const required = cat.subsections.reduce((s,x)=>s+x.required,0);
+    const completed = cat.subsections.reduce((s,x)=>s+x.completed,0);
+    const inProg    = cat.subsections.reduce((s,x)=>s+(x.inProgress||0),0);
+
+    const group = document.createElement('div');
+    group.className = 'req-group';
+
+    const header = document.createElement('div');
+    header.className = 'req-header';
+    header.innerHTML = `
+      <h3>${cat.title} (${fmt(required)})</h3>
+      ${renderSmartBar({ completed, inProgress: inProg, required })}
+      <div class="req-subtitle">${fmt(Math.max(0, required - (completed + inProg)))} credits remaining in this category</div>
+    `;
+
+    const subs = document.createElement('div');
+    subs.className = 'subsections';
+
+    cat.subsections.forEach(s=>{
+      const row = document.createElement('div');
+      row.className = 'subrow';
+      row.innerHTML = `
+        <div class="name">${s.name} (${fmt(s.required)})</div>
+        ${renderSmartBar({ completed: s.completed, inProgress: s.inProgress || 0, required: s.required })}
+      `;
+      subs.appendChild(row);
+    });
+
+    group.appendChild(header);
+    group.appendChild(subs);
+    container.appendChild(group);
+  });
+</script>
+</body>
+</html>

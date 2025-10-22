@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 2,
+  "program": { "name": "BS Computer Science", "catalogYear": "2023" },
+
+  "policy": {
+    "doubleCount": {
+      "GE_with_Major": true,
+      "Course_in_Multiple_GE_Areas": false
+    }
+  },
+
+  "courses": [
+    {
+      "id": "MATH-091B",
+      "subject": "MATH",
+      "number": "091B",
+      "code": "MATH 091B",
+      "title": "Support Course for GE Mathematics — Business",
+      "units": 1,
+      "level": "lower",
+      "description": "Credit/No Credit pre-baccalaureate support for the Business Math course (MATH 103); just-in-time remediation aligned to lecture meetings. May be repeated once for credit.",
+      "prerequisites": null,
+      "corequisites": { "all": [ { "course": "MATH-103" } ] },
+      "geTags": [],
+      "tags": ["SUPPORT", "MATH-LOWER"],
+      "restrictions": { "text": "" },
+      "repeatable": true
+    },
+    {
+      "id": "MATH-091C",
+      "subject": "MATH",
+      "number": "091C",
+      "code": "MATH 091C",
+      "title": "Support Course for GE Mathematics — STEM",
+      "units": 1,
+      "level": "lower",
+      "description": "Credit/No Credit support for the Calculus sequence; just-in-time remediation aligned to MATH 102 lecture meetings. May be repeated once for credit.",
+      "prerequisites": null,
+      "corequisites": { "all": [ { "course": "MATH-102" }, { "course": "MATH-102L" } ] },
+      "geTags": [],
+      "tags": ["SUPPORT", "MATH-LOWER"],
+      "restrictions": { "text": "" },
+      "repeatable": true
+    },
+    {
+      "id": "MATH-091S",
+      "subject": "MATH",
+      "number": "091S",
+      "code": "MATH 091S",
+      "title": "Support Course for GE Mathematics — Statistics",
+      "units": 1,
+      "level": "lower",
+      "description": "Credit/No Credit support for Introductory Statistics aligned to MATH 141 lecture meetings. May be repeated once for credit.",
+      "prerequisites": null,
+      "corequisites": { "all": [ { "course": "MATH-141" }, { "course": "MATH-141L" } ] },
+      "geTags": [],
+      "tags": ["SUPPORT", "MATH-LOWER"],
+      "restrictions": { "text": "" },
+      "repeatable": true
+    },
+    {
+      "id": "MATH-102",
+      "subject": "MATH",
+      "number": "102",
+      "code": "MATH 102",
+      "title": "Pre-Calculus I",
+      "units": 3,
+      "level": "lower",
+      "description": "Preparation for calculus: functions, rational expressions, algebraic skills for science/engineering/math majors.",
+      "prerequisites": null,
+      "corequisites": null,
+      "geTags": [],
+      "tags": ["PRECALC", "MATH-LOWER"],
+      "restrictions": { "text": "Not open to some majors may apply by campus policy (confirm locally)." },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-102L",
+      "subject": "MATH",
+      "number": "102L",
+      "code": "MATH 102L",
+      "title": "Pre-Calculus I Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Credit/No Credit hybrid enrichment laboratory aligned to MATH 102; reinforces problem solving and lecture concepts.",
+      "prerequisites": null,
+      "corequisites": { "all": [ { "course": "MATH-102" } ] },
+      "geTags": [],
+      "tags": ["LAB", "MATH-LOWER"],
+      "restrictions": { "text": "" },
+      "repeatable": false,
+      "pairedWith": "MATH-102"
+    },
+    {
+      "id": "MATH-103",
+      "subject": "MATH",
+      "number": "103",
+      "code": "MATH 103",
+      "title": "Mathematical Methods for Business",
+      "units": 3,
+      "level": "lower",
+      "description": "Algebra and calculus concepts for business applications; includes matrices, derivatives, and quantitative reasoning topics.",
+      "prerequisites": null,
+      "corequisites": null,
+      "geTags": ["QR"],
+      "tags": ["GE-MATH", "MATH-LOWER"],
+      "restrictions": { "text": "" },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-141",
+      "subject": "MATH",
+      "number": "141",
+      "code": "MATH 141",
+      "title": "Introductory Statistics",
+      "units": 3,
+      "level": "lower",
+      "description": "Introduction to statistical reasoning and methods.",
+      "prerequisites": null,
+      "corequisites": null,
+      "geTags": ["QR"],
+      "tags": ["MATH-LOWER"],
+      "restrictions": { "text": "" },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-141L",
+      "subject": "MATH",
+      "number": "141L",
+      "code": "MATH 141L",
+      "title": "Introductory Statistics Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Laboratory activities to reinforce MATH 141 concepts. Credit/No Credit.",
+      "prerequisites": null,
+      "corequisites": { "all": [ { "course": "MATH-141" } ] },
+      "geTags": [],
+      "tags": ["LAB", "MATH-LOWER"],
+      "restrictions": { "text": "" },
+      "repeatable": false,
+      "pairedWith": "MATH-141"
+    }
+  ],
+
+  "requirements": {
+    "areas": [
+      {
+        "id": "GE-QR",
+        "name": "General Education – Quantitative Reasoning",
+        "targetUnits": 3,
+        "eligible": { "byGeTags": ["QR"], "courseIds": ["MATH-103", "MATH-141"] },
+        "notes": "Choose one 3-unit QR/GE math course."
+      },
+      {
+        "id": "MATH-PRECALC",
+        "name": "Precalculus Preparation",
+        "targetUnits": 3,
+        "eligible": { "courseIds": ["MATH-102"] },
+        "notes": "For CS calculus pathway; campuses may vary."
+      },
+      {
+        "id": "LAB-ENRICH",
+        "name": "Math Lab Enrichment (optional)",
+        "targetUnits": 0,
+        "eligible": { "byTags": ["LAB"], "courseIds": ["MATH-102L", "MATH-141L"] },
+        "maxCountableUnits": 0,
+        "notes": "Lab/support courses typically do not count toward degree units; include for planning visibility."
+      },
+
+      { "id": "GE-A", "name": "A. English Language Communication & Critical Thinking", "placeholder": true, "children": [
+        { "id": "A1", "name": "Oral Communication", "targetUnits": null, "eligible": {} },
+        { "id": "A2", "name": "Written Communication", "targetUnits": null, "eligible": {} },
+        { "id": "A3", "name": "Critical Thinking", "targetUnits": null, "eligible": {} }
+      ]},
+      { "id": "GE-B", "name": "B. Scientific Inquiry & Quantitative Reasoning", "placeholder": true, "children": [
+        { "id": "B1", "name": "Physical Science (lecture)", "targetUnits": null, "eligible": {} },
+        { "id": "B2", "name": "Life Science (lecture)", "targetUnits": null, "eligible": {} },
+        { "id": "B3", "name": "Laboratory Activity", "targetUnits": null, "eligible": {} },
+        { "id": "B4", "name": "Mathematics / QR", "targetUnits": null, "eligible": {} },
+        { "id": "B5", "name": "Upper Division SI/QR", "targetUnits": null, "upperDivision": true, "eligible": {} }
+      ]},
+      { "id": "GE-C", "name": "C. Arts & Humanities", "placeholder": true, "children": [
+        { "id": "C1", "name": "Arts", "targetUnits": null, "eligible": {} },
+        { "id": "C2", "name": "Humanities", "targetUnits": null, "eligible": {} },
+        { "id": "C3", "name": "American History", "targetUnits": null, "eligible": {} }
+      ]},
+      { "id": "GE-D", "name": "D. Social Sciences", "placeholder": true, "children": [
+        { "id": "D1", "name": "Social Sciences", "targetUnits": null, "eligible": {} },
+        { "id": "D3", "name": "U.S. Constitution", "targetUnits": null, "eligible": {} },
+        { "id": "D4", "name": "California State & Local Government", "targetUnits": null, "eligible": {} }
+      ]},
+      { "id": "GE-E", "name": "E. Lifelong Learning", "placeholder": true, "targetUnits": null, "eligible": {} },
+      { "id": "GE-F", "name": "F. Comparative Cultural Studies / GRC&E / Foreign Languages", "placeholder": true, "targetUnits": null, "eligible": {} },
+      { "id": "GE-IC", "name": "Information Competence", "placeholder": true, "children": [
+        { "id": "IC-BasicSkill", "name": "IC in Basic Skills", "targetUnits": null, "eligible": {} },
+        { "id": "IC-SubjectExplorations", "name": "IC Subject Explorations", "targetUnits": null, "eligible": {} }
+      ]},
+      { "id": "GE-UDGE", "name": "Upper Division GE (total placeholder)", "placeholder": true, "children": [
+        { "id": "UDGE-1", "name": "Upper Division GE Slot 1", "upperDivision": true, "targetUnits": null, "eligible": {} },
+        { "id": "UDGE-2", "name": "Upper Division GE Slot 2", "upperDivision": true, "targetUnits": null, "eligible": {} }
+      ]},
+      { "id": "ETHNIC-STUDIES", "name": "Ethnic Studies Graduation Requirement", "placeholder": true, "targetUnits": null, "eligible": {} },
+
+      { "id": "MAJOR-LD", "name": "Computer Science Lower Division Core", "placeholder": true, "targetUnits": null, "eligible": {} },
+      { "id": "MAJOR-UD", "name": "Computer Science Upper Division Core", "placeholder": true, "targetUnits": null, "eligible": {} },
+      { "id": "MAJOR-SENIOR-ELECTIVES", "name": "Senior Electives", "placeholder": true, "targetUnits": null, "eligible": {} }
+    ]
+  }
+}

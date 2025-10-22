@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gradmate — Courses</title>
+
+  <style>
+    :root{
+      --blue:#0069FF; --bg:#F9FAFB; --text:#111827; --text2:#4B5563;
+      --card:#fff; --border:#E5E7EB;
+      --shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial,Helvetica;background:var(--bg);color:var(--text);}
+    .app{display:grid;grid-template-columns:300px 1fr;min-height:100vh;}
+    aside{background:#fff;border-right:1px solid var(--border);padding:24px;display:flex;flex-direction:column;gap:24px;}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:48px;height:48px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+    .nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;text-decoration:none;color:var(--text)}
+    .nav a.active{background:#e5e6e6}
+    .catalog-note{margin-top:auto;color:var(--text2);font-size:14px}
+
+    main{padding:24px 32px;}
+    .toolbar{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--border);border-radius:16px;padding:12px 16px;margin-bottom:16px}
+    .search{flex:1;display:flex;align-items:center;gap:8px;}
+    .search input{flex:1;border:none;outline:none;font-size:16px}
+    .btn{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-weight:600}
+    .btn-primary{background:var(--blue);color:#fff}
+
+    h1{margin:8px 0 4px;font-size:24px}
+    .sub{color:var(--text2);font-weight:600}
+
+    .filters{display:flex;gap:12px;margin:16px 0}
+    select{border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;background:#fff;color:var(--text2);cursor:pointer}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:10px}
+    .code{font-weight:700;color:var(--text)}
+    .title{color:var(--text2);font-weight:600;margin-bottom:4px}
+    .tags{display:flex;flex-wrap:wrap;gap:6px}
+    .tag{font-size:12px;padding:3px 8px;border-radius:999px;background:#F3F4F6;border:1px solid #E5E7EB;color:#374151}
+    .row{display:flex;align-items:center;gap:8px}
+    .row .spacer{flex:1}
+    .btn-ghost{background:#0069FF;border:1px solid #0069FF;color:var(--card)}
+    
+
+    /* drawer */
+    .drawer{position:fixed;top:0;right:-460px;width:420px;height:100%;background:#fff;border-left:1px solid var(--border);box-shadow:-8px 0 24px rgba(0,0,0,.08);transition:right .2s ease;display:flex;flex-direction:column;z-index:1000}
+    .drawer.open{right:0}
+    .drawer header{padding:16px;border-bottom:1px solid var(--border)}
+    .drawer .content{padding:16px;overflow:auto}
+    .kv{display:grid;grid-template-columns:120px 1fr;gap:8px;margin:10px 0}
+    .muted{color:var(--text2)}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <!-- Inline SVG logo (always visible) -->
+        <svg class="logo" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gradmate">
+          <defs><linearGradient id="g" x1="0.5" x2="0.5" y2="1"><stop offset="0" stop-color="#614de0"/><stop offset="1" stop-color="#2d6cdf"/></linearGradient></defs>
+          <rect x="8" y="8" width="80" height="80" rx="20" fill="url(#g)"/>
+          <text x="44" y="62" text-anchor="middle" font-size="48" font-family="Skia,Arial" font-weight="800" fill="#fff">G</text>
+        </svg>
+        <div style="font-weight:700;font-size:24px">Gradmate</div>
+      </div>
+      <nav class="nav">
+        <a href="#">🏠 Dashboard</a>
+        <a href="#">🧭 Degree Plan</a>
+        <a class="active" href="course.html">📚 Courses</a>
+        <a href="#">📄 Audit</a>
+        <a href="#">⚙️ Settings</a>
+      </nav>
+      <div class="catalog-note">BS CS Catalog 2023</div>
+    </aside>
+
+    <main>
+      <div class="toolbar">
+        <div class="search">
+          <span>🔎</span>
+          <input id="search" placeholder="Search course or requirements" />
+        </div>
+        <!-- CHANGED: global Search button -->
+        <button class="btn btn-primary" id="searchButton">Search</button>
+      </div>
+
+      <h1>Courses</h1>
+      <div class="sub">Search, explore, and add courses to your plan.</div>
+
+      <div class="filters">
+        <select id="levelFilter" aria-label="Filter by level">
+          <option value="">All levels</option>
+          <option value="0-99">000–099</option>
+          <option value="100-199">100–199</option>
+          <option value="200-299">200–299</option>
+          <option value="300-399">300–399</option>
+          <option value="400-499">400–499</option>
+          <option value="500-599">500–599</option>
+        </select>
+
+        <select id="creditsFilter" aria-label="Filter by credits">
+          <option value="">Any credits</option>
+          <option value="1">1 credit</option>
+          <option value="2">2 credits</option>
+          <option value="3">3 credits</option>
+          <option value="4">4 credits</option>
+        </select>
+
+        <select id="fulfillFilter" aria-label="Filter by fulfillment">
+          <option value="">Any fulfillment</option>
+          <option value="GE-A">GE Section A</option>
+          <option value="GE-B">GE Section B</option>
+          <option value="GE-C">GE Section C</option>
+          <option value="GE-D">GE Section D</option>
+          <option value="GE-E">GE Section E</option>
+          <option value="GE-F">GE Section F</option>
+          <option value="GE-QR">GE Quantitative Reasoning</option>
+          <option value="Lower Division Core">Lower Division Core</option>
+          <option value="Lower Division Elective">Lower Division Elective</option>
+          <option value="Upper Division Core">Upper Division Core</option>
+          <option value="Upper Division GE">Upper Division GE</option>
+          <option value="Ethnic Studies">Ethnic Studies</option>
+          <option value="Writing Skills">Writing Skills</option>
+          <option value="Senior Elective Division">Senior Elective Division</option>
+        </select>
+      </div>
+
+      <div id="resultCount" style="color:#6B7280;margin-bottom:8px"></div>
+      <div id="grid" class="grid"></div>
+    </main>
+  </div>
+
+  <!-- Details drawer -->
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <header><strong id="d_title">Course</strong></header>
+    <div class="content" id="d_body"></div>
+  </aside>
+
+  <!-- Global search router (works on every page, including this one) -->
+  <script src="global-search.js"></script>
+  <script src="courses.js"></script>
+</body>
+</html>
