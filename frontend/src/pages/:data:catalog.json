@@ -168,42 +168,52 @@
       },
 
       { "id": "GE-A", "name": "A. English Language Communication & Critical Thinking", "placeholder": true, "children": [
-        { "id": "A1", "name": "Oral Communication", "targetUnits": null, "eligible": {} },
-        { "id": "A2", "name": "Written Communication", "targetUnits": null, "eligible": {} },
+        { "id": "A1", "name": "Oral Communication", "targetUnits": 3, "eligible": {} },
+        { "id": "A2", "name": "Written Communication", "targetUnits": 3, "eligible": {} },
         { "id": "A3", "name": "Critical Thinking", "targetUnits": null, "eligible": {} }
       ]},
-      { "id": "GE-B", "name": "B. Scientific Inquiry & Quantitative Reasoning", "placeholder": true, "children": [
+      { "id": "GE-B", "name": "B. Scientific Inquiry & Quantitative Reasoning","targetUnits": 12, "placeholder": true, "children": [
         { "id": "B1", "name": "Physical Science (lecture)", "targetUnits": null, "eligible": {} },
         { "id": "B2", "name": "Life Science (lecture)", "targetUnits": null, "eligible": {} },
         { "id": "B3", "name": "Laboratory Activity", "targetUnits": null, "eligible": {} },
         { "id": "B4", "name": "Mathematics / QR", "targetUnits": null, "eligible": {} },
         { "id": "B5", "name": "Upper Division SI/QR", "targetUnits": null, "upperDivision": true, "eligible": {} }
       ]},
-      { "id": "GE-C", "name": "C. Arts & Humanities", "placeholder": true, "children": [
-        { "id": "C1", "name": "Arts", "targetUnits": null, "eligible": {} },
-        { "id": "C2", "name": "Humanities", "targetUnits": null, "eligible": {} },
-        { "id": "C3", "name": "American History", "targetUnits": null, "eligible": {} }
+      { "id": "GE-C", "name": "C. Arts & Humanities","placeholder": true, "children": [
+        { "id": "C1", "name": "Arts", "targetUnits": 3, "eligible": {} },
+        { "id": "C2", "name": "Humanities", "targetUnits": 3, "eligible": {} },
+        { "id": "C3", "name": "American History", "targetUnits": 3, "eligible": {} }
       ]},
       { "id": "GE-D", "name": "D. Social Sciences", "placeholder": true, "children": [
-        { "id": "D1", "name": "Social Sciences", "targetUnits": null, "eligible": {} },
+        { "id": "D1", "name": "Social Sciences", "targetUnits": 6, "eligible": {} },
         { "id": "D3", "name": "U.S. Constitution", "targetUnits": null, "eligible": {} },
         { "id": "D4", "name": "California State & Local Government", "targetUnits": null, "eligible": {} }
       ]},
-      { "id": "GE-E", "name": "E. Lifelong Learning", "placeholder": true, "targetUnits": null, "eligible": {} },
-      { "id": "GE-F", "name": "F. Comparative Cultural Studies / GRC&E / Foreign Languages", "placeholder": true, "targetUnits": null, "eligible": {} },
-      { "id": "GE-IC", "name": "Information Competence", "placeholder": true, "children": [
-        { "id": "IC-BasicSkill", "name": "IC in Basic Skills", "targetUnits": null, "eligible": {} },
-        { "id": "IC-SubjectExplorations", "name": "IC Subject Explorations", "targetUnits": null, "eligible": {} }
-      ]},
-      { "id": "GE-UDGE", "name": "Upper Division GE (total placeholder)", "placeholder": true, "children": [
-        { "id": "UDGE-1", "name": "Upper Division GE Slot 1", "upperDivision": true, "targetUnits": null, "eligible": {} },
-        { "id": "UDGE-2", "name": "Upper Division GE Slot 2", "upperDivision": true, "targetUnits": null, "eligible": {} }
-      ]},
-      { "id": "ETHNIC-STUDIES", "name": "Ethnic Studies Graduation Requirement", "placeholder": true, "targetUnits": null, "eligible": {} },
+      { "id": "GE-E", "name": "E. Lifelong Learning", "placeholder": true, "targetUnits": 3, "eligible": {} },
+      { "id": "GE-F", "name": "F. Comparative Cultural Studies / GRC&E / Foreign Languages", "placeholder": true, "targetUnits": 6, "eligible": {} },
 
-      { "id": "MAJOR-LD", "name": "Computer Science Lower Division Core", "placeholder": true, "targetUnits": null, "eligible": {} },
+      { "id": "GE-UDGE", "name": "Upper Division GE (total placeholder)", "placeholder": true, "children": [
+        { "id": "UDGE-1", "name": "Upper Division GE Slot 1", "upperDivision": true, "targetUnits": 3, "eligible": {} },
+        { "id": "UDGE-2", "name": "Upper Division GE Slot 2", "upperDivision": true, "targetUnits": 3, "eligible": {} }
+      ]},
+      { "id": "ETHNIC-STUDIES", "name": "Ethnic Studies Graduation Requirement", "placeholder": true, "targetUnits": 3, "eligible": {} },
+      { "id": "BASIC-SKILLS", "name": "Basic Skills Information Competence Requirement", "placeholder": true, "targetUnits": 3, "eligible": {} },
+      { "id": "SUBJECT-EXPLORATIONS", "name": "Subject Explorations Information Competence Requirement", "placeholder": true, "targetUnits": 3, "eligible": {} },
+      { "id": "WRITING-SKILLS", "name": "Writing Skills", "placeholder": true, "targetUnits": 3, "eligible": {} },
+
+
+      { "id": "MAJOR-LD", "name": "Computer Science Lower Division Core", "placeholder": true, "targetUnits": null, "children":[
+        { "id": "MAJOR-LDAL&PR", "name": "Lower Division Algorithm & Programming", "targetUnits": null, "eligible": {} },
+        { "id": "MAJOR-LDMJ", "name": "Lower Division Major Requirement", "targetUnits": null, "eligible": {} }
+      ] },
+      
+      { "id": "LOWER-SC", "name": "Computer Science Lower Division Science", "placeholder": true, "targetUnits": null, "children":[
+        { "id": "LOWER-LSCED", "name": "Life Science Elective", "placeholder": true, "targetUnits": null, "eligible": {} },
+        { "id": "LOWER-PSCED", "name": "Physical Science Elective", "placeholder": true, "targetUnits": null, "eligible": {} }
+      ]},
+
       { "id": "MAJOR-UD", "name": "Computer Science Upper Division Core", "placeholder": true, "targetUnits": null, "eligible": {} },
-      { "id": "MAJOR-SENIOR-ELECTIVES", "name": "Senior Electives", "placeholder": true, "targetUnits": null, "eligible": {} }
+      { "id": "MAJOR-SE", "name": "Senior Electives", "placeholder": true, "targetUnits": null, "eligible": {} }
     ]
   }
 }
