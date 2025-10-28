@@ -10,6 +10,9 @@
   },
 
   "courses": [
+    
+    
+
     {
       "id": "MATH-091B",
       "subject": "MATH",
@@ -21,6 +24,7 @@
       "description": "Credit/No Credit pre-baccalaureate support for the Business Math course (MATH 103); just-in-time remediation aligned to lecture meetings. May be repeated once for credit.",
       "prerequisites": null,
       "corequisites": { "all": [ { "course": "MATH-103" } ] },
+      "opens": [],
       "geTags": [],
       "tags": ["SUPPORT", "MATH-LOWER"],
       "restrictions": { "text": "" },
@@ -37,6 +41,7 @@
       "description": "Credit/No Credit support for the Calculus sequence; just-in-time remediation aligned to MATH 102 lecture meetings. May be repeated once for credit.",
       "prerequisites": null,
       "corequisites": { "all": [ { "course": "MATH-102" }, { "course": "MATH-102L" } ] },
+      "opens": [],
       "geTags": [],
       "tags": ["SUPPORT", "MATH-LOWER"],
       "restrictions": { "text": "" },
@@ -53,6 +58,7 @@
       "description": "Credit/No Credit support for Introductory Statistics aligned to MATH 141 lecture meetings. May be repeated once for credit.",
       "prerequisites": null,
       "corequisites": { "all": [ { "course": "MATH-141" }, { "course": "MATH-141L" } ] },
+      "opens": [],
       "geTags": [],
       "tags": ["SUPPORT", "MATH-LOWER"],
       "restrictions": { "text": "" },
@@ -69,6 +75,7 @@
       "description": "Preparation for calculus: functions, rational expressions, algebraic skills for science/engineering/math majors.",
       "prerequisites": null,
       "corequisites": null,
+      "opens": [],
       "geTags": [],
       "tags": ["PRECALC", "MATH-LOWER"],
       "restrictions": { "text": "Not open to some majors may apply by campus policy (confirm locally)." },
@@ -85,6 +92,7 @@
       "description": "Credit/No Credit hybrid enrichment laboratory aligned to MATH 102; reinforces problem solving and lecture concepts.",
       "prerequisites": null,
       "corequisites": { "all": [ { "course": "MATH-102" } ] },
+      "opens": [],
       "geTags": [],
       "tags": ["LAB", "MATH-LOWER"],
       "restrictions": { "text": "" },
@@ -102,6 +110,7 @@
       "description": "Algebra and calculus concepts for business applications; includes matrices, derivatives, and quantitative reasoning topics.",
       "prerequisites": null,
       "corequisites": null,
+      "opens": [],
       "geTags": ["QR"],
       "tags": ["GE-MATH", "MATH-LOWER"],
       "restrictions": { "text": "" },
@@ -118,6 +127,7 @@
       "description": "Introduction to statistical reasoning and methods.",
       "prerequisites": null,
       "corequisites": null,
+      "opens": [],
       "geTags": ["QR"],
       "tags": ["MATH-LOWER"],
       "restrictions": { "text": "" },
@@ -134,6 +144,7 @@
       "description": "Laboratory activities to reinforce MATH 141 concepts. Credit/No Credit.",
       "prerequisites": null,
       "corequisites": { "all": [ { "course": "MATH-141" } ] },
+      "opens": [],
       "geTags": [],
       "tags": ["LAB", "MATH-LOWER"],
       "restrictions": { "text": "" },
@@ -201,17 +212,14 @@
       { "id": "SUBJECT-EXPLORATIONS", "name": "Subject Explorations Information Competence Requirement", "placeholder": true, "targetUnits": 3, "eligible": {} },
       { "id": "WRITING-SKILLS", "name": "Writing Skills", "placeholder": true, "targetUnits": 3, "eligible": {} },
 
-
       { "id": "MAJOR-LD", "name": "Computer Science Lower Division Core", "placeholder": true, "targetUnits": null, "children":[
         { "id": "MAJOR-LDAL&PR", "name": "Lower Division Algorithm & Programming", "targetUnits": null, "eligible": {} },
         { "id": "MAJOR-LDMJ", "name": "Lower Division Major Requirement", "targetUnits": null, "eligible": {} }
       ] },
-      
       { "id": "LOWER-SC", "name": "Computer Science Lower Division Science", "placeholder": true, "targetUnits": null, "children":[
         { "id": "LOWER-LSCED", "name": "Life Science Elective", "placeholder": true, "targetUnits": null, "eligible": {} },
         { "id": "LOWER-PSCED", "name": "Physical Science Elective", "placeholder": true, "targetUnits": null, "eligible": {} }
       ]},
-
       { "id": "MAJOR-UD", "name": "Computer Science Upper Division Core", "placeholder": true, "targetUnits": null, "eligible": {} },
       { "id": "MAJOR-SE", "name": "Senior Electives", "placeholder": true, "targetUnits": null, "eligible": {} }
     ]
