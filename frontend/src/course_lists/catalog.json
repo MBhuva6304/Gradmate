@@ -10,9 +10,9 @@
   },
 
   "courses": [
-    
-    
 
+
+    
     {
       "id": "MATH-091B",
       "subject": "MATH",
@@ -155,29 +155,7 @@
 
   "requirements": {
     "areas": [
-      {
-        "id": "GE-QR",
-        "name": "General Education – Quantitative Reasoning",
-        "targetUnits": 3,
-        "eligible": { "byGeTags": ["QR"], "courseIds": ["MATH-103", "MATH-141"] },
-        "notes": "Choose one 3-unit QR/GE math course."
-      },
-      {
-        "id": "MATH-PRECALC",
-        "name": "Precalculus Preparation",
-        "targetUnits": 3,
-        "eligible": { "courseIds": ["MATH-102"] },
-        "notes": "For CS calculus pathway; campuses may vary."
-      },
-      {
-        "id": "LAB-ENRICH",
-        "name": "Math Lab Enrichment (optional)",
-        "targetUnits": 0,
-        "eligible": { "byTags": ["LAB"], "courseIds": ["MATH-102L", "MATH-141L"] },
-        "maxCountableUnits": 0,
-        "notes": "Lab/support courses typically do not count toward degree units; include for planning visibility."
-      },
-
+      
       { "id": "GE-A", "name": "A. English Language Communication & Critical Thinking", "placeholder": true, "children": [
         { "id": "A1", "name": "Oral Communication", "targetUnits": 3, "eligible": {} },
         { "id": "A2", "name": "Written Communication", "targetUnits": 3, "eligible": {} },
