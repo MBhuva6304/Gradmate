@@ -8,11 +8,108 @@
       "Course_in_Multiple_GE_Areas": false
     }
   },
-
+  
+  "crosslistClusters": [
+    {
+      "id": "GE-A1",
+      "members": ["AAS-151","AFRS-151","CAS-151","CHS-151","COMS-151","QS-151"]
+    }
+  ],
+  
   "courses": [
 
 
-    
+    {
+      "id": "AAS-151",
+      "subject": "Asian American Studies",
+      "number": "151",
+      "code": "AAS 151",
+      "title": "Fundamentals of Public Speaking",
+      "units": 3,
+      "level": "lower",
+      "description": "Introduction to public speaking and oral communication with applied practice; emphasis on logical reasoning, critical listening, and contexts relevant to Asian American communities.",
+      "prerequisites": { "any": [ { "course": "LING-113A" }, { "course": "LING-113B" } ] },
+      "geTags": ["A1"],
+      "tags": ["GE-A1", "ORAL-COMM"],
+      "restrictions": { "text": "" },
+      "repeatable": false
+    },
+    {
+      "id": "AFRS-151",
+      "subject": "Africana Studies",
+      "number": "151",
+      "code": "AFRS 151",
+      "title": "Freshman Speech Communication",
+      "units": 3,
+      "level": "lower",
+      "description": "Introduction to human communication with intensive practice in public speaking, logical reasoning, and critical listening; African/Black studies contexts.",
+      "prerequisites": { "any": [ { "course": "LING-113A" }, { "course": "LING-113B" } ] },
+      "geTags": ["A1"],
+      "tags": ["GE-A1", "ORAL-COMM"],
+      "restrictions": { "text": "" },
+      "repeatable": false
+    },
+    {
+      "id": "CAS-151",
+      "subject": "Central American Studies", 
+      "number": "151",
+      "code": "CAS 151",
+      "title": "Fundamentals of Public Speaking",
+      "units": 3,
+      "level": "lower",
+      "description": "Fundamentals of public speaking and verbal communication; practice in organization, delivery, and critical listening with Central American studies topics.",
+      "prerequisites": { "any": [ { "course": "LING-113A" }, { "course": "LING-113B" } ] },
+      "geTags": ["A1"],
+      "tags": ["GE-A1", "ORAL-COMM"],
+      "restrictions": { "text": "" },
+      "repeatable": false
+    },
+    {
+      "id": "CHS-151",
+      "subject": "Chicana/o Studies",
+      "number": "151",
+      "code": "CHS 151", 
+      "title": "Freshman Speech Communication",
+      "units": 3,
+      "level": "lower",
+      "description": "Principles and practice of effective verbal communication and public speaking; focus on reasoning, critical listening, and delivery in Chicana/o studies contexts.",
+      "prerequisites": { "any": [ { "course": "LING-113A" }, { "course": "LING-113B" } ] },
+      "geTags": ["A1"],
+      "tags": ["GE-A1", "ORAL-COMM"],
+      "restrictions": { "text": "" },
+      "repeatable": false
+    },
+    {
+      "id": "COMS-151",
+      "subject": "Communication Studies",
+      "number": "151",
+      "code": "COMS 151",
+      "title": "Fundamentals of Public Speaking", 
+      "units": 3,
+      "level": "lower",
+      "description": "Introduction to principles of effective public speaking with intensive practice in speech development, delivery, and analysis.",
+      "prerequisites": { "any": [ { "course": "LING-113A" }, { "course": "LING-113B" } ] },
+      "geTags": ["A1"],
+      "tags": ["GE-A1", "ORAL-COMM"],
+      "restrictions": { "text": "" },
+      "repeatable": false
+    },
+    {
+      "id": "QS-151",
+      "subject": "Queer Studies",
+      "number": "151",
+      "code": "QS 151",
+      "title": "Fundamentals of QS Public Speaking",
+      "units": 3,
+      "level": "lower",
+      "description": "Public speaking with emphasis on issues and contexts significant to LGBTQIA+ communities; practice in reasoning, preparation, and delivery.",
+      "prerequisites": { "any": [ { "course": "LING-113A" }, { "course": "LING-113B" } ] },
+      "geTags": ["A1"],
+      "tags": ["GE-A1", "ORAL-COMM"],
+      "restrictions": { "text": "" },
+      "repeatable": false
+    },
+
     {
       "id": "MATH-091B",
       "subject": "MATH",
