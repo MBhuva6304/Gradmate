@@ -27,21 +27,27 @@
     form .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
     .box{display:flex;flex-direction:column;gap:8px}
     .box label{font-size:14px;font-weight:700}
-    .input,.search{width:100%;height:44px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#fff;color:var(--text);outline:none;transition:.15s border-color,.15s box-shadow}
-    .input:focus,.search:focus{border-color:var(--ring);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+    .input{width:100%;height:44px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#fff;color:var(--text);outline:none;transition:.15s border-color,.15s box-shadow}
+    .input:focus{border-color:var(--ring);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
     .btn{height:44px;padding:0 16px;border-radius:12px;border:1px solid transparent;background:var(--blue);color:#fff;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
     .btn.secondary{background:#fff;color:var(--text);border-color:var(--border)}
-    .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .course-toolbar{display:flex;gap:10px;margin-bottom:12px}
-    .course-results,.course-selected{border:1px solid var(--border);border-radius:12px;background:#fff;min-height:220px;max-height:380px;overflow:auto;padding:6px}
+    .muted{color:var(--text2);font-size:12px}
+    .course-selected{border:1px solid var(--border);border-radius:12px;background:#fff;min-height:220px;max-height:380px;overflow:auto;padding:6px}
     .list-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;line-height:1.2}
     .list-item + .list-item{margin-top:6px}
     .list-item:hover{background:#F3F4F6}
     .pill{font-size:12px;background:#EEF2FF;border:1px solid #E0E7FF;border-radius:999px;padding:2px 8px}
     .mini{height:34px;border-radius:10px;padding:0 10px}
-    .muted{color:var(--text2);font-size:12px}
     .page-footer{display:flex;justify-content:flex-end;padding:16px 0 26px;position:sticky;bottom:-1px;background:linear-gradient(180deg,rgba(249,250,251,0) 0%,rgba(249,250,251,1) 40%)}
     @media (max-width:1100px){.grid{grid-template-columns:1fr}}
+
+    /* Autocomplete dropdown */
+    .auto-wrap{position:relative}
+    .auto{position:absolute; top:48px; left:0; right:0; max-height:320px; overflow:auto;
+      background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); z-index:50; display:none}
+    .auto-item{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; border-radius:10px; margin:6px}
+    .auto-item:hover, .auto-item[aria-selected="true"]{background:#F3F4F6}
+    .auto-empty{padding:10px 12px; color:var(--text2)}
   </style>
 </head>
 <body>
@@ -92,33 +98,30 @@
               </div>
             </div>
 
-            <div class="actions" style="margin:16px 0 8px">
+            <div class="muted" id="verify-row" style="display:flex;gap:12px;align-items:center;margin:16px 0 8px">
               <button type="button" id="btn-verify" class="btn">Verify Your Email Id</button>
-              <span class="muted" id="verify-hint" aria-live="polite"></span>
+              <span id="verify-hint" aria-live="polite"></span>
             </div>
 
-            <div class="box" id="box-target" data-box="targeted-graduation" style="max-width:420px">
-              <label for="gradDate">Targeted graduation</label>
-              <input class="input" id="gradDate" name="gradDate" placeholder="MM/YYYY" />
-            </div>
+            <!-- Targeted graduation REMOVED -->
 
             <input type="hidden" name="completedCourses" id="completedCoursesField" />
           </form>
         </div>
       </section>
 
-      <!-- ================= Right: Completed Courses Picker ================= -->
+      <!-- ================= Right: Completed Courses ================= -->
       <aside class="card" id="courses-card">
         <div class="card-head">Add Completed Courses</div>
         <div class="card-body">
-          <div class="course-toolbar">
-            <input id="course-search" class="search" placeholder="🔎 Search" aria-label="Search courses" />
-            <button class="btn mini secondary" id="toggle-edit" type="button">Edit</button>
-          </div>
-
-          <div class="box" id="box-results" data-box="results">
-            <label class="muted">Results <span id="loadStatus" class="muted"></span></label>
-            <div id="results" class="course-results" aria-live="polite"></div>
+          <!-- Google-like search with autocomplete -->
+          <div class="box">
+            <label class="muted">Search courses</label>
+            <div class="auto-wrap">
+              <input id="course-search" class="input" placeholder="Search by code or title…" aria-label="Search courses" autocomplete="off" />
+              <div id="auto" class="auto" role="listbox" aria-label="Course suggestions"></div>
+            </div>
+            <span class="muted" id="loadStatus" style="margin-top:6px"></span>
           </div>
 
           <div class="box" id="box-selected" data-box="selected" style="margin-top:14px">
@@ -140,17 +143,19 @@
   <script src="/courses.js"></script>
 
   <script>
-    // ========================== Robust course loader ==========================
+    // ========================== Helpers & refs ==========================
     const $ = (id)=>document.getElementById(id);
-    const $results  = $('results');
     const $selected = $('selected');
-    const $search   = $('course-search');
     const $hidden   = $('completedCoursesField');
+    const $search   = $('course-search');
+    const $auto     = $('auto');
     const $status   = $('loadStatus');
 
     const picked = new Map(); // code -> course
+    let COURSES = [];
+    let cursorIndex = -1; // keyboard selection
 
-    // Normalize any raw list into {id, code, title, tags, prerequisites}
+    // ========================== Normalize data ==========================
     function normalize(list){
       const out = [];
       const seen = new Set();
@@ -203,48 +208,57 @@
         });
       });
 
-      // Try in order
       const errs = [];
       for (const t of tries){
         try{
           const list = await t();
-          if (list && list.length){
-            console.log('[Gradmate] Loaded', list.length, 'courses');
-            return list;
-          }
+          if (list && list.length){ return list; }
         }catch(e){ errs.push(e.message); }
       }
-      throw new Error(`Could not load courses from any source. ${location.protocol==='file:' ? 'You are opening the file directly; use a local server.' : ''} Tries: ${errs.join(' | ')}`);
+      console.warn('Could not load courses from any source:', errs.join(' | '));
+      return [];
     }
 
-    // ============================= UI wiring =============================
-    function renderResults(items){
-      $results.innerHTML = '';
-      if (!items.length){
-        $results.innerHTML = `<div class="muted" style="padding:12px">No courses found.</div>`;
-        return;
-      }
-      for (const c of items){
-        const row = document.createElement('div');
-        row.className = 'list-item';
-        const tags = (c.tags||[]).slice(0,2).map(t=>`<span class="pill">${t}</span>`).join(' ');
-        row.innerHTML = `
+    // ========================== Autocomplete ==========================
+    function searchIndex(q){
+      const n = q.trim().toLowerCase();
+      if (!n) return [];
+      return COURSES.filter(c =>
+        c.code.toLowerCase().includes(n) || (c.title||'').toLowerCase().includes(n)
+      ).slice(0,12);
+    }
+
+    function hideAuto(){ $auto.style.display = 'none'; cursorIndex = -1; }
+    function showAuto(){ $auto.style.display = 'block'; }
+
+    function renderAuto(items){
+      if (!items.length){ $auto.innerHTML=''; hideAuto(); return; }
+      const html = items.map((c,i)=>`
+        <div class="auto-item" role="option" data-id="${c.id || c.code}" aria-selected="${i===cursorIndex}">
           <div>
             <div style="font-weight:700">${c.code}</div>
-            ${c.title ? `<div class="muted">${c.title}</div>`:''}
+            ${c.title ? `<div class="muted" style="margin-top:2px">${c.title}</div>`:''}
           </div>
-          <div class="actions">
-            ${tags}
-            <button class="btn mini" data-add="${c.id || c.code}">Add</button>
-          </div>`;
-        $results.appendChild(row);
-      }
+          ${(c.tags||[]).slice(0,2).map(t=>`<span class="pill">${t}</span>`).join('')}
+        </div>
+      `).join('');
+      $auto.innerHTML = html;
+      showAuto();
     }
 
+    function pickCourseById(id){
+      const c = COURSES.find(x => (x.id||x.code) === id);
+      if (!c) return;
+      picked.set(c.code, c);
+      renderSelected();
+      hideAuto();
+      $search.value = ''; // clear after pick (like Google)
+    }
+
+    // ========================== Selected list ==========================
     function renderSelected(){
       $selected.innerHTML = '';
       if (!picked.size){
-        $selected.innerHTML = `<div class="muted" style="padding:12px">Nothing added yet.</div>`;
         $hidden.value = '[]';
         return;
       }
@@ -264,31 +278,48 @@
       $hidden.value = JSON.stringify(Array.from(picked.values()).map(c=>c.code));
     }
 
-    function wireEvents(COURSES){
-      const idx = (q)=> COURSES.filter(c=>{
-        const n = q.toLowerCase();
-        return c.code.toLowerCase().includes(n) || (c.title||'').toLowerCase().includes(n);
-      }).slice(0,50);
-
-      $('course-search').addEventListener('input', (e)=>renderResults(idx(e.target.value)));
-      $results.addEventListener('click', (e)=>{
-        const id = e.target?.dataset?.add;
-        if (!id) return;
-        const c = COURSES.find(x => (x.id||x.code) === id);
-        if (!c) return;
-        picked.set(c.code, c);
-        renderSelected();
+    // ========================== Wire events ==========================
+    function wire(){
+      // typing -> suggestions
+      $search.addEventListener('input', e=>{
+        const items = searchIndex(e.target.value);
+        renderAuto(items);
       });
+
+      // click a suggestion
+      $auto.addEventListener('click', e=>{
+        const id = e.target.closest('.auto-item')?.dataset?.id;
+        if (id) pickCourseById(id);
+      });
+
+      // keyboard navigation
+      $search.addEventListener('keydown', e=>{
+        const items = Array.from($auto.querySelectorAll('.auto-item'));
+        if (!items.length) return;
+
+        if (e.key === 'ArrowDown'){ e.preventDefault(); cursorIndex = (cursorIndex+1) % items.length; renderAuto(searchIndex($search.value)); return; }
+        if (e.key === 'ArrowUp'){ e.preventDefault(); cursorIndex = (cursorIndex-1+items.length) % items.length; renderAuto(searchIndex($search.value)); return; }
+        if (e.key === 'Enter'){ 
+          if (cursorIndex >= 0){ 
+            e.preventDefault(); 
+            const id = items[cursorIndex].dataset.id;
+            pickCourseById(id); 
+          }
+        }
+        if (e.key === 'Escape'){ hideAuto(); }
+      });
+
+      // hide on blur (slight delay to allow click)
+      $search.addEventListener('blur', ()=> setTimeout(hideAuto, 120));
+
+      // remove from selected
       $selected.addEventListener('click', (e)=>{
         const code = e.target?.dataset?.remove;
         if (!code) return;
         picked.delete(code); renderSelected();
       });
 
-      $('toggle-edit').addEventListener('click', ()=>{
-        document.body.classList.toggle('editing'); renderSelected();
-      });
-
+      // verify + submit
       $('btn-verify').addEventListener('click', ()=>{
         const email = $('email').value.trim();
         const hint = $('verify-hint');
@@ -306,30 +337,20 @@
           email: $('email').value.trim(),
           program: $('program').value.trim(),
           catalogYear: $('catalogYear').value.trim(),
-          gradDate: $('gradDate').value.trim(),
           completedCourses: Array.from(picked.values()).map(c=>c.code)
         };
         console.log('Create account payload:', payload);
         alert('Account created (demo). See console for payload.');
       });
-
-      // first render
-      renderResults(COURSES.slice(0,50));
-      renderSelected();
     }
 
-    // ============================= Boot =============================
-    (async function boot(){
-      try{
-        $status.textContent = '(loading…)';
-        const COURSES = await loadAnyCourses();
-        $status.textContent = `(${COURSES.length} courses)`;
-        wireEvents(COURSES);
-      }catch(err){
-        console.error(err);
-        $status.textContent = '— failed to load';
-        $results.innerHTML = `<div class="muted" style="padding:12px">${err.message}</div>`;
-      }
+    // ========================== Boot ==========================
+    (async function(){
+      $status.textContent = '(loading…)';
+      COURSES = await loadAnyCourses();
+      $status.textContent = COURSES.length ? `(${COURSES.length} courses)` : '';
+      wire();
+      renderSelected();  // empty state
     })();
   </script>
 </body>
