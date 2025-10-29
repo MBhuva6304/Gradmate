@@ -12,10 +12,51 @@
   "crosslistClusters": [
     {
       "id": "GE-A1",
-      "members": ["AAS-151","AFRS-151","CAS-151","CHS-151","COMS-151","QS-151"]
+      "members": [
+        "AAS-151",
+        "AFRS-151",
+        "CAS-151",
+        "CHS-151",
+        "COMS-151",
+        "QS-151"
+      ]
+    },
+    {
+      "id": "WRIT-113B",
+      "members": [
+        "AAS-113B",
+        "AFRS-113B", 
+        "CAS-113B",
+        "CHS-113B",
+        "ENGL-113B",
+        "LING-113B",
+        "QS-113B"
+      ]
+    },
+    {
+      "id": "WRIT-114B", 
+      "members": [
+        "AAS-114B",
+        "AFRS-114B",
+        "CAS-114B", 
+        "CHS-114B",
+        "ENGL-114B",
+        "QS-114B"
+      ]
+    },
+    {
+      "id": "WRIT-115",
+      "members": [
+        "AAS-115",
+        "AFRS-115",
+        "CAS-115",
+        "CHS-115", 
+        "ENGL-115",
+        "QS-115"
+      ]
     }
   ],
-  
+
   "courses": [
 
 
@@ -110,6 +151,301 @@
       "repeatable": false
     },
 
+    {
+      "id": "ENGL-113B",
+      "subject": "English",
+      "number": "113B",
+      "code": "ENGL 113B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing with emphasis on logical thought, clear expression, organization strategies, and effective use of evidence.",
+      "prerequisites": { "all": [ { "course": "ENGL-113A" } ] },
+      "corequisites": { "all": [ { "course": "UNIV-062" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Credit for only one cross-listed 113B course (AAS/AFRS/CAS/CHS/ENGL/LING/QS 113B)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "ENGL-114B",
+      "subject": "English",
+      "number": "114B",
+      "code": "ENGL 114B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing; practice in diction, syntax, grammar, and elements of prose style with continued development of academic writing.",
+      "prerequisites": { "all": [ { "course": "ENGL-114A" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Credit for only one cross-listed 114B course (AAS/AFRS/CAS/CHS/ENGL/QS 114B)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "ENGL-115",
+      "subject": "English",
+      "number": "115",
+      "code": "ENGL 115",
+      "title": "Approaches to University Writing",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing focusing on logical thought and clear expression; instruction in organization, grammar, and elements of prose style.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement at GE-level writing (Multiple Measures Placement). Credit for only one cross-listed 115 course (AAS/AFRS/CAS/CHS/ENGL/QS 115)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "LING-113B",
+      "subject": "Linguistics",
+      "number": "113B",
+      "code": "LING 113B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing emphasizing organization, diction, syntax, grammar, and effective use of evidence.",
+      "prerequisites": { "all": [ { "course": "LING-113A" } ] },
+      "corequisites": { "all": [ { "course": "UNIV-062" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Credit for only one cross-listed 113B course (AAS/AFRS/CAS/CHS/ENGL/LING/QS 113B)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "AAS-113B",
+      "subject": "Asian American Studies",
+      "number": "113B",
+      "code": "AAS 113B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing with Asian American Studies contexts; emphasis on logical reasoning, organization, and critical use of sources.",
+      "prerequisites": { "all": [ { "course": "AAS-113A" } ] },
+      "corequisites": { "all": [ { "course": "UNIV-062" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Credit for only one cross-listed 113B course." },
+      "repeatable": false
+    },
+
+    {
+      "id": "AAS-114B",
+      "subject": "Asian American Studies",
+      "number": "114B",
+      "code": "AAS 114B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing; practice in style and organization with Asian American Studies topics.",
+      "prerequisites": { "all": [ { "course": "AAS-114A" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "repeatable": false
+    },
+
+    {
+      "id": "AAS-115",
+      "subject": "Asian American Studies",
+      "number": "115",
+      "code": "AAS 115",
+      "title": "Approaches to University Writing",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository writing with Asian American Studies applications; development of clear expression and effective organization.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement at GE-level writing (Multiple Measures Placement)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "AFRS-113B",
+      "subject": "Africana Studies",
+      "number": "113B",
+      "code": "AFRS 113B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing with emphases on logic, organization, and clear expression in Africana Studies contexts.",
+      "prerequisites": { "all": [ { "course": "AFRS-113A" } ] },
+      "corequisites": { "all": [ { "course": "UNIV-062" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "repeatable": false
+    },
+
+    {
+      "id": "AFRS-114B",
+      "subject": "Africana Studies",
+      "number": "114B",
+      "code": "AFRS 114B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing with continued development of style and organization in Africana Studies topics.",
+      "prerequisites": { "all": [ { "course": "AFRS-114A" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "repeatable": false
+    },
+
+    {
+      "id": "AFRS-115",
+      "subject": "Africana Studies",
+      "number": "115",
+      "code": "AFRS 115",
+      "title": "Approaches to University Writing",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository writing focusing on clarity, organization, and evidence use in Africana Studies contexts.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement at GE-level writing (Multiple Measures Placement)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CAS-113B",
+      "subject": "Central American Studies",
+      "number": "113B",
+      "code": "CAS 113B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing with Central American Studies topics; practice in organization and critical reasoning.",
+      "prerequisites": { "all": [ { "course": "CAS-113A" } ] },
+      "corequisites": { "all": [ { "course": "UNIV-062" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "repeatable": false
+    },
+
+    {
+      "id": "CAS-114B",
+      "subject": "Central American Studies",
+      "number": "114B",
+      "code": "CAS 114B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing; emphasis on diction, syntax, grammar, and prose style.",
+      "prerequisites": { "all": [ { "course": "CAS-114A" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "repeatable": false
+    },
+
+    {
+      "id": "CAS-115",
+      "subject": "Central American Studies",
+      "number": "115",
+      "code": "CAS 115",
+      "title": "Approaches to University Writing",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository writing with attention to organization and effective argumentation.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement at GE-level writing (Multiple Measures Placement)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CHS-113B",
+      "subject": "Chicana and Chicano Studies",
+      "number": "113B",
+      "code": "CH S 113B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing focused on logical reasoning, organization, and delivery in Chicana/o Studies contexts.",
+      "prerequisites": { "all": [ { "course": "CHS-113A" } ] },
+      "corequisites": { "all": [ { "course": "UNIV-062" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "repeatable": false
+    },
+
+    {
+      "id": "CHS-114B",
+      "subject": "Chicana and Chicano Studies",
+      "number": "114B",
+      "code": "CH S 114B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing; continued development of style, grammar, and organization in Chicana/o Studies.",
+      "prerequisites": { "all": [ { "course": "CHS-114A" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "repeatable": false
+    },
+
+    {
+      "id": "CHS-115",
+      "subject": "Chicana and Chicano Studies",
+      "number": "115",
+      "code": "CH S 115",
+      "title": "Approaches to University Writing",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository writing emphasizing clear expression and effective organization in Chicana/o Studies contexts.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement at GE-level writing (Multiple Measures Placement)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "QS-113B",
+      "subject": "Queer Studies",
+      "number": "113B",
+      "code": "QS 113B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing with emphasis on reasoning, organization, and critical listening in LGBTQIA+ contexts.",
+      "prerequisites": { "all": [ { "course": "QS-113A" } ] },
+      "corequisites": { "all": [ { "course": "UNIV-062" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "repeatable": false
+    },
+
+    {
+      "id": "QS-114B",
+      "subject": "Queer Studies",
+      "number": "114B",
+      "code": "QS 114B",
+      "title": "Approaches to University Writing B",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing; continued development of diction, syntax, grammar, and prose style in LGBTQIA+ contexts.",
+      "prerequisites": { "all": [ { "course": "QS-114A" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "repeatable": false
+    },
+
+    {
+      "id": "QS-115",
+      "subject": "Queer Studies",
+      "number": "115",
+      "code": "QS 115",
+      "title": "Approaches to University Writing",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository writing with practice in reasoning, preparation, and delivery from queer perspectives.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement at GE-level writing (Multiple Measures Placement)." },
+      "repeatable": false
+    },
     {
       "id": "MATH-091B",
       "subject": "MATH",
