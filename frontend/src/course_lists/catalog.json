@@ -8,54 +8,100 @@
       "Course_in_Multiple_GE_Areas": false
     }
   },
-  
-  "crosslistClusters": [
-    {
-      "id": "GE-A1",
-      "members": [
-        "AAS-151",
-        "AFRS-151",
-        "CAS-151",
-        "CHS-151",
-        "COMS-151",
-        "QS-151"
-      ]
-    },
-    {
-      "id": "WRIT-113B",
-      "members": [
-        "AAS-113B",
-        "AFRS-113B", 
-        "CAS-113B",
-        "CHS-113B",
-        "ENGL-113B",
-        "LING-113B",
-        "QS-113B"
-      ]
-    },
-    {
-      "id": "WRIT-114B", 
-      "members": [
-        "AAS-114B",
-        "AFRS-114B",
-        "CAS-114B", 
-        "CHS-114B",
-        "ENGL-114B",
-        "QS-114B"
-      ]
-    },
-    {
-      "id": "WRIT-115",
-      "members": [
-        "AAS-115",
-        "AFRS-115",
-        "CAS-115",
-        "CHS-115", 
-        "ENGL-115",
-        "QS-115"
-      ]
-    }
-  ],
+"crosslistClusters": [
+  {
+    "id": "WRIT-113A",
+    "members": [
+      "AAS-113A",
+      "AFRS-113A",
+      "CAS-113A",
+      "CHS-113A",
+      "ENGL-113A",
+      "LING-113A",
+      "QS-113A"
+    ]
+  },
+  {
+    "id": "WRIT-113B",
+    "members": [
+      "AAS-113B",
+      "AFRS-113B",
+      "CAS-113B",
+      "CHS-113B",
+      "ENGL-113B",
+      "LING-113B",
+      "QS-113B"
+    ]
+  },
+  {
+    "id": "WRIT-114A",
+    "members": [
+      "AAS-114A",
+      "AFRS-114A",
+      "CAS-114A",
+      "CHS-114A",
+      "ENGL-114A",
+      "QS-114A"
+    ]
+  },
+  {
+    "id": "WRIT-114B",
+    "members": [
+      "AAS-114B",
+      "AFRS-114B",
+      "CAS-114B",
+      "CHS-114B",
+      "ENGL-114B",
+      "QS-114B"
+    ]
+  },
+  {
+    "id": "WRIT-115",
+    "members": [
+      "AAS-115",
+      "AFRS-115",
+      "CAS-115",
+      "CHS-115",
+      "ENGL-115",
+      "QS-115"
+    ]
+  },
+  {
+    "id": "PUBSPEAK-151",
+    "members": [
+      "AAS-151",
+      "AFRS-151",
+      "CAS-151",
+      "CHS-151",
+      "COMS-151",
+      "QS-151"
+    ]
+  },
+  {
+    "id": "CLIMATE-111",
+    "members": [
+      "GEOG-111",
+      "SUST-111",
+      "SCI-111"
+    ]
+  },
+  {
+    "id": "CLIMATE-111L",
+    "members": [
+      "GEOG-111L",
+      "SUST-111L",
+      "SCI-111L"
+    ]
+  },
+  {
+    "id": "CLIMATE-112L",
+    "members": [
+      "GEOG-112L",
+      "SUST-111L",
+      "SCI-111L"
+    ]
+  }
+],
 
   "courses": [
 
@@ -107,13 +153,13 @@
     },
     {
       "id": "CHS-151",
-      "subject": "Chicana/o Studies",
+      "subject": "Chicana and Chicano Studies",
       "number": "151",
       "code": "CHS 151", 
       "title": "Freshman Speech Communication",
       "units": 3,
       "level": "lower",
-      "description": "Principles and practice of effective verbal communication and public speaking; focus on reasoning, critical listening, and delivery in Chicana/o studies contexts.",
+      "description": "Principles and practice of effective verbal communication and public speaking; focus on reasoning, critical listening, and delivery in Chicana and Chicano Studies contexts.",
       "prerequisites": { "any": [ { "course": "LING-113A" }, { "course": "LING-113B" } ] },
       "geTags": ["A1"],
       "tags": ["GE-A1", "ORAL-COMM"],
@@ -138,7 +184,7 @@
     {
       "id": "QS-151",
       "subject": "Queer Studies",
-      "number": "151",
+      "number": "151", 
       "code": "QS 151",
       "title": "Fundamentals of QS Public Speaking",
       "units": 3,
@@ -149,6 +195,248 @@
       "tags": ["GE-A1", "ORAL-COMM"],
       "restrictions": { "text": "" },
       "repeatable": false
+    },
+
+    {
+      "id": "AAS-113A",
+      "subject": "Asian American Studies", 
+      "number": "113A",
+      "code": "AAS 113A",
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing focusing on logical thought, clear expression, organization, diction, syntax, and grammar; Asian American Studies contexts.",
+      "corequisites": { "all": [ { "course": "UNIV-061" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 113A courses (AAS/AFRS/CAS/CHS/ENGL/LING/QS 113A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "AFRS-113A",
+      "subject": "Africana Studies",
+      "number": "113A", 
+      "code": "AFRS 113A",
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing emphasizing logical thought, clear expression, organization, diction, syntax, and grammar; Africana Studies contexts.",
+      "corequisites": { "all": [ { "course": "UNIV-061" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 113A courses (AAS/AFRS/CAS/CHS/ENGL/LING/QS 113A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CAS-113A",
+      "subject": "Central American Studies",
+      "number": "113A",
+      "code": "CAS 113A", 
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing with practice in organization, diction, syntax, grammar, and effective use of evidence; Central American Studies topics.",
+      "corequisites": { "all": [ { "course": "UNIV-061" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 113A courses (AAS/AFRS/CAS/CHS/ENGL/LING/QS 113A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CHS-113A",
+      "subject": "Chicana and Chicano Studies",
+      "number": "113A",
+      "code": "CH S 113A",
+      "title": "Approaches to University Writing A", 
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing focusing on logical reasoning, organization, diction, syntax, and grammar; Chicana/o Studies contexts.",
+      "corequisites": { "all": [ { "course": "UNIV-061" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 113A courses (AAS/AFRS/CAS/CHS/ENGL/LING/QS 113A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "ENGL-113A",
+      "subject": "English",
+      "number": "113A",
+      "code": "ENGL 113A",
+      "title": "Approaches to University Writing A",
+      "units": 3, 
+      "level": "lower",
+      "description": "Expository prose writing with a focus on content and form; development of organizational strategies and effective use of evidence; instruction in diction, syntax, and grammar.",
+      "corequisites": { "all": [ { "course": "UNIV-061" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 113A courses (AAS/AFRS/CAS/CHS/ENGL/LING/QS 113A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "LING-113A",
+      "subject": "Linguistics",
+      "number": "113A",
+      "code": "LING 113A",
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower", 
+      "description": "Expository prose writing for international/non-native speakers; focus on logic, clear expression, organization, and conventions of English prose.",
+      "corequisites": { "all": [ { "course": "UNIV-061" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING", "ESL"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 113A courses (AAS/AFRS/CAS/CHS/ENGL/LING/QS 113A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "QS-113A",
+      "subject": "Queer Studies",
+      "number": "113A", 
+      "code": "QS 113A",
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing with emphasis on logical thought, organization, diction, syntax, and grammar; topics framed through LGBTQIA+ contexts.",
+      "corequisites": { "all": [ { "course": "UNIV-061" } ] },
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 113A courses (AAS/AFRS/CAS/CHS/ENGL/LING/QS 113A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "AAS-114A",
+      "subject": "Asian American Studies",
+      "number": "114A",
+      "code": "AAS 114A", 
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing with focus on logical thought, clear expression, organizational strategies, and evidence use; instruction in diction, syntax and grammar.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 114A courses (AAS/AFRS/CAS/CHS/ENGL/QS 114A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "AFRS-114A",
+      "subject": "Africana Studies",
+      "number": "114A",
+      "code": "AFRS 114A",
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower", 
+      "description": "Expository prose writing with focus on content and form; development of organizational strategies and appropriate gathering and use of evidence; diction, syntax and grammar.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 114A courses (AAS/AFRS/CAS/CHS/ENGL/QS 114A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CAS-114A",
+      "subject": "Central American Studies",
+      "number": "114A",
+      "code": "CAS 114A",
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing on both content and form; practice in organizational strategies and effective use of evidence; instruction in diction, syntax and grammar.",
+      "geTags": ["A2"], 
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 114A courses (AAS/AFRS/CAS/CHS/ENGL/QS 114A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CHS-114A",
+      "subject": "Chicana and Chicano Studies",
+      "number": "114A",
+      "code": "CH S 114A",
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing focused on logical thought, clear expression, organizational strategies, and gathering/using evidence; instruction in diction, syntax and grammar.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 114A courses (AAS/AFRS/CAS/CHS/ENGL/QS 114A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "ENGL-114A",
+      "subject": "English",
+      "number": "114A",
+      "code": "ENGL 114A",
+      "title": "Approaches to University Writing A",
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing emphasizing logical thought and clear expression; development of organizational strategies and appropriate use of evidence; diction, syntax, grammar.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 114A courses (AAS/AFRS/CAS/CHS/ENGL/QS 114A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "QS-114A",
+      "subject": "Queer Studies",
+      "number": "114A",
+      "code": "QS 114A",
+      "title": "Approaches to University Writing A", 
+      "units": 3,
+      "level": "lower",
+      "description": "Expository prose writing focusing on content and form; development of organizational strategies and effective evidence use; instruction in diction, syntax and grammar.",
+      "geTags": ["A2"],
+      "tags": ["GE-A2", "WRITING"],
+      "restrictions": { "text": "Placement in supported GE A2 Written Communication. Credit for only one of the cross-listed 114A courses (AAS/AFRS/CAS/CHS/ENGL/QS 114A)." },
+      "repeatable": false
+    },
+
+    {
+      "id": "UNIV-062",
+      "subject": "University",
+      "number": "062",
+      "code": "UNIV 062",
+      "title": "Supplemental Instruction in Writing",
+      "units": 1,
+      "level": "lower",
+      "description": "Mandatory supplemental instruction for 113B writing courses; peer-led sessions supporting university writing. Up to 1 unit of non-baccalaureate credit per term.",
+      "corequisites": {
+      "any": [
+        { "course": "AAS-113B" }, { "course": "AFRS-113B" }, { "course": "CAS-113B" },
+        { "course": "CHS-113B" }, { "course": "ENGL-113B" }, { "course": "LING-113B" }, { "course": "QS-113B" }
+      ]
+      },
+      "tags": ["SUPPORT", "WRITING-LAB"],
+      "restrictions": { "text": "Non-baccalaureate credit; must be taken concurrently with a 113B course." },
+      "repeatable": true
+    },
+
+    {
+      "id": "UNIV-061",
+      "subject": "University", 
+      "number": "061",
+      "code": "UNIV 061",
+      "title": "Supplemental Instruction in Writing",
+      "units": 1,
+      "level": "lower",
+      "description": "Mandatory supplemental instruction for 113A writing courses; peer-led sessions supporting university writing. Provides up to 1 additional unit of non-baccalaureate credit per term.",
+      "corequisites": {
+      "any": [
+        { "course": "AAS-113A" }, { "course": "AFRS-113A" }, { "course": "CAS-113A" },
+        { "course": "CHS-113A" }, { "course": "ENGL-113A" }, { "course": "LING-113A" }, { "course": "QS-113A" }
+      ]
+      },
+      "tags": ["SUPPORT", "WRITING-LAB"],
+      "restrictions": { "text": "Non-baccalaureate credit; must be taken concurrently with a 113A course." },
+      "repeatable": true
     },
 
     {
@@ -436,7 +724,7 @@
       "id": "QS-115",
       "subject": "Queer Studies",
       "number": "115",
-      "code": "QS 115",
+      "code": "QS 115", 
       "title": "Approaches to University Writing",
       "units": 3,
       "level": "lower",
@@ -446,9 +734,799 @@
       "restrictions": { "text": "Placement at GE-level writing (Multiple Measures Placement)." },
       "repeatable": false
     },
+
+    {
+      "id": "GEOL-125", 
+      "subject": "Geology",
+      "number": "125",
+      "code": "GEOL 125",
+      "title": "Introduction to Environmental Science",
+      "units": 3,
+      "level": "lower", 
+      "description": "How human activities affect the environment; ecology, atmospheric and hydrologic science, climate change, energy use, conservation and sustainable agriculture. May satisfy B3 lab by completing a related lab when offered.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "ENV-SCI"],
+      "repeatable": false
+    },
+
+    {
+      "id": "PHYS-100A",
+      "subject": "Physics",
+      "number": "100A",
+      "code": "PHYS 100A",
+      "title": "General Physics I",
+      "units": 3,
+      "level": "lower",
+      "description": "Introductory mechanics, heat and sound for B1 Physical Science.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "PHYSICS"],
+      "restrictions": { "text": "Background in MATH 105 or MATH 106 or sufficient preparation for entry into MATH 150A or MATH 255A. B3 lab may be satisfied by PHYS 100AL." },
+      "repeatable": false
+    },
+    
+    {
+      "id": "PHYS-100B",
+      "subject": "Physics", 
+      "number": "100B",
+      "code": "PHYS 100B",
+      "title": "General Physics II",
+      "units": 3,
+      "level": "lower",
+      "description": "Continuation of PHYS 100A. Electricity and magnetism, light and modern physics.",
+      "prerequisites": { "all": [ { "course": "PHYS-100A" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "PHYSICS"],
+      "restrictions": { "text": "B3 lab may be satisfied by PHYS 100BL." },
+      "repeatable": false
+    },
+
+    {
+      "id": "PHYS-220A",
+      "subject": "Physics",
+      "number": "220A", 
+      "code": "PHYS 220A",
+      "title": "Mechanics",
+      "units": 3,
+      "level": "lower",
+      "description": "Dynamics and statics of particles and rigid bodies; vibrations and fluid mechanics.",
+      "prerequisites": { "any": [ { "course": "MATH-150A" }, { "course": "MATH-255A" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "PHYSICS"],
+      "restrictions": { "text": "Recommended corequisite or preparatory: MATH 150B or MATH 255B. B3 lab may be satisfied by PHYS 220AL." },
+      "repeatable": false
+    },
+
+    {
+      "id": "PHYS-220B",
+      "subject": "Physics",
+      "number": "220B",
+      "code": "PHYS 220B",
+      "title": "Electricity and Magnetism",
+      "units": 3, 
+      "level": "lower",
+      "description": "Electric and magnetic fields, circuits, electromagnetic induction.",
+      "prerequisites": {
+      "all": [
+        { "course": "PHYS-220A" },
+        { "any": [ { "course": "MATH-150B" }, { "course": "MATH-255B" } ] }
+      ]
+      },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "PHYSICS"],
+      "restrictions": { "text": "Recommended corequisite or preparatory: MATH 250. B3 lab may be satisfied by PHYS 220BL." },
+      "repeatable": false
+    },
+
+    {
+      "id": "SCI-111",
+      "subject": "Science",
+      "number": "111",
+      "code": "SCI 111",
+      "title": "Understanding Climate Change",
+      "units": 3,
+      "level": "lower",
+      "description": "Basic science behind climate predictions; causes and impacts of climate change; mitigation and economic barriers.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CLIMATE"],
+      "restrictions": { "text": "Credit for only one course from SCI 111, GEOG 111, or SUST 111." },
+      "repeatable": false
+    },
+
+    {
+      "id": "SUST-111",
+      "subject": "Sustainability",
+      "number": "111",
+      "code": "SUST 111",
+      "title": "Understanding Climate Change",
+      "units": 3,
+      "level": "lower",
+      "description": "Science of climate change, projections, mitigation and societal context; sustainability focus.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CLIMATE"],
+      "restrictions": { "text": "Credit for only one course from SUST 111, GEOG 111, or SCI 111." },
+      "repeatable": false
+    },
+
+    {
+      "id": "ASTR-152",
+      "subject": "Astronomy",
+      "number": "152",
+      "code": "ASTR 152",
+      "title": "Elementary Astronomy",
+      "units": 3,
+      "level": "lower",
+      "description": "History of astronomy, laws governing the universe, stars and galaxies, origins and evolution; Big Bang overview.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "ASTRONOMY"],
+      "restrictions": { "text": "Students should enroll in ASTR 152 only if meeting the B3 lab in Life Science. No credit with ASTR 154." },
+      "repeatable": false
+    },
+
+    {
+      "id": "ASTR-154",
+      "subject": "Astronomy",
+      "number": "154",
+      "code": "ASTR 154",
+      "title": "Elementary Astronomy",
+      "units": 2,
+      "level": "lower",
+      "description": "Astronomy survey: history, laws, properties of stars/galaxies, origin and evolution, Big Bang.",
+      "corequisites": { "all": [ { "course": "ASTR-154L" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "ASTRONOMY"],
+      "restrictions": { "text": "No credit with ASTR 152." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CHEM-100",
+      "subject": "Chemistry",
+      "number": "100",
+      "code": "CHEM 100",
+      "title": "Principles of Chemistry",
+      "units": 3,
+      "level": "lower",
+      "description": "Systematic, semi-empirical introduction to the submicroscopic world; atomic/molecular structure, bonding, formation and reactivity; applications to life and environmental sciences.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CHEMISTRY"],
+      "restrictions": { "text": "Prerequisite: GE-level Math placement or exemption. Engineering/biology/physical science majors should consult advisors. B3 lab may be satisfied by CHEM 100L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CHEM-101",
+      "subject": "Chemistry",
+      "number": "101",
+      "code": "CHEM 101",
+      "title": "General Chemistry I",
+      "units": 3,
+      "level": "lower",
+      "description": "Principles and theories of chemistry with emphasis on calculations; kinetic molecular theory, atomic structure, periodicity, solutions, oxidation-reduction.",
+      "prerequisites": { "any": [ { "course": "CHEM-100" } ] },
+      "corequisites": { "all": [ { "course": "CHEM-101D" }, { "course": "CHEM-101L" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CHEMISTRY"],
+      "restrictions": { "text": "Satisfactory score on Chemistry Placement Test (CPT) or grade of C or higher in CHEM 100 at CSUN only. All three components (CHEM 101, 101D, 101L) must be completed before CHEM 333/333D/333L or CHEM 321/L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CHEM-102",
+      "subject": "Chemistry",
+      "number": "102",
+      "code": "CHEM 102",
+      "title": "General Chemistry II",
+      "units": 3,
+      "level": "lower",
+      "description": "Continuation of CHEM 101: kinetics, gas phase and solution equilibria, electrochemistry, thermodynamics, and radio/nuclear chemistry.",
+      "prerequisites": {
+      "all": [ { "course": "CHEM-101" }, { "course": "CHEM-101D" }, { "course": "CHEM-101L" } ]
+      },
+      "corequisites": { "all": [ { "course": "CHEM-102D" }, { "course": "CHEM-102L" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CHEMISTRY"],
+      "restrictions": { "text": "Minimum grade of C− in CHEM 101. B3 lab may be satisfied by CHEM 102L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOG-112",
+      "subject": "Geography",
+      "number": "112",
+      "code": "GEOG 112",
+      "title": "Climate Change",
+      "units": 2,
+      "level": "lower",
+      "description": "Scientific basis of climate change; greenhouse gases, impacts, projections, mitigation, and economics.",
+      "corequisites": { "all": [ { "course": "GEOG-112L" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CLIMATE"],
+      "restrictions": { "text": "No credit in addition to GEOG 111, SUST 111, or SCI 111." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOL-101",
+      "subject": "Geology",
+      "number": "101",
+      "code": "GEOL 101",
+      "title": "Geology of Planet Earth",
+      "units": 3,
+      "level": "lower",
+      "description": "Earth materials and processes; tectonics, hazards, glacial/river/coastal processes; resources and pollution; field trips.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "GEOLOGY"],
+      "restrictions": { "text": "No credit for both GEOL 100 and GEOL 101. B3 lab may be satisfied by GEOL 102." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOL-107",
+      "subject": "Geology",
+      "number": "107",
+      "code": "GEOL 107",
+      "title": "Geology Goes Hollywood",
+      "units": 2,
+      "level": "lower",
+      "description": "Online lecture exploring Earth science issues in film and TV and how media influences perceptions.",
+      "corequisites": { "all": [ { "course": "GEOL-107L" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "GEOLOGY", "MEDIA"],
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOL-110",
+      "subject": "Geology",
+      "number": "110",
+      "code": "GEOL 110",
+      "title": "The Fossil Record of Ancient Life on Earth",
+      "units": 3,
+      "level": "lower",
+      "description": "Dynamic history of Earth's evolution and life over geologic time; dinosaurs to humans; geosphere, biosphere, hydrosphere, atmosphere.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "PALEO"],
+      "restrictions": { "text": "No credit for both GEOL 110 and GEOL 113. Enroll in GEOL 110 only if taking a different course than GEOL 112 to meet B3 lab." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOL-113",
+      "subject": "Geology",
+      "number": "113",
+      "code": "GEOL 113",
+      "title": "Earth and Life Through Time",
+      "units": 2,
+      "level": "lower",
+      "description": "Evolution, environmental change, and Earth history over 4.6 billion years using the fossil record.",
+      "corequisites": { "all": [ { "course": "GEOL-112" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "PALEO"],
+      "restrictions": { "text": "No credit for both GEOL 113 and GEOL 110." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOL-117",
+      "subject": "Geology",
+      "number": "117",
+      "code": "GEOL 117",
+      "title": "Geological Disasters",
+      "units": 2,
+      "level": "lower",
+      "description": "Lecture/lab combo on geologic hazards: earthquakes, volcanoes, landslides, flooding; risk evaluation and mitigation.",
+      "corequisites": { "all": [ { "course": "GEOL-117L" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "HAZARDS"],
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOL-122",
+      "subject": "Geology",
+      "number": "122",
+      "code": "GEOL 122",
+      "title": "The World Ocean",
+      "units": 3,
+      "level": "lower",
+      "description": "Introduction to ocean basins, environments, and resources; biological, chemical, geological, and physical oceanography.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "OCEAN"],
+      "restrictions": { "text": "B3 lab may be satisfied by GEOL 123." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CHEM-103",
+      "subject": "Chemistry",
+      "number": "103",
+      "code": "CHEM 103",
+      "title": "Introductory Chemistry I",
+      "units": 3,
+      "level": "lower",
+      "description": "Fundamentals of inorganic chemistry: atomic structure, molecules, periodic table, states of matter, stoichiometry and basic algebraic operations.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CHEMISTRY"],
+      "restrictions": { "text": "Prerequisite: GE-level Math placement or exemption. Not open to engineering, biology, or physical science majors. B3 lab may be satisfied by CHEM 103L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CHEM-104",
+      "subject": "Chemistry",
+      "number": "104",
+      "code": "CHEM 104",
+      "title": "Introductory Chemistry II",
+      "units": 3,
+      "level": "lower",
+      "description": "Continuation of CHEM 103; properties of solutions, equilibria, acids/bases, and chemistry of simple organic compounds and common elements.",
+      "prerequisites": { "all": [ { "course": "CHEM-103" }, { "course": "CHEM-103L" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CHEMISTRY"],
+      "restrictions": { "text": "Not open to engineering, biology, or physical science majors. B3 lab may be satisfied by CHEM 104L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "CHEM-110",
+      "subject": "Chemistry",
+      "number": "110",
+      "code": "CHEM 110",
+      "title": "Chemistry in Action",
+      "units": 3,
+      "level": "lower",
+      "description": "Chemistry and technological advances; impacts on society and environment. Survey of modern topics.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CHEMISTRY"],
+      "restrictions": { "text": "B3 lab may be satisfied by CHEM 110L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOG-101",
+      "subject": "Geography",
+      "number": "101",
+      "code": "GEOG 101",
+      "title": "The Physical Environment",
+      "units": 3,
+      "level": "lower",
+      "description": "Nature, distribution and relationships of climate, landforms, vegetation, hydrology and soils.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "GEOGRAPHY"],
+      "restrictions": { "text": "Enroll in GEOG 101 only if meeting B3 lab in Life Science." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOG-101A",
+      "subject": "Geography",
+      "number": "101A",
+      "code": "GEOG 101A",
+      "title": "The Physical Environment",
+      "units": 2,
+      "level": "lower",
+      "description": "Natural environment including weather, climate, landforms, vegetation, hydrology and soils; landscape change over time.",
+      "corequisites": { "all": [ { "course": "GEOG-101AL" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "GEOGRAPHY"],
+      "restrictions": { "text": "No credit for both GEOG 101A and GEOG 101." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOG-103",
+      "subject": "Geography",
+      "number": "103",
+      "code": "GEOG 103",
+      "title": "Weather",
+      "units": 3,
+      "level": "lower",
+      "description": "Study of atmospheric processes.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "WEATHER"],
+      "restrictions": { "text": "Enroll in GEOG 103 only if meeting B3 lab in Life Science." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOG-103A",
+      "subject": "Geography",
+      "number": "103A", 
+      "code": "GEOG 103A",
+      "title": "Weather",
+      "units": 2,
+      "level": "lower",
+      "description": "Dynamics of Earth's atmosphere; temperature variations, clouds, moisture, wind systems, air masses/fronts; thunderstorms, tornadoes, hurricanes; forecasting.",
+      "corequisites": { "all": [ { "course": "GEOG-103AL" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "WEATHER"],
+      "restrictions": { "text": "No credit for both GEOG 103A and GEOG 103." },
+      "repeatable": false
+    },
+
+    {
+      "id": "ASTR-154L",
+      "subject": "Astronomy",
+      "number": "154L",
+      "code": "ASTR 154L",
+      "title": "Observational Astronomy Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Techniques of observational astronomy including data acquisition and interpretation; testing hypotheses using observations of the Moon, planets, Sun, stars and galaxies.",
+      "corequisites": { "all": [ { "course": "ASTR-154" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "ASTRONOMY", "LAB"],
+      "repeatable": false
+    },
+
+    {
+      "id": "ANTH-151",
+      "subject": "Anthropology", 
+      "number": "151",
+      "code": "ANTH 151",
+      "title": "Introduction to Biological Anthropology",
+      "units": 3,
+      "level": "lower",
+      "description": "Biological variation in humans and non-human primates; evolution and behavior in past and present; interactions between biology and culture.",
+      "geTags": ["B2", "D1"],
+      "tags": ["GE-B2", "GE-D1", "ANTHRO"],
+      "repeatable": false
+    },
+
+    {
+      "id": "BIOL-100",
+      "subject": "Biology",
+      "number": "100",
+      "code": "BIOL 100",
+      "title": "Introductory Biology",
+      "units": 2, 
+      "level": "lower",
+      "description": "Major biological concepts for non-science majors: ecology, evolution, heredity, organismal and cellular structure and physiology.",
+      "corequisites": { "all": [ { "course": "BIOL-100L" } ] },
+      "geTags": ["B2"],
+      "tags": ["GE-B2", "BIO"],
+      "restrictions": { "text": "Not for credit in the Biology major. May not be taken for credit by students who have completed BIOL 101, BIOL 102, BIOL 106 or BIOL 107. B3 lab satisfied by BIOL 100L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "BIOL-101",
+      "subject": "Biology",
+      "number": "101",
+      "code": "BIOL 101",
+      "title": "General Biology",
+      "units": 3,
+      "level": "lower",
+      "description": "Selected topics illustrating major concepts in biology: evolution, environmental relationships, heredity, the cell, energetics and development.",
+      "geTags": ["B2"],
+      "tags": ["GE-B2", "BIO"], 
+      "restrictions": { "text": "Not for credit in the Biology major. May not be taken by students who have completed BIOL 106 or BIOL 107. B3 lab satisfied by BIOL 101L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "BIOL-106",
+      "subject": "Biology",
+      "number": "106",
+      "code": "BIOL 106",
+      "title": "Biological Principles I",
+      "units": 3,
+      "level": "lower",
+      "description": "First course of a two-semester sequence for Biology majors. Scientific process, heredity, evolution, taxonomy/systematics, ecology and animal behavior.",
+      "corequisites": { "all": [ { "course": "BIOL-106L" } ] },
+      "geTags": ["B2"],
+      "tags": ["GE-B2", "BIO-MAJOR"],
+      "restrictions": { "text": "Primarily for Biology majors. B3 lab satisfied by BIOL 106L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "BIOL-107",
+      "subject": "Biology",
+      "number": "107",
+      "code": "BIOL 107", 
+      "title": "Biological Principles II",
+      "units": 3,
+      "level": "lower",
+      "description": "Second course of the sequence for Biology majors. Chemistry of life, cells, molecular genetics, development, plant and animal physiology.",
+      "corequisites": { "all": [ { "course": "BIOL-107L" } ] },
+      "geTags": ["B2"],
+      "tags": ["GE-B2", "BIO-MAJOR"],
+      "restrictions": { "text": "Recommended corequisite or preparatory: CHEM 102 and CHEM 102L. B3 lab satisfied by BIOL 107L." },
+      "repeatable": false
+    },
+
+    {
+      "id": "BIOL-218",
+      "subject": "Biology",
+      "number": "218",
+      "code": "BIOL 218",
+      "title": "Microbes and People",
+      "units": 2,
+      "level": "lower",
+      "description": "Microbial world and its involvement in disease, food production and the environment for non-science majors.",
+      "corequisites": { "all": [ { "course": "BIOL-218L" } ] },
+      "geTags": ["B2"],
+      "tags": ["GE-B2", "MICROBIO"],
+      "restrictions": { "text": "Prerequisite: completion of the lower-division writing requirement. Not available for Biology majors. B3 lab satisfied by BIOL 218L." },
+      "repeatable": false
+    },
+    {
+      "id": "BIOL-292",
+      "subject": "Biology", 
+      "number": "292",
+      "code": "BIOL 292",
+      "title": "Wild SoCal",
+      "units": 2,
+      "level": "lower",
+      "description": "For non-science majors: field-based study of important wild plants and animals of Southern California; application of scientific methods via case studies.",
+      "corequisites": { "all": [ { "course": "BIOL-292L" } ] },
+      "geTags": ["B2"],
+      "tags": ["GE-B2", "FIELD"],
+      "restrictions": { "text": "Students may not receive credit for both BIOL 292/L and BIOL 323/392E. B3 lab satisfied by BIOL 292L." },
+      "repeatable": false
+    },
+    {
+      "id": "PHYS-100AL",
+      "subject": "Physics",
+      "number": "100AL", 
+      "code": "PHYS 100AL",
+      "title": "General Physics I Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Laboratory exercises in mechanics, heat and sound. Fulfills the B3 Science Laboratory Activity requirement when taken with PHYS 100A.",
+      "prerequisites": { "any": [ { "course": "MATH-105" }, { "course": "MATH-106" } ] },
+      "corequisites": { "any": [ { "course": "PHYS-100A" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "PHYSICS", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "PHYS-100BL",
+      "subject": "Physics",
+      "number": "100BL",
+      "code": "PHYS 100BL",
+      "title": "General Physics II Lab",
+      "units": 1,
+      "level": "lower", 
+      "description": "Experiments in electricity, magnetism, light and modern physics. Fulfills the B3 Science Laboratory Activity requirement when taken with PHYS 100B.",
+      "prerequisites": { "all": [ { "course": "PHYS-100A" } ] },
+      "corequisites": { "any": [ { "course": "PHYS-100B" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "PHYSICS", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "PHYS-220AL",
+      "subject": "Physics",
+      "number": "220AL",
+      "code": "PHYS 220AL",
+      "title": "Mechanics Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Experiments in dynamics, statics, vibrations, and fluid mechanics. Fulfills the B3 Science Laboratory Activity requirement when taken with PHYS 220A or PHYS 225.",
+      "prerequisites": { "any": [ { "course": "MATH-150A" }, { "course": "MATH-255A" } ] },
+      "corequisites": { "any": [ { "course": "PHYS-220A" }, { "course": "PHYS-225" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "PHYSICS", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "PHYS-220BL",
+      "subject": "Physics",
+      "number": "220BL",
+      "code": "PHYS 220BL",
+      "title": "Electricity and Magnetism Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Experiments in electric and magnetic fields, circuits, and electromagnetic induction. Fulfills the B3 Science Laboratory Activity requirement when taken with PHYS 220B or PHYS 226.",
+      "prerequisites": { "any": [ { "course": "PHYS-220A" }, { "course": "PHYS-225" } ] },
+      "corequisites": { "any": [ { "course": "PHYS-220B" }, { "course": "PHYS-226" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "PHYSICS", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "CHEM-100L",
+      "subject": "Chemistry",
+      "number": "100L",
+      "code": "CHEM 100L",
+      "title": "Principles of Chemistry Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Laboratory course accompanying CHEM 100 introducing fundamentals of scientific inquiry and basic lab techniques.",
+      "corequisites": { "all": [ { "course": "CHEM-100" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CHEMISTRY", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "CHEM-101L",
+      "subject": "Chemistry",
+      "number": "101L",
+      "code": "CHEM 101L",
+      "title": "General Chemistry I Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Laboratory emphasizing basic skills, quantitative relationships, and inorganic preparative techniques. 3 hours per week.",
+      "corequisites": { "all": [ { "course": "CHEM-101" }, { "course": "CHEM-101D" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CHEMISTRY", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "CHEM-102L",
+      "subject": "Chemistry",
+      "number": "102L",
+      "code": "CHEM 102L",
+      "title": "General Chemistry II Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Experiments in kinetics, equilibria, reactions of metals and nonmetals, and qualitative analysis.",
+      "corequisites": { "all": [ { "course": "CHEM-102" }, { "course": "CHEM-102D" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CHEMISTRY", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "CHEM-103L",
+      "subject": "Chemistry",
+      "number": "103L",
+      "code": "CHEM 103L",
+      "title": "Introductory Chemistry I Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Experiments on inorganic chemistry fundamentals: atoms, molecules, periodic table, stoichiometry, and states of matter.",
+      "corequisites": { "all": [ { "course": "CHEM-103" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CHEMISTRY", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "CHEM-104L",
+      "subject": "Chemistry",
+      "number": "104L",
+      "code": "CHEM 104L",
+      "title": "Introductory Chemistry II Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Continuation of CHEM 103L; experiments on equilibria, acids/bases, and organic chemistry of common elements.",
+      "corequisites": { "all": [ { "course": "CHEM-104" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CHEMISTRY", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "CHEM-110L",
+      "subject": "Chemistry",
+      "number": "110L",
+      "code": "CHEM 110L",
+      "title": "Chemistry in Action Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Lab-demonstration course accompanying CHEM 100 or CHEM 110; introduces basic lab skills and demonstrations of chemical principles.",
+      "corequisites": { "any": [ { "course": "CHEM-100" }, { "course": "CHEM-110" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CHEMISTRY", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "SCI-111L",
+      "subject": "Science",
+      "number": "111L",
+      "code": "SCI 111L",
+      "title": "Understanding Climate Change Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Laboratory exercises on climate prediction modeling, proxy data, and climate change impacts.",
+      "corequisites": { "any": [ { "course": "SCI-111" }, { "course": "GEOG-111L" }, { "course": "SUST-111L" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CLIMATE", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "SUST-111L",
+      "subject": "Sustainability",
+      "number": "111L",
+      "code": "SUST 111L",
+      "title": "Understanding Climate Change Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Climate prediction modeling, proxy data use, and analysis of climate change effects; shared lab with SCI 111L and GEOG 111L.",
+      "corequisites": { "any": [ { "course": "SUST-111" }, { "course": "SCI-111L" }, { "course": "GEOG-111L" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CLIMATE", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "GEOG-101AL",
+      "subject": "Geography",
+      "number": "101AL",
+      "code": "GEOG 101AL",
+      "title": "The Physical Environment Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Lab analyzing climate, landforms, vegetation, hydrology, and soils; supports GEOG 101A.",
+      "corequisites": { "all": [ { "course": "GEOG-101A" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "GEOGRAPHY", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "GEOG-103AL",
+      "subject": "Geography",
+      "number": "103AL",
+      "code": "GEOG 103AL",
+      "title": "Weather Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Lab on dynamics of Earth's atmosphere; temperature, clouds, precipitation, wind, and forecasting.",
+      "corequisites": { "all": [ { "course": "GEOG-103A" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "GEOGRAPHY", "LAB"],
+      "repeatable": false
+    },
+    
+    {
+      "id": "GEOL-102",
+      "subject": "Geology",
+      "number": "102",
+      "code": "GEOL 102",
+      "title": "Geology of Planet Earth Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Field and lab identification of rocks and minerals; interpretation of geologic maps and plate tectonics.",
+      "corequisites": { "any": [ { "course": "GEOL-100" }, { "course": "GEOL-101" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "GEOLOGY", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "GEOL-107L",
+      "subject": "Geology",
+      "number": "107L",
+      "code": "GEOL 107L",
+      "title": "Geology Goes Hollywood Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Online lab exploring Earth science issues as portrayed in film/TV and evaluating accuracy in scientific depictions.",
+      "corequisites": { "all": [ { "course": "GEOL-107" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "GEOLOGY", "MEDIA", "LAB"],
+      "repeatable": false
+    },
+    
+    {
+      "id": "GEOL-117L",
+      "subject": "Geology",
+      "number": "117L",
+      "code": "GEOL 117L",
+      "title": "Geological Disasters Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Lab accompanying GEOL 117; explores geologic hazards such as earthquakes, volcanoes, and floods.",
+      "corequisites": { "all": [ { "course": "GEOL-117" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "GEOLOGY", "LAB"],
+      "repeatable": false
+    },
+    {
+      "id": "GEOL-123",
+      "subject": "Geology",
+      "number": "123",
+      "code": "GEOL 123",
+      "title": "World Ocean Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Lab and field study of oceanographic data collection and interpretation accompanying GEOL 122.",
+      "corequisites": { "any": [ { "course": "GEOL-122" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "GEOLOGY", "OCEAN", "LAB"],
+      "repeatable": false
+    },
     {
       "id": "MATH-091B",
-      "subject": "MATH",
+      "subject": "Mathematics",
       "number": "091B",
       "code": "MATH 091B",
       "title": "Support Course for GE Mathematics — Business",
@@ -463,9 +1541,10 @@
       "restrictions": { "text": "" },
       "repeatable": true
     },
+
     {
       "id": "MATH-091C",
-      "subject": "MATH",
+      "subject": "Mathematics",
       "number": "091C",
       "code": "MATH 091C",
       "title": "Support Course for GE Mathematics — STEM",
@@ -480,9 +1559,10 @@
       "restrictions": { "text": "" },
       "repeatable": true
     },
+
     {
       "id": "MATH-091S",
-      "subject": "MATH",
+      "subject": "Mathematics",
       "number": "091S",
       "code": "MATH 091S",
       "title": "Support Course for GE Mathematics — Statistics",
@@ -497,26 +1577,10 @@
       "restrictions": { "text": "" },
       "repeatable": true
     },
-    {
-      "id": "MATH-102",
-      "subject": "MATH",
-      "number": "102",
-      "code": "MATH 102",
-      "title": "Pre-Calculus I",
-      "units": 3,
-      "level": "lower",
-      "description": "Preparation for calculus: functions, rational expressions, algebraic skills for science/engineering/math majors.",
-      "prerequisites": null,
-      "corequisites": null,
-      "opens": [],
-      "geTags": [],
-      "tags": ["PRECALC", "MATH-LOWER"],
-      "restrictions": { "text": "Not open to some majors may apply by campus policy (confirm locally)." },
-      "repeatable": false
-    },
+    
     {
       "id": "MATH-102L",
-      "subject": "MATH",
+      "subject": "Mathematics",
       "number": "102L",
       "code": "MATH 102L",
       "title": "Pre-Calculus I Lab",
@@ -532,26 +1596,10 @@
       "repeatable": false,
       "pairedWith": "MATH-102"
     },
-    {
-      "id": "MATH-103",
-      "subject": "MATH",
-      "number": "103",
-      "code": "MATH 103",
-      "title": "Mathematical Methods for Business",
-      "units": 3,
-      "level": "lower",
-      "description": "Algebra and calculus concepts for business applications; includes matrices, derivatives, and quantitative reasoning topics.",
-      "prerequisites": null,
-      "corequisites": null,
-      "opens": [],
-      "geTags": ["QR"],
-      "tags": ["GE-MATH", "MATH-LOWER"],
-      "restrictions": { "text": "" },
-      "repeatable": false
-    },
+    
     {
       "id": "MATH-141",
-      "subject": "MATH",
+      "subject": "Mathematics",
       "number": "141",
       "code": "MATH 141",
       "title": "Introductory Statistics",
@@ -568,7 +1616,7 @@
     },
     {
       "id": "MATH-141L",
-      "subject": "MATH",
+      "subject": "Mathematics",
       "number": "141L",
       "code": "MATH 141L",
       "title": "Introductory Statistics Lab",
@@ -583,6 +1631,344 @@
       "restrictions": { "text": "" },
       "repeatable": false,
       "pairedWith": "MATH-141"
+    },
+
+    {
+      "id": "MATH-102",
+      "subject": "Mathematics",
+      "number": "102",
+      "code": "MATH 102",
+      "title": "Pre-Calculus I",
+      "units": 3,
+      "level": "lower",
+      "description": "Preparation for algebra necessary for calculus. Topics include linear, quadratic, and rational expressions, with emphasis on local and global behavior of functions. Intended for computer science, engineering, mathematics, and natural science majors.",
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH"],
+      "restrictions": { "text": "Students conditionally prepared must have credit for or concurrently enroll in MATH 102L. Not open to students with credit in MATH 105." },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-103",
+      "subject": "Mathematics",
+      "number": "103",
+      "code": "MATH 103",
+      "title": "Mathematical Methods for Business",
+      "units": 3,
+      "level": "lower",
+      "description": "Concepts and applications of algebra and calculus to business, including functions, systems of equations, matrices, and the derivative. Topics emphasize quantitative reasoning in business contexts.",
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH", "BUSINESS"],
+      "restrictions": { "text": "Students conditionally prepared must have credit for or concurrently enroll in MATH 103L." },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-105",
+      "subject": "Mathematics",
+      "number": "105",
+      "code": "MATH 105",
+      "title": "Pre-Calculus II",
+      "units": 5,
+      "level": "lower",
+      "description": "Preparation for trigonometric, exponential, and logarithmic functions used in calculus. Builds proficiency in analyzing the behavior of exponential, logarithmic, and trigonometric expressions.",
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH"],
+      "restrictions": { "text": "Students conditionally prepared must have credit for or concurrently enroll in MATH 105L." },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-106",
+      "subject": "Mathematics",
+      "number": "106",
+      "code": "MATH 106",
+      "title": "Mathematical Foundations for Non-Calculus Physics",
+      "units": 5,
+      "level": "lower",
+      "description": "Mathematics applicable to non-calculus physics: inequalities, functions and graphs, vectors, angular velocity, and parametric equations. Emphasis on applied algebra and trigonometry.",
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH", "PHYSICS"],
+      "restrictions": { "text": "Not open to students with credit in MATH 105 or MATH 255A." },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-131",
+      "subject": "Mathematics",
+      "number": "131",
+      "code": "MATH 131",
+      "title": "Mathematical Ideas",
+      "units": 3,
+      "level": "lower",
+      "description": "Exploration of mathematical ideas and reasoning for non-majors. Introduces logic, patterns, and problem-solving approaches used in mathematics.",
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH"],
+      "restrictions": { "text": "Prerequisite: Multiple Measures Placement in GE-level Mathematics or credit in MATH 093, MATH 196QR, or MATH 196S (or equivalent)." },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-140",
+      "subject": "Mathematics",
+      "number": "140",
+      "code": "MATH 140",
+      "title": "Introductory Statistics",
+      "units": 4,
+      "level": "lower",
+      "description": "Methods for displaying, describing, and producing data; normal distribution, correlation, regression, sampling distributions, and probability. Emphasis on statistical inference for means and proportions.",
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH", "STATISTICS"],
+      "restrictions": { "text": "Prerequisite: Multiple Measures Placement in GE-level Mathematics or credit in MATH 093, MATH 196QR, or MATH 196S (or equivalent)." },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-150A",
+      "subject": "Mathematics",
+      "number": "150A",
+      "code": "MATH 150A",
+      "title": "Calculus I",
+      "units": 5,
+      "level": "lower",
+      "description": "Differential and integral calculus of one variable. Topics include limits, derivatives, applications of differentiation, and the fundamentals of integration.",
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH", "CALCULUS"],
+      "restrictions": { "text": "Students conditionally prepared or transferring credit for MATH 105 or both MATH 102 and MATH 104 must have credit for or concurrently enroll in MATH 150AL." },
+      "repeatable": false
+    },
+    {
+      "id": "MATH-255A",
+      "subject": "Mathematics",
+      "number": "255A",
+      "code": "MATH 255A",
+      "title": "Calculus for the Life Sciences I",
+      "units": 3,
+      "level": "lower",
+      "description": "Introduction to calculus for life science applications. Includes limits, differentiation, optimization, and integration with an emphasis on biological and health contexts.",
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH", "CALCULUS"],
+      "restrictions": { "text": "Students conditionally prepared must have credit for or concurrently enroll in MATH 255AL. Not open to students with credit in MATH 150A. Knowledge of trigonometry is assumed." },
+      "repeatable": false
+    },
+    {
+      "id": "BIOL-292L",
+      "subject": "Biology",
+      "number": "292L",
+      "code": "BIOL 292L",
+      "title": "Field Studies in Biology — Wild SoCal Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Field-based lab to accompany BIOL 292. Emphasizes scientific observation, data collection and interpretation in SoCal habitats.",
+      "corequisites": { "all": [ { "course": "BIOL-292" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "BIO", "FIELD", "LAB"],
+      "restrictions": { "text": "3 hours per week or equivalent; course fee. B2 Life Science satisfied by completing BIOL 292." },
+      "repeatable": false
+    },
+    {
+      "id": "CHEM-101D",
+      "subject": "Chemistry",
+      "number": "101D",
+      "code": "CHEM 101D",
+      "title": "Problem Solving in General Chemistry I",
+      "units": 1,
+      "level": "lower",
+      "description": "Structured group work developing analysis and problem-solving skills for CHEM 101 topics.",
+      "prerequisites": { "any": [ { "course": "CHEM-100" } ] },
+      "corequisites": { "all": [ { "course": "CHEM-101" }, { "course": "CHEM-101L" } ] },
+      "tags": ["CHEMISTRY", "DISCUSSION"],
+      "repeatable": false
+    },
+    {
+      "id": "CHEM-102D",
+      "subject": "Chemistry",
+      "number": "102D",
+      "code": "CHEM 102D",
+      "title": "Problem Solving in General Chemistry II",
+      "units": 1,
+      "level": "lower",
+      "description": "Problem-solving discussion supporting CHEM 102; worked examples and individual problems.",
+      "prerequisites": { "all": [ { "course": "CHEM-101" }, { "course": "CHEM-101L" } ] },
+      "corequisites": { "all": [ { "course": "CHEM-102" }, { "course": "CHEM-102L" } ] },
+      "tags": ["CHEMISTRY", "DISCUSSION"],
+      "restrictions": { "text": "Prerequisite grade of C- or better in CHEM 101." },
+      "repeatable": false
+    },
+    {
+      "id": "BIOL-107L",
+      "subject": "Biology",
+      "number": "107L",
+      "code": "BIOL 107L",
+      "title": "Biological Principles II Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Laboratory in biological chemistry, cells, molecular genetics, development, and physiology; observations, experiments, demonstrations.",
+      "corequisites": { "all": [ { "course": "BIOL-107" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "BIO", "LAB"],
+      "restrictions": { "text": "Recommended corequisite/preparatory: CHEM 102 and CHEM 102L. B2 satisfied by completing BIOL 107." },
+      "repeatable": false
+    },
+    {
+      "id": "GEOG-111",
+      "subject": "Geography",
+      "number": "111",
+      "code": "GEOG 111",
+      "title": "Understanding Climate Change",
+      "units": 3,
+      "level": "lower",
+      "description": "Scientific basis of climate change; causes, impacts, projections, and mitigation within social/economic contexts.",
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "CLIMATE", "GEOGRAPHY"],
+      "restrictions": { "text": "Credit for only one: GEOG 111, SUST 111, or SCI 111. B3 lab may be satisfied by GEOG 111L." },
+      "repeatable": false
+    },
+    {
+      "id": "GEOG-111L",
+      "subject": "Geography",
+      "number": "111L",
+      "code": "GEOG 111L",
+      "title": "Understanding Climate Change Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Lab on climate prediction modeling, proxy data, and analysis of climate-change impacts.",
+      "corequisites": { "all": [ { "course": "GEOG-111" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CLIMATE", "LAB"],
+      "restrictions": { "text": "Credit for only one lab: GEOG 111L, SUST 111L, or SCI 111L." },
+      "repeatable": false
+    },
+    {
+      "id": "GEOG-112L",
+      "subject": "Geography",
+      "number": "112L",
+      "code": "GEOG 112L",
+      "title": "Climate Change Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Laboratory to accompany GEOG 112 on climate science across spatial and temporal scales; sustainability context.",
+      "corequisites": { "all": [ { "course": "GEOG-112" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "CLIMATE", "LAB"],
+      "restrictions": { "text": "No credit in addition to GEOG 111L, SUST 111L, or SCI 111L." },
+      "repeatable": false
+    },
+    {
+      "id": "BIOL-106L",
+      "subject": "Biology",
+      "number": "106L",
+      "code": "BIOL 106L",
+      "title": "Biological Principles I Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Lab for Biology majors covering scientific process, heredity, evolution, taxonomy/systematics, ecology, and animal behavior.",
+      "corequisites": { "all": [ { "course": "BIOL-106" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "BIO", "LAB"],
+      "restrictions": { "text": "B2 Biological Science satisfied by completing BIOL 106." },
+      "repeatable": false
+    },
+    {
+      "id": "BIOL-100L",
+      "subject": "Biology",
+      "number": "100L",
+      "code": "BIOL 100L",
+      "title": "Introductory Biology Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Observations, experiments, demonstrations, and required field trips to augment BIOL 100; emphasis on methods of science and biological principles.",
+      "corequisites": { "all": [ { "course": "BIOL-100" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "BIO", "LAB"],
+      "restrictions": { "text": "Not for credit in the Biology major. No credit if completed BIOL 101L, BIOL 102LCS, BIOL 106L, or BIOL 107L." },
+      "repeatable": false
+    },
+    {
+      "id": "BIOL-218L",
+      "subject": "Biology",
+      "number": "218L",
+      "code": "BIOL 218L",
+      "title": "Microbes and People Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Lab for non-science majors on microbes in disease, food production, and the environment; demonstrations and experiments.",
+      "prerequisites": { "all": [ { "course": "LD-WRITING" } ] },
+      "corequisites": { "all": [ { "course": "BIOL-218" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "BIO", "MICROBIO", "LAB"],
+      "restrictions": { "text": "Not available for Biology majors. B2 satisfied by completing BIOL 218." },
+      "repeatable": false
+    },
+    
+    {
+      "id": "MATH-150B",
+      "subject": "Mathematics",
+      "number": "150B",
+      "code": "MATH 150B",
+      "title": "Calculus II",
+      "units": 5,
+      "level": "lower",
+      "description": "Techniques of integration and improper integrals; sequences and series; power series and Taylor polynomials; parametric and polar coordinates; vectors and solid geometry.",
+      "prerequisites": { "all": [ { "course": "MATH-150A" } ] },
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH", "CALCULUS"],
+      "repeatable": false
+    },
+    {
+      "id": "MATH-255B",
+      "subject": "Mathematics",
+      "number": "255B",
+      "code": "MATH 255B",
+      "title": "Calculus for the Life Sciences II",
+      "units": 3,
+      "level": "lower",
+      "description": "Second semester of the brief life-sciences calculus sequence. Techniques of integration, introduction to differential equations, probability applications, elements of multivariable calculus, and linear algebra with life-science applications.",
+      "prerequisites": { "all": [ { "course": "MATH-255A" } ] },
+      "geTags": ["B4"],
+      "tags": ["GE-B4", "MATH", "CALCULUS", "LIFE-SCI"],
+      "restrictions": { "text": "Not open to students who have successfully completed MATH 150AB." },
+      "repeatable": false
+    },
+    {
+      "id": "PHYS-225",
+      "subject": "Physics",
+      "number": "225",
+      "code": "PHYS 225",
+      "title": "Physics I (Calculus-based)",
+      "units": 4,
+      "level": "lower",
+      "description": "Calculus-based mechanics for physical science majors: kinematics and dynamics, fluids, waves, and acoustics.",
+      "prerequisites": { "all": [ { "course": "MATH-150A" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "PHYSICS", "CALC-BASED"],
+      "restrictions": { "text": "Recommended corequisite or preparatory: MATH 150B." },
+      "repeatable": false
+    },
+    {
+      "id": "PHYS-226",
+      "subject": "Physics",
+      "number": "226",
+      "code": "PHYS 226",
+      "title": "Physics II (Calculus-based)",
+      "units": 4,
+      "level": "lower",
+      "description": "Continuation for physical science majors: electricity and magnetism, circuits, optics, and related topics.",
+      "prerequisites": { "all": [ { "course": "MATH-150B" }, { "course": "PHYS-225" } ] },
+      "geTags": ["B1"],
+      "tags": ["GE-B1", "PHYSICS", "CALC-BASED"],
+      "restrictions": { "text": "Recommended corequisite or preparatory: MATH 250." },
+      "repeatable": false
+    },
+
+    {
+      "id": "GEOL-112",
+      "subject": "Geology",
+      "number": "112",
+      "code": "GEOL 112",
+      "title": "Earth and Life Through Time Lab",
+      "units": 1,
+      "level": "lower",
+      "description": "Laboratory accompanying GEOL 113. Introduces fossils, relative-age relationships, and construction and interpretation of maps and cross-sections emphasizing paleogeography and sedimentary rocks. Includes one-day field trip.",
+      "corequisites": { "all": [ { "course": "GEOL-113" } ] },
+      "geTags": ["B3"],
+      "tags": ["GE-B3", "GEOLOGY", "LAB"],
+      "restrictions": { "text": "Available for General Education, B3 Science Laboratory Activity provided GEOL 113 is also completed." },
+      "repeatable": false
     }
   ],
 

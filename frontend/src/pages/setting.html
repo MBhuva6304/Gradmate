@@ -98,12 +98,11 @@
         <span aria-hidden="true">🔎</span>
         <input type="search" placeholder="Search settings…" />
       </div>
-      <!-- Forgot Password button removed -->
       <button class="btn" type="button" onclick="save()">Save</button>
       <div class="avatar" aria-label="Profile">M</div>
     </div>
 
-    <!-- Content (Profile + Notifications only) -->
+    <!-- Content (Profile + Security) -->
     <div class="settings-grid">
 
       <!-- Profile with Edit toggle -->
@@ -137,37 +136,6 @@
 
         <div class="actions">
           <button class="btn" type="button" id="editBtn">Edit</button>
-          <button class="btn" type="button" onclick="save()">Save</button>
-        </div>
-      </section>
-
-      <!-- Notifications -->
-      <section class="section">
-        <h3>Notifications</h3>
-        <p>Stay on top of registration and graduation tasks.</p>
-
-        <div class="row">
-          <label for="email-notif">Email notifications</label>
-          <input id="email-notif" class="switch" type="checkbox" checked />
-        </div>
-
-        <div class="row">
-          <label for="reminders">Course reminders</label>
-          <select id="reminders" class="select">
-            <option>Off</option>
-            <option selected>Weekly</option>
-            <option>Daily during enrollment</option>
-          </select>
-        </div>
-
-        <div class="row">
-          <label for="digest">Weekly digest day</label>
-          <select id="digest" class="select">
-            <option>Monday</option><option selected>Friday</option><option>Sunday</option>
-          </select>
-        </div>
-
-        <div class="actions">
           <button class="btn" type="button" onclick="save()">Save</button>
         </div>
       </section>

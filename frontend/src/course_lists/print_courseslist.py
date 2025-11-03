@@ -8,14 +8,17 @@ courses = data.get("courses", [])
 
 print("Courses found in catalog.json:\n")
 
-# Works for list or dict formats
+# Works for list or dict formats — sorted alphabetically by course ID
 if isinstance(courses, list):
-    for c in courses:
-        print(f"- {c['id']}: {c.get('title','')}")
+    for c in sorted(courses, key=lambda x: x["id"]):
+        print(f"- {c['id']}: {c.get('title', '')}")
+
 elif isinstance(courses, dict):
-    for cid, c in courses.items():
-        print(f"- {cid}: {c.get('title','')}")
+    for cid in sorted(courses.keys()):
+        c = courses[cid]
+        print(f"- {cid}: {c.get('title', '')}")
+
 else:
     print("⚠️  'courses' is not a list or dictionary.")
 
-print(f"\nTotal courses: {len(courses)}")
+print(f"\nTotal courses in catalog.json: {len(courses)}")
