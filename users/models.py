@@ -187,7 +187,10 @@ class StudentProfile(models.Model):
         next_term = next_term or Term.from_date().next()
         remaining = list(self.remaining_required_courses())
         eligible = [c for c in remaining if self.prerequisites_satisfied(c)]
-        offered = [c for c in eligible if (c.offered_in.count() == 0 or next_term in c.offered_in.all())]
+        offered = [
+            c for c in eligible
+            if (c.offered_in.count() == 0 or next_term in c.offered_in.all())
+        ]
         total = 0.0
         take = []
         for c in sorted(offered, key=lambda x: x.code):
@@ -215,6 +218,10 @@ class StudentProfile(models.Model):
             term = term.next()
         return term, remaining_credits, completed_credits, base_target
 
+
+# =========================
+# Tags
+# =========================
 class Tag(models.Model):
     name = models.CharField(max_length=48, unique=True)
     slug = models.SlugField(max_length=60, unique=True, blank=True)
@@ -226,6 +233,7 @@ class Tag(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+
 
 # =========================
 # Course catalog + reqs
@@ -244,39 +252,48 @@ class Course(models.Model):
         help_text="Optional labels like LAB, SUPPORT, GE-QR, etc."
     )
 
-    code = models.CharField(max_length=16)             # e.g., CS101
-
+    code = models.CharField(max_length=16)  # e.g., CS101
     title = models.CharField(max_length=128)
     credits = models.DecimalField(max_digits=4, decimal_places=1, default=3.0)
 
-    subject = models.CharField(                        # e.g., "CS" or "AAS"
-        max_length=32, blank=True, default="",
+    subject = models.CharField(  # e.g., "CS" or "AAS"
+        max_length=32,
+        blank=True,
+        default="",
         help_text="Department prefix, e.g., CS, AAS",
     )
-    level = models.CharField(          # e.g., 151
-        null=True, blank=True,
-        help_text="Course number, e.g., LOWER",
+
+    level = models.CharField(          # e.g., "100", "200"
+        max_length=8,                  # ← this must be present
+        null=True,
+        blank=True,
+        help_text="Course number, e.g., 151",
     )
-    section = models.CharField(                        # e.g., 01 or A
-        max_length=16, blank=True, default="",
+
+    section = models.CharField(    # e.g., 01 or A
+        max_length=32,
+        blank=True,
+        default="",
         help_text="Section code, e.g., 01 or A",
     )
 
+    description = models.TextField(
+        blank=True,
+        default="",
+        help_text="Optional short description of this course.",
+    )
 
-    # general course description
-    description = models.TextField(blank=True, default="", help_text="Optional short description of this course.")
-
-    # prerequisites and (optional) per-term offerings
     prerequisites = models.ManyToManyField("self", symmetrical=False, blank=True)
     offered_in = models.ManyToManyField(Term, related_name="offerings", blank=True)
 
-    # Interpret the list of prerequisites
     PREREQ_MODES = (
         ("ALL", "All listed are required"),
         ("ANY", "Any one is sufficient"),
     )
     prereq_mode = models.CharField(
-        max_length=3, choices=PREREQ_MODES, default="ALL",
+        max_length=3,
+        choices=PREREQ_MODES,
+        default="ALL",
         help_text="If 'ANY', completing any one of the listed prerequisites is enough."
     )
 
@@ -312,14 +329,18 @@ class CompletedClass(models.Model):
     course = models.ForeignKey(
         Course, on_delete=models.CASCADE, related_name="completions"
     )
-    grade = models.CharField(max_length=2, blank=True)     # optional (A, B, P…)
-    term = models.CharField(max_length=12, blank=True)     # optional (e.g., 'Fall 2024')
+    grade = models.CharField(max_length=2, blank=True)   # optional (A, B, P…)
+    term = models.CharField(max_length=12, blank=True)   # optional (e.g., 'Fall 2024')
 
     class Meta:
         unique_together = (("profile", "course"),)
 
     def __str__(self):
-        who = self.profile.user.get_full_name() or self.profile.user.email or self.profile.user.username
+        who = (
+            self.profile.user.get_full_name()
+            or self.profile.user.email
+            or self.profile.user.username
+        )
         return f"{who} • {self.course.code}"
 
 
@@ -335,14 +356,21 @@ class PrerequisiteGroup(models.Model):
     for_course = models.ForeignKey(
         Course, on_delete=models.CASCADE, related_name="prereq_groups"
     )
-    name = models.CharField(max_length=64, blank=True, help_text="Optional label, e.g., 'Math alternatives'")
+    name = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Optional label, e.g., 'Math alternatives'",
+    )
     min_required = models.PositiveSmallIntegerField(
-        default=1, validators=[MinValueValidator(1)],
-        help_text="How many from this group are required."
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text="How many from this group are required.",
     )
     options = models.ManyToManyField(
-        Course, blank=True, related_name="as_prereq_option",
-        help_text="Courses that can satisfy this group."
+        Course,
+        blank=True,
+        related_name="as_prereq_option",
+        help_text="Courses that can satisfy this group.",
     )
 
     def __str__(self):
