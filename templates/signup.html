@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create account — Gradmate</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+  <main class="min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden">
+
+      <!-- Header -->
+      <header class="px-8 pt-8">
+        <div class="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-2xl font-extrabold shadow">
+          G
+        </div>
+        <h1 class="text-3xl font-semibold mt-4">Create your Gradmate account</h1>
+        <p class="text-gray-600 mt-1">Use your school email to sign up and start planning.</p>
+      </header>
+
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-8 px-8 pb-10 pt-6">
+        <!-- Left: steps + messages -->
+        <aside class="lg:col-span-1">
+          <div class="rounded-xl border border-slate-200 p-5">
+            <h2 class="font-semibold mb-3">How it works</h2>
+            <ol class="space-y-3 text-sm text-gray-700">
+              <li class="flex gap-3">
+                <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs">1</span>
+                Fill in your details and optional completed classes.
+              </li>
+              <li class="flex gap-3">
+                <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs">2</span>
+                We email a 6-digit code—enter it to verify your email.
+              </li>
+              <li class="flex gap-3">
+                <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs">3</span>
+                See your degree progress and next-semester suggestions.
+              </li>
+            </ol>
+          </div>
+
+          {% if messages %}
+            <div class="mt-6 space-y-2">
+              {% for m in messages %}
+                <p class="text-sm {% if 'error' in m.tags %}text-red-600{% else %}text-green-600{% endif %}">
+                  {{ m }}
+                </p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <p class="mt-6 text-sm text-gray-600">
+            Already have an account?
+            <a href="{% url 'login' %}" class="font-semibold text-blue-600 hover:underline">Sign in</a>
+          </p>
+        </aside>
+
+        <!-- Right: form -->
+        <div class="lg:col-span-2">
+          <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="md:col-span-2 text-red-600 text-sm">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <!-- Full name -->
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+              {{ form.full_name }}
+              {% if form.full_name.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.full_name.errors|striptags }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Email -->
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">School email</label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.email.errors|striptags }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Program -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Program</label>
+              {{ form.program }}
+              {% if form.program.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.program.errors|striptags }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Catalog year -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Catalog year</label>
+              {{ form.catalog_year }}
+              {% if form.catalog_year.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.catalog_year.errors|striptags }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Completed classes -->
+            <div class="md:col-span-2">
+              <div class="flex items-center justify-between">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Completed classes (optional)</label>
+                <span class="text-xs text-gray-500">Enter course codes, separated by commas or spaces</span>
+              </div>
+              {{ form.completed_codes }}
+              {% if form.completed_codes.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.completed_codes.errors|striptags }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Password -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <div class="relative">
+                {{ form.password1 }}
+                <button type="button"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-600"
+                        onclick="togglePwd('id_password1', this)">Show</button>
+              </div>
+              {% if form.password1.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.password1.errors|striptags }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Confirm password -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+              <div class="relative">
+                {{ form.password2 }}
+                <button type="button"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-600"
+                        onclick="togglePwd('id_password2', this)">Show</button>
+              </div>
+              {% if form.password2.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.password2.errors|striptags }}</p>
+              {% endif %}
+            </div>
+
+            {{ form.username }} <!-- hidden; autogenerated -->
+
+            <div class="md:col-span-2">
+              <button type="submit"
+                      class="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200">
+                Create account
+              </button>
+              <p class="mt-3 text-xs text-gray-500">
+                By continuing, you agree to our <a class="underline" href="#">Terms</a> and <a class="underline" href="#">Privacy Policy</a>.
+              </p>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    function togglePwd(id, btn){
+      const el = document.getElementById(id);
+      if (!el) return;
+      const now = el.type === 'password' ? 'text' : 'password';
+      el.type = now;
+      btn.textContent = now === 'password' ? 'Show' : 'Hide';
+    }
+  </script>
+</body>
+</html>

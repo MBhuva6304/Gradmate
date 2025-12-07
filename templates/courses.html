@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Courses{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+  <h1 class="text-2xl font-semibold text-slate-900 mb-6">Courses</h1>
+
+  <!-- Filters row -->
+<form id="filters-form" method="get" action="{% url 'courses' %}"
+class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+
+<!-- Level -->
+<div>
+<label class="sr-only" for="level">Level</label>
+<select id="level"
+      name="level"
+      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+>
+{% for value, label in level_choices %}
+  <option value="{{ value }}"
+          {% if value == selected_level %}selected{% endif %}>
+    {{ label }}
+  </option>
+{% endfor %}
+</select>
+</div>
+
+<!-- Credits -->
+<div>
+<label class="sr-only" for="credits">Credits</label>
+<select id="credits"
+      name="credits"
+      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+>
+{% for value, label in credit_choices %}
+  <option value="{{ value }}"
+          {% if value == selected_credits %}selected{% endif %}>
+    {{ label }}
+  </option>
+{% endfor %}
+</select>
+</div>
+
+<!-- Fulfillment (tags) -->
+<div>
+<label class="sr-only" for="tag">Fulfillment</label>
+<select id="tag"
+      name="tag"
+      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+>
+{% for value, label in fulfillment_choices %}
+  <option value="{{ value }}"
+          {% if value == selected_tag %}selected{% endif %}>
+    {{ label }}
+  </option>
+{% endfor %}
+</select>
+</div>
+</form>
+
+
+  <p class="text-xs text-slate-500 mb-2">{{ courses|length }} results</p>
+
+  <!-- Courses grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    {% for c in courses %}
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-4 flex flex-col justify-between">
+        <div>
+          <p class="text-sm font-semibold text-slate-900">
+            {{ c.code }} ({{ c.credits }})
+          </p>
+          <p class="mt-1 text-sm text-slate-700">
+            {{ c.title }}
+          </p>
+
+          <!-- tags row (only fulfillment tags) -->
+          <div class="mt-3 flex flex-wrap gap-2">
+            {% for t in c.tags.all %}
+              <span class="px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-700">
+                {{ t.name }}
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Details button -->
+        <div class="mt-4">
+          <a
+            href="{% url 'course_detail' c.id %}?partial=1"
+            data-course-url="{% url 'course_detail' c.id %}?partial=1"
+            class="inline-flex items-center justify-center rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700"
+          >
+            Details
+          </a>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-sm text-slate-600">No courses found for your program / catalog year.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Slide-over panel backdrop -->
+<div id="course-detail-backdrop"
+     class="hidden fixed inset-0 bg-black/30 z-40"></div>
+
+<!-- Slide-over panel -->
+<div id="course-detail-panel"
+     class="hidden fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-xl border-l border-slate-200 z-50">
+  <div class="flex flex-col h-full">
+    <!-- Header WITHOUT close button (close is inside modal partial instead) -->
+    <div class="flex items-center px-5 py-3 border-b border-slate-200">
+      <h2 class="text-sm font-semibold text-slate-900">
+        Course details
+      </h2>
+    </div>
+
+    <div id="course-detail-content" class="flex-1 overflow-y-auto px-5 py-4 text-sm text-slate-800">
+      <!-- modal body gets injected here -->
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // --- Filters auto-submit on change ---
+    const filtersForm = document.getElementById("filters-form");
+    if (filtersForm) {
+      filtersForm.addEventListener("change", function () {
+        filtersForm.submit();
+      });
+    }
+
+    // --- Slide-over panel for course details ---
+    const backdrop = document.getElementById("course-detail-backdrop");
+    const panel = document.getElementById("course-detail-panel");
+    const panelContent = document.getElementById("course-detail-content");
+
+    function openPanelWithUrl(url) {
+      if (!panel || !panelContent || !backdrop) return;
+
+      fetch(url, { headers: { "X-Requested-With": "fetch" } })
+        .then(response => response.text())
+        .then(html => {
+          panelContent.innerHTML = html;
+          panel.classList.remove("hidden");
+          backdrop.classList.remove("hidden");
+        })
+        .catch(err => {
+          console.error("Error loading course detail:", err);
+        });
+    }
+
+    // Attach click handlers to all Details links
+    document.querySelectorAll("[data-course-url]").forEach(link => {
+      link.addEventListener("click", function (event) {
+        event.preventDefault();
+        const url = this.getAttribute("data-course-url");
+        if (url) {
+          openPanelWithUrl(url);
+        }
+      });
+    });
+
+    function closePanel() {
+      if (!panel || !backdrop) return;
+      panel.classList.add("hidden");
+      backdrop.classList.add("hidden");
+      panelContent.innerHTML = "";
+    }
+
+    // Close by clicking on backdrop
+    if (backdrop) {
+      backdrop.addEventListener("click", closePanel);
+    }
+
+    // Also let the inner modal close button (inside the partial) close it
+    document.addEventListener("click", function (e) {
+      if (e.target && e.target.id === "course-detail-close") {
+        e.preventDefault();
+        closePanel();
+      }
+    });
+  });
+</script>
+{% endblock %}

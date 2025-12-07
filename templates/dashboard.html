@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard · Gradmate{% endblock %}
+
+{% block content %}
+<!-- Top heading (inside main, below global search bar) -->
+<div class="mb-4">
+  <h1 class="text-xl font-semibold">Degree Progress</h1>
+  <p class="text-sm text-slate-600">
+    Current term: {{ current_term }} · Estimated graduation: {{ grad_term }}
+  </p>
+</div>
+
+{% if req_missing %}
+  <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4">
+    <strong>Setup needed:</strong>
+    No program requirements found for
+    <em>{{ profile.get_program_display }} ({{ profile.catalog_year }})</em>.
+    Go to
+    <a class="underline" href="/admin/users/programrequirement/add/">Admin → Program requirements</a>
+    and add required courses.
+  </div>
+{% endif %}
+
+<!-- ========== TOP ROW: Progress / Categories / Alerts ========== -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+
+  <!-- Credits Progress -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-sm font-semibold">Credits Progress</h2>
+        <p class="text-xs text-slate-500">Goal: {{ target_credits }} units</p>
+      </div>
+      <span class="text-xs text-slate-500">Current term: {{ current_term }}</span>
+    </div>
+
+    <div class="flex items-center gap-6">
+      <!-- Donut -->
+      <div class="relative h-32 w-32">
+        <div class="h-32 w-32 rounded-full"
+             style="
+               background:
+                 radial-gradient(circle closest-side, white 70%, transparent 0 99.9%, white 0),
+                 conic-gradient(#4f46e5 {{ progress_percent }}%, #e5e7eb 0);
+             ">
+        </div>
+        <div class="absolute inset-0 grid place-items-center">
+          <div class="text-center">
+            <div class="text-xl font-semibold">{{ progress_percent }}%</div>
+            <div class="text-[11px] text-slate-500">toward {{ target_credits }} units</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="flex-1 space-y-2 text-xs">
+        <div class="flex justify-between">
+          <span class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-blue-600 inline-block"></span>
+            Completed
+          </span>
+          <span class="font-medium">{{ completed_credits }} units</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-amber-500 inline-block"></span>
+            In Progress
+          </span>
+          <span class="font-medium">{{ in_progress_credits }} units</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-slate-300 inline-block"></span>
+            Remaining
+          </span>
+          <span class="font-medium">{{ remaining_credits }} units</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Requirements by Category (placeholder buckets) -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+    <h2 class="text-sm font-semibold mb-1">Requirements by Category</h2>
+    <p class="text-xs text-slate-500 mb-4">
+      Blue = completed · Amber = in progress
+    </p>
+
+    <div class="space-y-3 text-xs">
+      <div>
+        <div class="flex justify-between mb-1">
+          <span>Major Core</span>
+          <span class="text-slate-500">{{ completed_credits }} / {{ target_credits }}</span>
+        </div>
+        <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div class="h-2 bg-blue-600" style="width: {{ progress_percent }}%;"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between mb-1">
+          <span>Math &amp; Science</span>
+          <span class="text-slate-500">8 / 24</span>
+        </div>
+        <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div class="h-2 bg-blue-600" style="width: 33%;"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between mb-1">
+          <span>General Education</span>
+          <span class="text-slate-500">17 / 44</span>
+        </div>
+        <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div class="h-2 bg-blue-600" style="width: 40%;"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between mb-1">
+          <span>Upper-Div Electives</span>
+          <span class="text-slate-500">5 / 14</span>
+        </div>
+        <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div class="h-2 bg-blue-600" style="width: 35%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts & Messages -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3">
+    <h2 class="text-sm font-semibold mb-2">Alerts &amp; Messages</h2>
+
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-900 flex gap-2">
+      <span>⚠️</span>
+      <div>
+        <p class="font-semibold">You might be short on upper-division electives.</p>
+        <p>Make sure your remaining plan includes enough upper-division units.</p>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3 text-xs text-indigo-900 flex gap-2">
+      <span>🗓</span>
+      <div>
+        <p class="font-semibold">Registration reminder</p>
+        <p>Next registration window is before {{ next_term }}. Aim for at least {{ next_credits|default:12 }} units.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== BOTTOM ROW: Plan + Remaining Courses ========== -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <!-- Next Term Plan -->
+  <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+    <div class="flex items-center justify-between mb-2">
+      <div>
+        <h2 class="text-sm font-semibold">{{ next_term }} Plan</h2>
+        <p class="text-xs text-slate-500">Draft — {{ next_credits }} units</p>
+      </div>
+    </div>
+
+    {% if next_list %}
+      <div class="grid sm:grid-cols-2 gap-3 mt-2">
+        {% for c in next_list %}
+          <article class="rounded-2xl border border-slate-200 px-4 py-3 bg-slate-50 hover:bg-white transition text-sm">
+            <div class="flex justify-between mb-1">
+              <h3 class="font-medium">{{ c.code }} — {{ c.title }}</h3>
+              <span class="text-xs text-slate-500">{{ c.credits }} units</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-2">
+              Suggested from your remaining requirements.
+            </p>
+            <span class="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-[2px] text-[10px] font-medium">
+              Fulfills: Major Requirement
+            </span>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-sm text-slate-500 mt-2">
+        No courses recommended yet. Once more prerequisites are completed, we’ll suggest a draft plan here.
+      </p>
+    {% endif %}
+  </div>
+
+  <!-- Remaining Courses -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-sm font-semibold">Remaining Courses</h2>
+      <span class="text-xs text-slate-500">
+        {{ remaining|length }} course{{ remaining|length|pluralize }}
+      </span>
+    </div>
+
+    <div class="border-t border-slate-100 pt-2 max-h-80 overflow-auto text-sm">
+      {% if remaining %}
+        <ul class="divide-y divide-slate-100">
+          {% for c in remaining %}
+            <li class="py-2 flex justify-between">
+              <span>{{ c.code }} — {{ c.title }}</span>
+              <span class="text-xs text-slate-500">{{ c.credits }} u</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-sm text-slate-500">All required courses completed 🎉</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

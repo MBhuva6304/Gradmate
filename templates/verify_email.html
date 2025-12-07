@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Verify your email</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-6">
+  <div class="w-full max-w-xl bg-white rounded-2xl shadow-lg p-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xl font-bold">G</div>
+      <h1 class="text-2xl font-extrabold text-gray-900">Verify your email</h1>
+    </div>
+
+    {% if messages %}
+      <ul class="space-y-2 mb-4">
+        {% for m in messages %}
+          <li class="text-sm {% if m.tags and 'error' in m.tags %}text-red-600{% else %}text-green-600{% endif %}">
+            {{ m }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <p class="text-gray-700 mb-6">
+      We sent a 6-digit code to <span class="font-semibold">{{ email }}</span>. Enter it below to finish creating your account.
+    </p>
+
+    <!-- Post to verify-signup; only the code field is required -->
+    <form method="post" action="{% url 'verify-signup' %}" class="space-y-4">
+      {% csrf_token %}
+
+      <label class="block text-sm font-medium text-gray-700">6-digit code</label>
+      {{ form.code }}
+
+      {% if form.code.errors %}
+        <p class="text-sm text-red-600">{{ form.code.errors|striptags }}</p>
+      {% endif %}
+
+      <button type="submit"
+              class="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
+        Verify
+      </button>
+    </form>
+
+    <div class="mt-6 flex items-center justify-between text-sm">
+      <a href="{% url 'verify-signup' %}?resend=1" class="text-blue-600 hover:underline">Resend code</a>
+      <div class="space-x-4">
+        <a href="{% url 'login' %}" class="text-gray-600 hover:underline">Back to login</a>
+        <a href="{% url 'signup' %}" class="text-gray-600 hover:underline">Start over</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

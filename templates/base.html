@@ -1,0 +1,142 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>{% block page_title %}Gradmate{% endblock %}</title>
+
+  <!-- Tailwind (CDN for dev) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+  <div class="min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-white border-r border-slate-200 p-6 rounded-r-3xl shadow-sm">
+      <div class="flex items-center gap-3 mb-8">
+        <div class="h-12 w-12 rounded-2xl bg-indigo-600 text-white grid place-items-center font-bold select-none">G</div>
+        <span class="text-2xl font-semibold select-none">Gradmate</span>
+      </div>
+
+      {% with current=request.resolver_match.url_name %}
+      <nav aria-label="Main" class="space-y-2">
+        <ul class="space-y-2">
+          <li>
+            <a href="{% url 'dashboard' %}"
+               class="block px-4 py-2 rounded-2xl hover:bg-slate-100 {% if current == 'dashboard' %}bg-slate-200 font-semibold{% endif %}">
+               🏠 <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'degree_plan' %}"
+               class="block px-4 py-2 rounded-2xl hover:bg-slate-100 {% if current == 'degree_plan' %}bg-slate-200 font-semibold{% endif %}">
+               🧭 <span>Degree Plan</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'courses' %}"
+               class="block px-4 py-2 rounded-2xl hover:bg-slate-100 {% if current == 'courses' %}bg-slate-200 font-semibold{% endif %}">
+               📚 <span>Courses</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'audit' %}"
+               class="block px-4 py-2 rounded-2xl hover:bg-slate-100 {% if current == 'audit' %}bg-slate-200 font-semibold{% endif %}">
+               📄 <span>Audit</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'settings' %}"
+               class="block px-4 py-2 rounded-2xl hover:bg-slate-100 {% if current == 'settings' %}bg-slate-200 font-semibold{% endif %}">
+               ⚙️ <span>Settings</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      {% endwith %}
+
+      <div class="mt-12 text-sm text-slate-500 select-none">
+        {% if profile %}{{ profile.get_program_display }} — Catalog {{ profile.catalog_year }}{% endif %}
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-6 relative z-10">
+      <!-- Top bar -->
+      <div class="flex items-center gap-3 mb-6">
+        <!-- GLOBAL SEARCH: only search field; used for live filtering on Courses page -->
+        <form action="{% url 'courses' %}" method="get" role="search" class="flex-1">
+          <input
+            id="global-search"
+            name="q"
+            type="search"
+            placeholder="Search…"
+            value="{{ request.GET.q|default:'' }}"
+            class="w-full rounded-xl border border-slate-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+            autocomplete="off"
+            autofocus
+          >
+        </form>
+
+        <!-- Logout (POST) -->
+        <form action="{% url 'logout' %}" method="post" class="inline">
+          {% csrf_token %}
+          <button type="submit" class="inline-flex items-center rounded-xl border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">
+            Logout
+          </button>
+        </form>
+
+        <!-- Avatar → Settings -->
+        <a href="{% url 'settings' %}" title="Settings"
+           class="h-9 w-9 rounded-full bg-slate-800 text-white grid place-items-center">
+          {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
+        </a>
+      </div>
+
+      <!-- Flash messages -->
+      {% if messages %}
+        <div class="space-y-2 mb-4">
+          {% for m in messages %}
+            <div class="rounded-lg px-4 py-2 text-sm
+              {% if m.tags == 'success' %} bg-green-50 text-green-800 border border-green-200
+              {% elif m.tags == 'error' %} bg-red-50 text-red-800 border border-red-200
+              {% else %} bg-slate-50 text-slate-800 border border-slate-200 {% endif %}">
+              {{ m }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% block extra_js %}
+  <script>
+  (function () {
+    // Only auto-focus when you're on the Courses page
+    const COURSES_PATH = "{% url 'courses' %}";
+    const input = document.getElementById("global-search");
+    if (!input) return;
+    if (!location.pathname.startsWith(COURSES_PATH)) return;
+
+    function focusSearch() {
+      try {
+        input.focus();
+        const len = input.value.length;
+        input.setSelectionRange(len, len); // caret to end so you can keep typing
+      } catch (e) {}
+    }
+
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      setTimeout(focusSearch, 0);
+    } else {
+      document.addEventListener("DOMContentLoaded", focusSearch);
+    }
+  })();
+  </script>
+  {% endblock %}
+</body>
+</html>
