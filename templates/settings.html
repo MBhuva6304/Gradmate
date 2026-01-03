@@ -2,100 +2,213 @@
 {% block page_title %}Settings — Gradmate{% endblock %}
 
 {% block content %}
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Profile card -->
-    <section class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200">
-      <div class="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <h2 class="font-semibold">Profile</h2>
-        <div class="space-x-2">
-          <button id="editBtn" type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm hover:bg-slate-100">Edit</button>
-          <button id="saveBtn" form="profileForm" disabled
-                  class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm opacity-50 cursor-not-allowed">
-            Save
+  <!-- This wrapper makes ONLY the settings page scroll, not the whole layout -->
+  <div class="overflow-y-auto" style="max-height: calc(100vh - 96px);">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Profile card -->
+      <section class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200">
+        <div class="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+          <h2 class="font-semibold">Profile</h2>
+          <div class="space-x-2">
+            <button
+              id="editBtn"
+              type="button"
+              class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm hover:bg-slate-100"
+            >
+              Edit
+            </button>
+            <button
+              id="saveBtn"
+              form="profileForm"
+              disabled
+              class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm opacity-50 cursor-not-allowed hover:bg-indigo-700"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+
+        <form
+          id="profileForm"
+          method="post"
+          class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
+          {% csrf_token %}
+          <input type="hidden" name="form" value="profile"/>
+
+          <!-- Full name -->
+          <div>
+            <label class="block text-sm text-slate-600 mb-1">Full name</label>
+            <input
+              id="full_name"
+              name="full_name"
+              value="{{ profile_form.full_name.value|default_if_none:'' }}"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2"
+              disabled
+            >
+          </div>
+
+          <!-- Email (locked) -->
+          <div>
+            <label class="block text-sm text-slate-600 mb-1">Email</label>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              value="{{ profile_form.email.value|default_if_none:'' }}"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-slate-100"
+              disabled
+            >
+            <p class="text-xs text-slate-500 mt-1">
+              Email is tied to your account and can’t be changed here.
+            </p>
+          </div>
+
+          <!-- Catalog year -->
+          <div>
+            <label class="block text-sm text-slate-600 mb-1">Catalog year</label>
+            <input
+              id="catalog_year"
+              type="number"
+              name="catalog_year"
+              value="{{ profile_form.catalog_year.value|default:profile.catalog_year }}"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2"
+              disabled
+            >
+          </div>
+
+          <!-- Major / Program -->
+          <div>
+            <label class="block text-sm text-slate-600 mb-1">Major</label>
+            <select
+              id="program"
+              name="program"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2"
+              disabled
+            >
+              {% for val, label in profile_form.fields.program.choices %}
+                <option
+                  value="{{ val }}"
+                  {% if profile_form.program.value == val or profile.program == val %}
+                    selected
+                  {% endif %}
+                >
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {% if profile_form.errors %}
+            <div class="md:col-span-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+              {{ profile_form.errors }}
+            </div>
+          {% endif %}
+        </form>
+      </section>
+
+      <!-- Security card -->
+      <section class="bg-white rounded-2xl shadow-sm border border-slate-200">
+        <div class="border-b border-slate-200 px-6 py-4">
+          <h2 class="font-semibold">Security</h2>
+          <p class="text-sm text-slate-600">Update your password.</p>
+        </div>
+
+        <form method="post" class="p-6 space-y-4">
+          {% csrf_token %}
+          <input type="hidden" name="form" value="password"/>
+
+          <!-- Current password -->
+          <div>
+            <label class="block text-sm text-slate-600 mb-1">Current password</label>
+            <input
+              type="password"
+              name="old_password"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2"
+              required
+            >
+          </div>
+
+          <!-- New password -->
+          <div>
+            <label class="block text-sm text-slate-600 mb-1">New password</label>
+            <input
+              type="password"
+              name="new_password1"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2"
+              required
+            >
+          </div>
+
+          <!-- Confirm new password -->
+          <div>
+            <label class="block text-sm text-slate-600 mb-1">Confirm new password</label>
+            <input
+              type="password"
+              name="new_password2"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2"
+              required
+            >
+          </div>
+
+          {% if pwd_form.errors %}
+            <div class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+              {{ pwd_form.errors }}
+            </div>
+          {% endif %}
+
+          <button
+            class="w-full rounded-lg bg-indigo-600 text-white px-4 py-2 hover:bg-indigo-700"
+          >
+            Change Password
           </button>
-        </div>
-      </div>
+        </form>
+      </section>
 
-      <form id="profileForm" method="post" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {% csrf_token %}
-        <input type="hidden" name="form" value="profile"/>
-        <div>
-          <label class="block text-sm text-slate-600 mb-1">Full name</label>
-          <input id="full_name" name="full_name" value="{{ profile_form.full_name.value|default_if_none:'' }}"
-                 class="w-full rounded-lg border border-slate-300 px-3 py-2" disabled>
-        </div>
-
-        <!-- Email (locked) -->
-        <div>
-          <label class="block text-sm text-slate-600 mb-1">Email</label>
-          <input id="email" type="email" name="email"
-                 value="{{ profile_form.email.value|default_if_none:'' }}"
-                 class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-slate-100" disabled>
-          <p class="text-xs text-slate-500 mt-1">Email is tied to your account and can’t be changed here.</p>
+      <!-- Completed courses card -->
+      <section class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200">
+        <div class="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+          <h2 class="font-semibold">Completed courses</h2>
+          {% if completed_courses %}
+            <span class="text-sm text-slate-500">
+              {{ completed_courses|length }} course{{ completed_courses|length|pluralize }}
+            </span>
+          {% endif %}
         </div>
 
-        <div>
-          <label class="block text-sm text-slate-600 mb-1">Catalog year</label>
-          <input id="catalog_year" type="number" name="catalog_year"
-                 value="{{ profile_form.catalog_year.value|default:profile.catalog_year }}"
-                 class="w-full rounded-lg border border-slate-300 px-3 py-2" disabled>
+        <div class="p-6">
+          {% if completed_courses %}
+            <ul class="divide-y divide-slate-200">
+              {% for cc in completed_courses %}
+                <li class="py-3">
+                  <p class="font-medium">
+                    {{ cc.course.code }} — {{ cc.course.title }}
+                  </p>
+                  <p class="text-sm text-slate-500">
+                    {% if cc.course.credits %}
+                      {{ cc.course.credits }} credits
+                    {% endif %}
+                  </p>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-sm text-slate-500">
+              You haven't marked any courses as completed yet.
+            </p>
+          {% endif %}
         </div>
-
-        <div>
-          <label class="block text-sm text-slate-600 mb-1">Major</label>
-          <select id="program" name="program" class="w-full rounded-lg border border-slate-300 px-3 py-2" disabled>
-            {% for val,label in profile_form.fields.program.choices %}
-              <option value="{{ val }}" {% if profile_form.program.value == val or profile.program == val %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        {% if profile_form.errors %}
-          <div class="md:col-span-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
-            {{ profile_form.errors }}
-          </div>
-        {% endif %}
-      </form>
-    </section>
-
-    <!-- Security card -->
-    <section class="bg-white rounded-2xl shadow-sm border border-slate-200">
-      <div class="border-b border-slate-200 px-6 py-4">
-        <h2 class="font-semibold">Security</h2>
-        <p class="text-sm text-slate-600">Update your password.</p>
-      </div>
-      <form method="post" class="p-6 space-y-4">
-        {% csrf_token %}
-        <input type="hidden" name="form" value="password"/>
-        <div>
-          <label class="block text-sm text-slate-600 mb-1">Current password</label>
-          <input type="password" name="old_password" class="w-full rounded-lg border border-slate-300 px-3 py-2" required>
-        </div>
-        <div>
-          <label class="block text-sm text-slate-600 mb-1">New password</label>
-          <input type="password" name="new_password1" class="w-full rounded-lg border border-slate-300 px-3 py-2" required>
-        </div>
-        <div>
-          <label class="block text-sm text-slate-600 mb-1">Confirm new password</label>
-          <input type="password" name="new_password2" class="w-full rounded-lg border border-slate-300 px-3 py-2" required>
-        </div>
-        {% if pwd_form.errors %}
-          <div class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
-            {{ pwd_form.errors }}
-          </div>
-        {% endif %}
-        <button class="w-full rounded-lg bg-indigo-600 text-white px-4 py-2 hover:bg-indigo-700">Change Password</button>
-      </form>
-    </section>
+      </section>
+    </div>
   </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
   // fields we toggle (email intentionally excluded)
-  const fieldIds = ['full_name','catalog_year','program'];
-  const editBtn  = document.getElementById('editBtn');
-  const saveBtn  = document.getElementById('saveBtn');
+  const fieldIds = ["full_name", "catalog_year", "program"];
+  const editBtn  = document.getElementById("editBtn");
+  const saveBtn  = document.getElementById("saveBtn");
   const fields   = fieldIds.map(id => document.getElementById(id)).filter(Boolean);
 
   let editing = false;
@@ -103,30 +216,44 @@
 
   function setEditing(on) {
     editing = on;
-    fields.forEach(el => { el.disabled = !on; });
-    saveBtn.disabled = true;
-    saveBtn.classList.toggle('opacity-50', true);
-    saveBtn.classList.toggle('cursor-not-allowed', true);
+    fields.forEach(el => {
+      el.disabled = !on;
+    });
 
     if (on) {
+      // Enable + remove faded styles as soon as Edit is clicked
+      saveBtn.disabled = false;
+      saveBtn.classList.remove("opacity-50", "cursor-not-allowed");
+
+      // store initial values (for optional dirty check)
       initial = {};
-      fields.forEach(el => { initial[el.id] = (el.value ?? ''); });
+      fields.forEach(el => {
+        initial[el.id] = el.value ?? "";
+      });
+    } else {
+      // Back to disabled + faded when leaving edit mode
+      saveBtn.disabled = true;
+      if (!saveBtn.classList.contains("opacity-50")) {
+        saveBtn.classList.add("opacity-50", "cursor-not-allowed");
+      }
     }
   }
 
   function checkDirty() {
     if (!editing) return;
-    const changed = fields.some(el => (el.value ?? '') !== initial[el.id]);
-    saveBtn.disabled = !changed;
-    saveBtn.classList.toggle('opacity-50', !changed);
-    saveBtn.classList.toggle('cursor-not-allowed', !changed);
+    // optional dirty-check logic here
   }
 
+  // initial state: not editing
   setEditing(false);
-  editBtn?.addEventListener('click', () => setEditing(true));
+
+  if (editBtn) {
+    editBtn.addEventListener("click", () => setEditing(true));
+  }
+
   fields.forEach(el => {
-    el.addEventListener('input', checkDirty);
-    el.addEventListener('change', checkDirty);
+    el.addEventListener("input", checkDirty);
+    el.addEventListener("change", checkDirty);
   });
 </script>
 {% endblock %}

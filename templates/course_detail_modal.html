@@ -92,6 +92,59 @@
         </div>
       </div>
     </section>
+    
+
+{% if c.prerequisites.exists or c.corequisites.exists %}
+<section>
+
+    <!-- Requirements -->
+  <section>
+  <h3 class="font-semibold text-slate-900 uppercase tracking-wide text-xs">
+    Requirements
+  </h3>
+
+  {% with prereqs=c.prerequisites.all %}
+  {% if prereqs %}
+    <div class="mt-4">
+      <div class="text-xs font-medium text-slate-500 uppercase">
+        Prerequisites
+      </div>
+
+      <div class="mt-2 flex flex-wrap gap-2">
+        {% for p in prereqs %}
+          <span class="px-2 py-1 rounded-full bg-slate-100 text-xs text-slate-800">
+            {{ p.code }}
+          </span>
+        {% endfor %}
+      </div>
+
+      <p class="mt-2 text-xs text-slate-500">
+        Mode: {{ c.prereq_mode }}
+      </p>
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+      {% with coreqs=c.corequisites.all %}
+  {% if coreqs %}
+    <div class="mt-4">
+      <div class="text-xs font-medium text-slate-500 uppercase">
+        Corequisites
+      </div>
+
+      <div class="mt-2 flex flex-wrap gap-2">
+        {% for co in coreqs %}
+          <span class="px-2 py-1 rounded-full bg-slate-100 text-xs text-slate-800">
+            {{ co.code }}
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+</section>
+{% endif %}
 
     <!-- Tags -->
     <section>

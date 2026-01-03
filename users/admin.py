@@ -47,10 +47,7 @@ class TagAdmin(admin.ModelAdmin):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Course admin — EXACT order you asked:
-# program, catalog year, code, subject, title, credits, level,
-# description, prerequisites, section, tags,
-# Scheduling (optional), Prerequisite groups (inline)
+# Course admin
 # ──────────────────────────────────────────────────────────────────────────────
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
@@ -62,10 +59,8 @@ class CourseAdmin(admin.ModelAdmin):
     list_filter = ("program", "catalog_year", "prereq_mode", "tags")
     search_fields = ("code", "subject", "title", "description")
 
-    # keep the dual-list widgets you already use
     filter_horizontal = ("tags", "prerequisites", "offered_in")
 
-    # make long text fields compact
     formfield_overrides = {
         models.TextField: {
             "widget": admin.widgets.AdminTextareaWidget(attrs={"rows": 3})
@@ -75,21 +70,17 @@ class CourseAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Course info", {
             "fields": (
-                # 1) program, catalog_year, code, subject
                 "program",
                 "catalog_year",
                 "code",
                 "subject",
-                # 2) title, credits, level
                 "title",
                 "credits",
                 "level",
-                # 3) description
                 "description",
-                # 4) prerequisites (with mode kept here; remove if not needed)
                 "prerequisites",
+                "corequisites",
                 "prereq_mode",
-                # 5) section, tags (tags right after section)
                 "section",
                 "tags",
             ),
@@ -100,16 +91,15 @@ class CourseAdmin(admin.ModelAdmin):
         }),
     )
 
-    # 6) Prerequisite groups appear at the very bottom
     inlines = [PrerequisiteGroupInline]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# CompletedClass admin
+# CompletedClass admin  (no grade column)
 # ──────────────────────────────────────────────────────────────────────────────
 @admin.register(CompletedClass)
 class CompletedClassAdmin(admin.ModelAdmin):
-    list_display = ("profile", "course", "term", "grade")
+    list_display = ("profile", "course", "term")
     list_filter = ("course__program", "course__catalog_year")
     search_fields = ("profile__user__email", "course__code", "course__title")
 

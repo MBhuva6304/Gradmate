@@ -32,6 +32,8 @@ from .models import (
     ProgramRequirement,
     Course,
     # Tag is optional; we try to use it but gracefully fall back if absent
+    # 👇 add your completed-class model here
+    CompletedClass,
 )
 
 # ----------------------------------------------------------------------
@@ -261,6 +263,14 @@ def settings_page(request):
         data=(request.POST if submit_kind == "password" else None)
     )
 
+    # 🔹 completed classes for this profile
+    completed_courses = (
+        CompletedClass.objects
+        .filter(profile=profile)
+        .select_related("course")
+        .order_by("course__subject", "course__code")
+    )
+
     if request.method == "POST":
         if submit_kind == "profile" and profile_form.is_valid():
             profile_form.save(request.user, profile)
@@ -277,6 +287,7 @@ def settings_page(request):
         "profile_form": profile_form,
         "pwd_form": pwd_form,
         "profile": profile,
+        "completed_courses": completed_courses,
     })
 
 
@@ -340,7 +351,7 @@ def audit(request):
     Simple wrapper view for the degree audit page.
     It just renders templates/audit.html.
     """
-    return render(request, "audit.html")
+    return render(request, "audit.html", {"profile": request.profile})
 
 
 # ----------------------------------------------------------------------
