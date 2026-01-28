@@ -10,6 +10,7 @@ from .models import (
     CompletedClass,
     Term,
     ProgramRequirement,
+    ProgramRequirementGroup,
     EmailOTP,
     PrerequisiteGroup,
 )
@@ -22,6 +23,13 @@ class PrerequisiteGroupInline(admin.StackedInline):
     extra = 0
     filter_horizontal = ("options",)
     fields = ("name", "min_required", "options")
+
+class ProgramRequirementGroupInline(admin.StackedInline):
+    model = ProgramRequirementGroup
+    extra = 1
+    filter_horizontal = ("courses",)
+    fields = ("name", "min_required", "courses")
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -121,7 +129,7 @@ class TermAdmin(admin.ModelAdmin):
 class ProgramRequirementAdmin(admin.ModelAdmin):
     list_display = ("program", "catalog_year", "required_credits")
     list_filter = ("program", "catalog_year")
-    filter_horizontal = ("courses",)
+    inlines = [ProgramRequirementGroupInline]
 
 
 # ──────────────────────────────────────────────────────────────────────────────

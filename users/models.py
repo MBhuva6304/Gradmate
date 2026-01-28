@@ -107,7 +107,6 @@ class StudentProfile(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
     )
 
-    # free-text completions (comma/space separated codes)
     completed_codes = models.TextField(blank=True, default="")
 
     program = models.CharField(max_length=32, choices=PROGRAM_CHOICES)
@@ -116,7 +115,6 @@ class StudentProfile(models.Model):
         help_text="e.g., 2024",
     )
 
-    # planning knobs
     avg_credits_per_term = models.PositiveIntegerField(default=15)
     max_credits_next_term = models.PositiveIntegerField(default=15)
 
@@ -124,14 +122,12 @@ class StudentProfile(models.Model):
         who = self.user.get_full_name() or self.user.email or self.user.username
         return f"{who} — {self.get_program_display()} ({self.catalog_year})"
 
-    # ----- helpers -----
     def _parsed_completed_codes(self) -> set[str]:
         raw = (self.completed_codes or "").upper()
         parts = [p.strip() for p in re.split(r"[,\s]+", raw) if p.strip()]
         return set(parts)
 
     def completed_courses_qs(self):
-        """Catalog Course rows completed by this student (by code OR CompletedClass)."""
         codes = set(
             CompletedClass.objects.filter(profile=self)
             .values_list("course__code", flat=True)
@@ -141,25 +137,27 @@ class StudentProfile(models.Model):
         )
 
     def get_requirement(self):
-        # Safe helper: returns None if not set up yet
         return ProgramRequirement.objects.filter(
             program=self.program, catalog_year=self.catalog_year
         ).first()
 
+    # ✅ OPTION B: courses come from ProgramRequirementGroup
     def remaining_required_courses(self):
         req = self.get_requirement()
         if not req:
-            # No requirement configured yet → return empty queryset
             return Course.objects.none()
-        done_ids = list(self.completed_courses_qs().values_list("id", flat=True))
-        return req.courses.exclude(id__in=done_ids)
+
+        done_ids = set(self.completed_courses_qs().values_list("id", flat=True))
+
+        required_ids = set(
+            Course.objects.filter(
+                programrequirementgroup__requirement=req
+            ).values_list("id", flat=True)
+        )
+
+        return Course.objects.filter(id__in=(required_ids - done_ids))
 
     def prerequisites_satisfied(self, course):
-        """
-        True if base prereqs (Course.prerequisites + prereq_mode) are met
-        AND every PrerequisiteGroup linked to this course is satisfied.
-        """
-        # ---- base prereqs (ALL / ANY) ----
         prereq_ids = set(course.prerequisites.values_list("id", flat=True))
         completed_ids = set(self.completed_courses_qs().values_list("id", flat=True))
 
@@ -167,16 +165,14 @@ class StudentProfile(models.Model):
         if prereq_ids:
             if course.prereq_mode == "ANY":
                 base_ok = len(prereq_ids & completed_ids) >= 1
-            else:  # "ALL"
+            else:
                 base_ok = prereq_ids.issubset(completed_ids)
         if not base_ok:
             return False
 
-        # ---- grouped alternatives (PrerequisiteGroup) ----
         for grp in course.prereq_groups.all():
             option_ids = set(grp.options.values_list("id", flat=True))
             if not option_ids:
-                # empty group = ignore
                 continue
             if len(option_ids & completed_ids) < grp.min_required:
                 return False
@@ -187,7 +183,10 @@ class StudentProfile(models.Model):
         next_term = next_term or Term.from_date().next()
         remaining = list(self.remaining_required_courses())
         eligible = [c for c in remaining if self.prerequisites_satisfied(c)]
-        offered = [c for c in eligible if (c.offered_in.count() == 0 or next_term in c.offered_in.all())]
+        offered = [
+            c for c in eligible
+            if (c.offered_in.count() == 0 or next_term in c.offered_in.all())
+        ]
         total = 0.0
         take = []
         for c in sorted(offered, key=lambda x: x.code):
@@ -200,12 +199,15 @@ class StudentProfile(models.Model):
         req = self.get_requirement()
         completed_credits = sum(float(c.credits) for c in self.completed_courses_qs())
 
-        # Fallback target if requirement not configured yet
         base_target = 120
         if req:
+            req_courses = Course.objects.filter(
+                programrequirementgroup__requirement=req
+            ).distinct()
+
             base_target = max(
                 req.required_credits,
-                sum(float(c.credits) for c in req.courses.all())
+                sum(float(c.credits) for c in req_courses)
             )
 
         remaining_credits = max(0.0, base_target - completed_credits)
@@ -214,7 +216,6 @@ class StudentProfile(models.Model):
         for _ in range(terms_needed):
             term = term.next()
         return term, remaining_credits, completed_credits, base_target
-
 
 class Tag(models.Model):
     name = models.CharField(max_length=48, unique=True)
@@ -309,7 +310,6 @@ class ProgramRequirement(models.Model):
         validators=[MinValueValidator(2000), MaxValueValidator(2100)]
     )
     required_credits = models.PositiveIntegerField(default=120)
-    courses = models.ManyToManyField(Course, blank=True)
 
     class Meta:
         unique_together = (("program", "catalog_year"),)
@@ -317,6 +317,32 @@ class ProgramRequirement(models.Model):
     def __str__(self):
         return f"{self.program} {self.catalog_year} Requirements"
 
+class ProgramRequirementGroup(models.Model):
+    requirement = models.ForeignKey(
+        ProgramRequirement,
+        on_delete=models.CASCADE,
+        related_name="groups",
+    )
+
+    name = models.CharField(
+        max_length=80,
+        help_text="e.g., Humanities, Math Core, Electives"
+    )
+
+    min_required = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text="How many courses must be completed from this group"
+    )
+
+    courses = models.ManyToManyField(
+        Course,
+        blank=True,
+        help_text="Courses that belong to this requirement group"
+    )
+
+    def __str__(self):
+        return f"{self.requirement} — {self.name} (need {self.min_required})"
 
 class CompletedClass(models.Model):
     """A catalog course a student has already finished."""
