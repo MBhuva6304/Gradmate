@@ -4,11 +4,11 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.utils import timezone
-from .models import StudentProfile
+
+from .models import StudentProfile, DPRUpload
 
 User = get_user_model()
 
-# Tailwind helper class for inputs
 TAILWIND_INPUT = "w-full rounded-lg border border-slate-300 px-3 py-2"
 
 class EmailAuthenticationForm(AuthenticationForm):
@@ -30,7 +30,6 @@ class OTPForm(forms.Form):
 
 class ProfileSettingsForm(forms.Form):
     full_name = forms.CharField(label="Full name", max_length=150)
-    # Email is displayed but not editable/savable
     email = forms.EmailField(label="Email", disabled=True, required=False)
     catalog_year = forms.IntegerField(label="Catalog year", min_value=2000, max_value=2100)
     program = forms.ChoiceField(label="Major", choices=StudentProfile.PROGRAM_CHOICES)
@@ -45,7 +44,6 @@ class ProfileSettingsForm(forms.Form):
         self.fields["program"].initial = profile.program
 
     def clean_email(self):
-        # Ignore any posted value; keep original.
         return self.initial.get("email")
 
     def save(self, user, profile):
@@ -61,7 +59,6 @@ class ProfileSettingsForm(forms.Form):
         return user, profile
 
 class SignUpForm(UserCreationForm):
-    # Full name + email (styled)
     full_name = forms.CharField(
         label="Full Name",
         max_length=150,
@@ -90,7 +87,6 @@ class SignUpForm(UserCreationForm):
         help_text="Separate codes with commas or spaces.",
     )
 
-    # Program + Catalog Year (styled)
     program = forms.ChoiceField(
         label="Program",
         choices=StudentProfile.PROGRAM_CHOICES,
@@ -110,16 +106,14 @@ class SignUpForm(UserCreationForm):
         }),
     )
 
-    # hidden username; we auto-generate it
     username = forms.CharField(required=False, widget=forms.HiddenInput())
 
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ("email",)  # password1/2 come from the base class
+        fields = ("email",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # style password widgets
         for name in ("password1", "password2"):
             self.fields[name].widget = forms.PasswordInput(attrs={
                 "class": "w-full h-12 rounded-xl border border-gray-300 bg-white px-4 "
@@ -177,3 +171,32 @@ class ProfileSetupForm(forms.ModelForm):
         self.fields["catalog_year"].initial = timezone.localdate().year
         self.fields["avg_credits_per_term"].initial = 15
         self.fields["max_credits_next_term"].initial = 15
+
+
+# ✅ DPR Upload form (this creates the file picker)
+class DPRUploadForm(forms.ModelForm):
+    class Meta:
+        model = DPRUpload
+        fields = ["file"]
+        widgets = {
+            "file": forms.ClearableFileInput(attrs={
+                "accept": "application/pdf",
+                "class": "block w-full text-sm text-slate-700 "
+                         "file:mr-4 file:rounded-xl file:border-0 "
+                         "file:bg-indigo-600 file:px-4 file:py-2 file:text-white "
+                         "hover:file:bg-indigo-700"
+            })
+        }
+
+    def clean_file(self):
+        f = self.cleaned_data["file"]
+        name = (f.name or "").lower()
+
+        if not name.endswith(".pdf"):
+            raise forms.ValidationError("Please upload a PDF file.")
+
+        max_size = 10 * 1024 * 1024  # 10MB
+        if f.size > max_size:
+            raise forms.ValidationError("PDF must be 10MB or smaller.")
+
+        return f

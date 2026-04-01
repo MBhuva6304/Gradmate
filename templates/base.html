@@ -80,6 +80,9 @@
           >
         </form>
 
+        <!-- ✅ Page-specific actions (Dashboard can inject "Add Courses" here) -->
+        {% block topbar_actions %}{% endblock %}
+
         <!-- Logout (POST) -->
         <form action="{% url 'logout' %}" method="post" class="inline">
           {% csrf_token %}

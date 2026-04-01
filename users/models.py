@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.conf import settings
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from datetime import timedelta
 from math import ceil
 from django.utils.text import slugify
@@ -59,6 +59,7 @@ class EmailOTP(models.Model):
 # Terms (SP/SU/FA)
 # =========================
 SEASONS = [("SP", "Spring"), ("SU", "Summer"), ("FA", "Fall")]
+
 
 class Term(models.Model):
     year = models.PositiveIntegerField()
@@ -132,49 +133,145 @@ class StudentProfile(models.Model):
             CompletedClass.objects.filter(profile=self)
             .values_list("course__code", flat=True)
         ) | self._parsed_completed_codes()
+
         return Course.objects.filter(
-            program=self.program, catalog_year=self.catalog_year, code__in=codes
+            program=self.program,
+            catalog_year=self.catalog_year,
+            code__in=codes,
         )
+
+    def completed_course_codes(self) -> set[str]:
+        db_codes = set(
+            CompletedClass.objects.filter(profile=self)
+            .values_list("course__code", flat=True)
+        )
+        return {c.upper() for c in (db_codes | self._parsed_completed_codes())}
+
+    def in_progress_course_codes(self) -> set[str]:
+        return {
+            c.upper()
+            for c in InProgressClass.objects.filter(profile=self)
+            .values_list("course__code", flat=True)
+        }
+
+    def taken_course_codes(self) -> set[str]:
+        return self.completed_course_codes() | self.in_progress_course_codes()
 
     def get_requirement(self):
         return ProgramRequirement.objects.filter(
-            program=self.program, catalog_year=self.catalog_year
+            program=self.program,
+            catalog_year=self.catalog_year,
         ).first()
 
-    # ✅ OPTION B: courses come from ProgramRequirementGroup
     def remaining_required_courses(self):
+        """
+        DPR-aware remaining course list.
+
+        Excludes BOTH:
+        - completed courses
+        - in-progress courses
+
+        IMPORTANT:
+        Exclusion is by COURSE CODE, not by COURSE ID.
+        This avoids duplicate-row problems like:
+        COMP-122 completed row id != COMP-122 block row id
+        """
         req = self.get_requirement()
         if not req:
             return Course.objects.none()
 
-        done_ids = set(self.completed_courses_qs().values_list("id", flat=True))
+        taken_codes = {code.upper() for code in self.taken_course_codes()}
 
-        required_ids = set(
-            Course.objects.filter(
-                programrequirementgroup__requirement=req
-            ).values_list("id", flat=True)
-        )
+        # New DPR engine blocks
+        blocks = list(req.blocks.prefetch_related("courses").all())
+        if blocks:
+            used_codes = set()
+            needed_codes = set()
 
-        return Course.objects.filter(id__in=(required_ids - done_ids))
+            blocks.sort(key=lambda b: (int(b.min_required), b.courses.count(), b.name))
+
+            for b in blocks:
+                block_courses = list(b.courses.all())
+                block_codes = [c.code.upper() for c in block_courses]
+
+                available_completed = []
+                for code in block_codes:
+                    if code in taken_codes and (b.allow_double_count or code not in used_codes):
+                        available_completed.append(code)
+
+                assigned = available_completed[: int(b.min_required)]
+
+                if not b.allow_double_count:
+                    used_codes.update(assigned)
+
+                still_needed = max(0, int(b.min_required) - len(assigned))
+                if still_needed > 0:
+                    remaining_options = [code for code in block_codes if code not in taken_codes]
+                    needed_codes.update(remaining_options[:still_needed])
+
+            return Course.objects.filter(
+                program=self.program,
+                catalog_year=self.catalog_year,
+                code__in=needed_codes,
+            ).order_by("code").distinct()
+
+        # Fallback old group logic
+        groups = req.groups.prefetch_related("courses").all()
+
+        required_codes = set()
+        elective_pool_codes = set()
+
+        for g in groups:
+            group_codes = {c.code.upper() for c in g.courses.all()}
+            completed_in_group = len(group_codes & taken_codes)
+
+            if completed_in_group >= int(g.min_required):
+                continue
+
+            if len(group_codes) <= int(g.min_required):
+                required_codes.update(group_codes)
+            else:
+                elective_pool_codes.update(group_codes)
+
+        required_codes = required_codes - taken_codes
+        elective_pool_codes = elective_pool_codes - taken_codes
+
+        required_qs = Course.objects.filter(
+            program=self.program,
+            catalog_year=self.catalog_year,
+            code__in=required_codes,
+        ).order_by("code")
+
+        elective_qs = Course.objects.filter(
+            program=self.program,
+            catalog_year=self.catalog_year,
+            code__in=elective_pool_codes,
+        ).order_by("code")[:30]
+
+        return (required_qs | elective_qs).distinct()
 
     def prerequisites_satisfied(self, course):
-        prereq_ids = set(course.prerequisites.values_list("id", flat=True))
-        completed_ids = set(self.completed_courses_qs().values_list("id", flat=True))
+        prereq_codes = {
+            c.code.upper() for c in course.prerequisites.all()
+            if c.program == self.program and c.catalog_year == self.catalog_year
+        }
+        completed_codes = self.completed_course_codes()
 
         base_ok = True
-        if prereq_ids:
+        if prereq_codes:
             if course.prereq_mode == "ANY":
-                base_ok = len(prereq_ids & completed_ids) >= 1
+                base_ok = len(prereq_codes & completed_codes) >= 1
             else:
-                base_ok = prereq_ids.issubset(completed_ids)
+                base_ok = prereq_codes.issubset(completed_codes)
+
         if not base_ok:
             return False
 
         for grp in course.prereq_groups.all():
-            option_ids = set(grp.options.values_list("id", flat=True))
-            if not option_ids:
+            option_codes = {c.code.upper() for c in grp.options.all()}
+            if not option_codes:
                 continue
-            if len(option_ids & completed_ids) < grp.min_required:
+            if len(option_codes & completed_codes) < grp.min_required:
                 return False
 
         return True
@@ -182,17 +279,25 @@ class StudentProfile(models.Model):
     def recommend_next_term(self, next_term=None):
         next_term = next_term or Term.from_date().next()
         remaining = list(self.remaining_required_courses())
+
+        taken_codes = self.taken_course_codes()
+
+        # double safety: never recommend already completed / in-progress classes
+        remaining = [c for c in remaining if c.code.upper() not in taken_codes]
+
         eligible = [c for c in remaining if self.prerequisites_satisfied(c)]
         offered = [
             c for c in eligible
             if (c.offered_in.count() == 0 or next_term in c.offered_in.all())
         ]
+
         total = 0.0
         take = []
         for c in sorted(offered, key=lambda x: x.code):
             if total + float(c.credits) <= self.max_credits_next_term:
                 take.append(c)
                 total += float(c.credits)
+
         return take, total, next_term
 
     def approximate_graduation_term(self):
@@ -201,14 +306,7 @@ class StudentProfile(models.Model):
 
         base_target = 120
         if req:
-            req_courses = Course.objects.filter(
-                programrequirementgroup__requirement=req
-            ).distinct()
-
-            base_target = max(
-                req.required_credits,
-                sum(float(c.credits) for c in req_courses)
-            )
+            base_target = int(req.required_credits)
 
         remaining_credits = max(0.0, base_target - completed_credits)
         terms_needed = ceil(remaining_credits / max(1, self.avg_credits_per_term))
@@ -216,6 +314,100 @@ class StudentProfile(models.Model):
         for _ in range(terms_needed):
             term = term.next()
         return term, remaining_credits, completed_credits, base_target
+
+    def requirement_group_progress(self):
+        """
+        Full DPR engine:
+        - supports any 1 / any 2 / any N via RequirementBlock.min_required
+        - avoids double-counting by default
+        - supports explicit double-counting with allow_double_count=True
+        - supports path/either-or rules via PathRule
+        - falls back to old ProgramRequirementGroup logic if blocks are not configured
+
+        IMPORTANT:
+        Matching is by COURSE CODE, not by COURSE ID.
+        """
+        req = self.get_requirement()
+        if not req:
+            return []
+
+        completed_codes = self.completed_course_codes()
+        used_codes = set()
+        out = []
+
+        blocks = list(req.blocks.prefetch_related("courses").all())
+
+        if blocks:
+            blocks.sort(key=lambda b: (int(b.min_required), b.courses.count(), b.name))
+
+            for b in blocks:
+                block_codes = [c.code.upper() for c in b.courses.all()]
+
+                available = []
+                for code in block_codes:
+                    if code in completed_codes:
+                        if b.allow_double_count or code not in used_codes:
+                            available.append(code)
+
+                assigned = available[: int(b.min_required)]
+
+                if not b.allow_double_count:
+                    used_codes.update(assigned)
+
+                out.append({
+                    "name": b.name,
+                    "min_required": int(b.min_required),
+                    "completed": int(len(assigned)),
+                    "total_options": int(len(block_codes)),
+                    "done": len(assigned) >= int(b.min_required),
+                    "type": "block",
+                    "allow_double_count": bool(b.allow_double_count),
+                })
+
+            for rule in req.path_rules.all():
+                best_score = 0
+                target = 0
+
+                for path in (rule.paths or []):
+                    if not isinstance(path, list):
+                        continue
+                    target = max(target, len(path))
+                    score = 0
+                    for block_name in path:
+                        block_result = next(
+                            (x for x in out if x["name"] == block_name and x.get("type") == "block"),
+                            None,
+                        )
+                        if block_result and block_result["done"]:
+                            score += 1
+                    best_score = max(best_score, score)
+
+                out.append({
+                    "name": rule.name,
+                    "min_required": int(target),
+                    "completed": int(best_score),
+                    "total_options": int(len(rule.paths or [])),
+                    "done": best_score >= target if target else False,
+                    "type": "path",
+                })
+
+            return out
+
+        # Fallback old group behavior
+        groups = req.groups.prefetch_related("courses").all()
+        for g in groups:
+            group_codes = [c.code.upper() for c in g.courses.all()]
+            completed_in_group = sum(1 for code in group_codes if code in completed_codes)
+            out.append({
+                "name": g.name,
+                "min_required": int(g.min_required),
+                "completed": int(completed_in_group),
+                "total_options": int(len(group_codes)),
+                "done": completed_in_group >= int(g.min_required),
+                "type": "group",
+            })
+        return out
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=48, unique=True)
@@ -230,11 +422,7 @@ class Tag(models.Model):
         super().save(*args, **kwargs)
 
 
-# =========================
-# Course catalog + reqs
-# =========================
 class Course(models.Model):
-    """Catalog course for a given program + catalog year."""
     program = models.CharField(max_length=32, choices=StudentProfile.PROGRAM_CHOICES)
     catalog_year = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(2000), MaxValueValidator(2100)]
@@ -244,39 +432,24 @@ class Course(models.Model):
         Tag,
         blank=True,
         related_name="courses",
-        help_text="Optional labels like LAB, SUPPORT, GE-QR, etc."
+        help_text="Optional labels like LAB, SUPPORT, GE-QR, etc.",
     )
 
-    code = models.CharField(max_length=16)             # e.g., CS101
-
+    code = models.CharField(max_length=16)
     title = models.CharField(max_length=128)
     credits = models.DecimalField(max_digits=4, decimal_places=1, default=3.0)
 
-    subject = models.CharField(                        # e.g., "CS" or "AAS"
-        max_length=32, blank=True, default="",
-        help_text="Department prefix, e.g., CS, AAS",
-    )
-    level = models.CharField(          # e.g., 151
-        max_length=50,
-        null=True, blank=True,
-        help_text="Course number, e.g., LOWER",
-    )
-    section = models.CharField(                        # e.g., 01 or A
-        max_length=16, blank=True, default="",
-        help_text="Section code, e.g., 01 or A",
-    )
+    subject = models.CharField(max_length=32, blank=True, default="")
+    level = models.CharField(max_length=50, null=True, blank=True)
+    section = models.CharField(max_length=16, blank=True, default="")
+    description = models.TextField(blank=True, default="")
 
-    # general course description
-    description = models.TextField(blank=True, default="", help_text="Optional short description of this course.")
-
-    # prerequisites and (optional) per-term offerings
     prerequisites = models.ManyToManyField(
         "self",
         symmetrical=False,
         blank=True,
         related_name="as_prerequisite_for",
     )
-    # NEW: corequisites (can be taken in the same term)
     corequisites = models.ManyToManyField(
         "self",
         symmetrical=False,
@@ -285,26 +458,21 @@ class Course(models.Model):
     )
     offered_in = models.ManyToManyField(Term, related_name="offerings", blank=True)
 
-    # Interpret the list of prerequisites
     PREREQ_MODES = (
         ("ALL", "All listed are required"),
         ("ANY", "Any one is sufficient"),
     )
-    prereq_mode = models.CharField(
-        max_length=3, choices=PREREQ_MODES, default="ALL",
-        help_text="If 'ANY', completing any one of the listed prerequisites is enough."
-    )
+    prereq_mode = models.CharField(max_length=3, choices=PREREQ_MODES, default="ALL")
 
     class Meta:
         unique_together = (("program", "catalog_year", "code"),)
         ordering = ["program", "catalog_year", "code"]
 
     def __str__(self):
-        return f"{self.code} — {self.title} ({self.program} {self.catalog_year})"
+        return f"{self.code} — {self.title}"
 
 
 class ProgramRequirement(models.Model):
-    """Set of required courses for a program/catalog year (+ an overall credit target)."""
     program = models.CharField(max_length=32, choices=StudentProfile.PROGRAM_CHOICES)
     catalog_year = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(2000), MaxValueValidator(2100)]
@@ -317,42 +485,70 @@ class ProgramRequirement(models.Model):
     def __str__(self):
         return f"{self.program} {self.catalog_year} Requirements"
 
+
 class ProgramRequirementGroup(models.Model):
     requirement = models.ForeignKey(
         ProgramRequirement,
         on_delete=models.CASCADE,
         related_name="groups",
     )
-
-    name = models.CharField(
-        max_length=80,
-        help_text="e.g., Humanities, Math Core, Electives"
-    )
-
-    min_required = models.PositiveSmallIntegerField(
-        default=1,
-        validators=[MinValueValidator(1)],
-        help_text="How many courses must be completed from this group"
-    )
-
-    courses = models.ManyToManyField(
-        Course,
-        blank=True,
-        help_text="Courses that belong to this requirement group"
-    )
+    name = models.CharField(max_length=80)
+    min_required = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1)])
+    courses = models.ManyToManyField(Course, blank=True)
 
     def __str__(self):
         return f"{self.requirement} — {self.name} (need {self.min_required})"
 
+
+class RequirementBlock(models.Model):
+    requirement = models.ForeignKey(
+        ProgramRequirement,
+        on_delete=models.CASCADE,
+        related_name="blocks",
+    )
+    name = models.CharField(max_length=80)
+    min_required = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+    )
+    allow_double_count = models.BooleanField(default=False)
+    courses = models.ManyToManyField(
+        Course,
+        blank=True,
+        related_name="requirement_blocks",
+    )
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.requirement} — {self.name} (need {self.min_required})"
+
+
+class PathRule(models.Model):
+    requirement = models.ForeignKey(
+        ProgramRequirement,
+        on_delete=models.CASCADE,
+        related_name="path_rules",
+    )
+    name = models.CharField(max_length=80)
+    paths = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.requirement} — {self.name}"
+
+
 class CompletedClass(models.Model):
-    """A catalog course a student has already finished."""
     profile = models.ForeignKey(
         StudentProfile, on_delete=models.CASCADE, related_name="completed_classes"
     )
     course = models.ForeignKey(
         Course, on_delete=models.CASCADE, related_name="completions"
     )
-    term = models.CharField(max_length=12, blank=True)     # optional (e.g., 'Fall 2024')
+    term = models.CharField(max_length=12, blank=True)
 
     class Meta:
         unique_together = (("profile", "course"),)
@@ -362,27 +558,51 @@ class CompletedClass(models.Model):
         return f"{who} • {self.course.code}"
 
 
-# =========================
-# Grouped alternative prereqs
-# =========================
+class InProgressClass(models.Model):
+    profile = models.ForeignKey(
+        StudentProfile, on_delete=models.CASCADE, related_name="in_progress_classes"
+    )
+    course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, related_name="in_progress"
+    )
+    term = models.CharField(max_length=12, blank=True)
+
+    class Meta:
+        unique_together = (("profile", "course"),)
+
+    def __str__(self):
+        who = self.profile.user.get_full_name() or self.profile.user.email or self.profile.user.username
+        return f"{who} • {self.course.code} (IP)"
+
+
 class PrerequisiteGroup(models.Model):
-    """
-    A group of alternative prerequisites for a specific course.
-    The group is satisfied if the student has completed at least `min_required`
-    of the `options`.
-    """
     for_course = models.ForeignKey(
         Course, on_delete=models.CASCADE, related_name="prereq_groups"
     )
-    name = models.CharField(max_length=64, blank=True, help_text="Optional label, e.g., 'Math alternatives'")
-    min_required = models.PositiveSmallIntegerField(
-        default=1, validators=[MinValueValidator(1)],
-        help_text="How many from this group are required."
-    )
-    options = models.ManyToManyField(
-        Course, blank=True, related_name="as_prereq_option",
-        help_text="Courses that can satisfy this group."
-    )
+    name = models.CharField(max_length=64, blank=True)
+    min_required = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1)])
+    options = models.ManyToManyField(Course, blank=True, related_name="as_prereq_option")
 
     def __str__(self):
         return f"{self.for_course.code} group ({self.name or self.pk}) — need {self.min_required}"
+
+
+def dpr_upload_path(instance, filename: str) -> str:
+    safe = (filename or "dpr.pdf").replace(" ", "_")
+    return f"dpr/user_{instance.user_id}/{timezone.now().date()}_{safe}"
+
+
+class DPRUpload(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="dpr_uploads",
+    )
+    file = models.FileField(
+        upload_to=dpr_upload_path,
+        validators=[FileExtensionValidator(["pdf"])],
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"DPRUpload({self.user_id}) @ {self.uploaded_at:%Y-%m-%d %H:%M}"
