@@ -302,7 +302,11 @@ class StudentProfile(models.Model):
 
     def approximate_graduation_term(self):
         req = self.get_requirement()
-        completed_credits = sum(float(c.credits) for c in self.completed_courses_qs())
+        completed_credits = sum(
+            float(c.credits)
+            for c in self.completed_courses_qs()
+            if c.counts_for_total_units()
+        )
 
         base_target = 120
         if req:
@@ -468,6 +472,14 @@ class Course(models.Model):
         unique_together = (("program", "catalog_year", "code"),)
         ordering = ["program", "catalog_year", "code"]
 
+    def numeric_level(self):
+        digits = "".join(ch for ch in (self.code or "") if ch.isdigit())
+        return int(digits) if digits else None
+
+    def counts_for_total_units(self) -> bool:
+        level = self.numeric_level()
+        return level is not None and level >= 100
+    
     def __str__(self):
         return f"{self.code} — {self.title}"
 

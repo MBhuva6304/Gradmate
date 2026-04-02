@@ -114,95 +114,40 @@ def _norm_code(s: str) -> str:
 
 
 def _parse_dpr_lines(text: str) -> tuple[list[dict], list[dict]]:
-    """
-    Returns:
-      completed_rows: [{term, subject, number, units, grade}]
-      ip_rows:        [{term, subject, number, units}]
-
-    Handles DPR lines like:
-      23SP  MATH 105  5.0IP  PRE-CALC II
-      22FA  COMP 110  3.0 A  INTRO ...
-      2023FA COMP-110 3.0 A  INTRO ...
-      24SP  COMP110L  1.0 A  LAB ...
-    """
     completed: list[dict] = []
     inprog: list[dict] = []
 
-    completed_grade_tokens = {
-        "A", "A-", "A+",
-        "B", "B-", "B+",
-        "C", "C-", "C+",
-        "D", "D-", "D+",
-        "F",
-        "P", "CR",
-    }
+    if not text:
+        return completed, inprog
 
-    for raw in (text or "").splitlines():
-        line = " ".join(raw.split())
-        if not line:
-            continue
+    text = text.replace("\xa0", " ")
+    text = re.sub(r"[ \t]+", " ", text)
 
-        toks = line.split(" ")
-        if len(toks) < 3:
-            continue
+    grade_tokens = r"A\+|A-|A|B\+|B-|B|C\+|C-|C|D\+|D-|D|F|P|CR|IP"
 
-        term = toks[0].upper()
-        if not _TERM_RE.match(term):
-            continue
+    pattern = re.compile(
+        rf"(?P<term>(?:\d{{2}}|\d{{4}})(?:SP|SU|FA))\s+"
+        rf"(?P<subject>[A-Z]{{1,4}}(?:\s+[A-Z]{{1,3}})?)\s+"
+        rf"(?P<number>\d{{1,4}}[A-Z]?)\s+"
+        rf"(?P<units>\d+(?:\.\d+)?)\s*"
+        rf"(?P<grade>{grade_tokens})\b",
+        re.I,
+    )
 
-        subject = ""
-        number = ""
-        units_token = ""
-
-        # Case A: COMP 110 3.0 A
-        if (
-            len(toks) >= 4
-            and re.fullmatch(r"[A-Z]{2,6}", toks[1], re.I)
-            and re.fullmatch(r"\d{1,4}[A-Z]?", toks[2], re.I)
-        ):
-            subject = toks[1].upper()
-            number = toks[2].upper()
-            units_token = toks[3].upper()
-            status_index = 4
-
-        # Case B: COMP-110 3.0 A  OR  COMP110L 1.0 A
-        else:
-            m = _COURSE_TOKEN_RE.match(toks[1])
-            if not m or len(toks) < 3:
-                continue
-            subject = m.group("subj").upper()
-            number = m.group("num").upper()
-            units_token = toks[2].upper()
-            status_index = 3
-
-        # units token may be "5.0IP" or "3.0"
-        m2 = re.match(r"^(?P<units>\d+(?:\.\d+)?)(?P<status>[A-Z]{1,3})?$", units_token)
-        if not m2:
-            continue
-
-        units = float(m2.group("units"))
-        glued_status = (m2.group("status") or "").upper()
-        next_tok = toks[status_index].upper() if len(toks) > status_index else ""
-        status = glued_status or next_tok
+    for m in pattern.finditer(text):
+        row = {
+            "term": m.group("term").upper(),
+            "subject": re.sub(r"\s+", "", m.group("subject").upper()),
+            "number": m.group("number").upper(),
+            "units": float(m.group("units")),
+        }
+        status = m.group("grade").upper()
 
         if status == "IP":
-            inprog.append({
-                "term": term,
-                "subject": subject,
-                "number": number,
-                "units": units,
-            })
-            continue
-
-        if status in completed_grade_tokens:
-            completed.append({
-                "term": term,
-                "subject": subject,
-                "number": number,
-                "units": units,
-                "grade": status,
-            })
-            continue
+            inprog.append(row)
+        else:
+            row["grade"] = status
+            completed.append(row)
 
     return completed, inprog
 
@@ -468,11 +413,10 @@ def dashboard(request):
 
     incomplete_block_count = sum(1 for g in (ge_progress + major_progress) if not g.get("done"))
 
-    in_progress_credits = (
-        InProgressClass.objects
-        .filter(profile=profile)
-        .aggregate(total=Sum("course__credits"))
-        .get("total") or 0
+    in_progress_credits = sum(
+        float(c.course.credits or 0)
+        for c in InProgressClass.objects.filter(profile=profile).select_related("course")
+        if c.course
     )
 
     remaining_for_chart = max(
@@ -510,9 +454,406 @@ def degree_plan(request):
     return render(request, "degree_plan.html", {"profile": request.profile})
 
 
+def _safe_float(v, default=0.0):
+    try:
+        return float(v or 0)
+    except Exception:
+        return float(default)
+
+
+def _safe_int(v, default=0):
+    try:
+        return int(v or 0)
+    except Exception:
+        return int(default)
+
+
+def _status_meta(done: bool, completed: float, in_progress: float, required: float):
+    used = completed + in_progress
+    if done or (required > 0 and completed >= required):
+        return {
+            "label": "Completed",
+            "tag_class": "ok",
+            "icon": "✔",
+        }
+    if in_progress > 0:
+        return {
+            "label": "In Progress",
+            "tag_class": "ip",
+            "icon": "●",
+        }
+    return {
+        "label": "Missing",
+        "tag_class": "bad",
+        "icon": "✖",
+    }
+
+
+def _short_group_name(name: str) -> str:
+    mapping = {
+        "A1 Oral Communication": "A1",
+        "A2 Written Communication": "A2",
+        "A3 Critical Thinking": "A3",
+        "B1 Physical Science": "B1",
+        "B2 Life Science": "B2",
+        "B3 Lab Activity": "B3",
+        "B4 Math / Quantitative Reasoning": "B4",
+        "B5 Upper Division Scientific Inquiry": "B5",
+        "C1 Arts": "C1",
+        "C2 Humanities": "C2",
+        "D1 Social Sciences": "D1",
+        "D3 Constitution of the U.S.": "D3",
+        "D4 California State and Local Government": "D4",
+        "E Lifelong Learning": "E",
+        "F Comparative Cultural Studies": "F",
+        "Pre-Major": "PRE",
+        "Lower Division Core": "LDC",
+        "Lower Division Elective A": "LDE-A",
+        "Lower Division Elective B": "LDE-B",
+        "Probability / Statistics": "STAT",
+        "Upper Division Core": "UDC",
+        "Senior Electives": "SE",
+        "Ethnic Studies": "ES",
+        "Information Competence": "IC",
+    }
+    return mapping.get(name, name)
+
+
+def _bucket_title(name: str) -> str:
+    n = (name or "").strip()
+
+    ge_prefixes = {"A1", "A2", "A3", "B1", "B2", "B3", "B4", "B5", "C1", "C2", "D1", "D3", "D4", "E", "F"}
+    lower_div = {"PRE", "LDC", "LDE-A", "LDE-B", "STAT"}
+    upper_div = {"UDC", "SE"}
+    university = {"ES", "IC"}
+
+    if n in ge_prefixes or n.startswith(("A1", "A2", "A3", "B1", "B2", "B3", "B4", "B5", "C1", "C2", "D1", "D3", "D4", "E", "F")):
+        return "General Education"
+
+    if n in lower_div or n in {"Pre-Major", "Lower Division Core", "Lower Division Elective A", "Lower Division Elective B", "Probability / Statistics"}:
+        return "Lower Division Requirements"
+
+    if n in upper_div or n in {"Upper Division Core", "Senior Electives"}:
+        return "Upper Division Requirements"
+
+    if n in university or n in {"Ethnic Studies", "Information Competence"}:
+        return "University Requirements"
+
+    return "Other Requirements"
+
 @profile_required
 def audit(request):
-    return render(request, "audit.html", {"profile": request.profile})
+    profile = request.profile
+
+    completed_courses = list(
+        CompletedClass.objects
+        .filter(profile=profile)
+        .select_related("course")
+        .order_by("course__subject", "course__code")
+    )
+
+    in_progress_courses = list(
+        InProgressClass.objects
+        .filter(profile=profile)
+        .select_related("course")
+        .order_by("course__subject", "course__code")
+    )
+
+    completed_codes_all = {
+        (cc.course.code or "").upper()
+        for cc in completed_courses
+        if cc.course and cc.course.code
+    }
+
+    in_progress_codes_all = {
+        (ic.course.code or "").upper()
+        for ic in in_progress_courses
+        if ic.course and ic.course.code
+    }
+
+    below_100_completed = [
+        cc for cc in completed_courses
+        if cc.course and cc.course.numeric_level() is not None and cc.course.numeric_level() < 100
+    ]
+
+    below_100_in_progress = [
+        ic for ic in in_progress_courses
+        if ic.course and ic.course.numeric_level() is not None and ic.course.numeric_level() < 100
+    ]
+
+    completed_map = {
+        c.course_id: c
+        for c in completed_courses
+        if c.course_id
+    }
+    in_progress_map = {
+        c.course_id: c
+        for c in in_progress_courses
+        if c.course_id
+    }
+
+    completed_credits = sum(
+        _safe_float(getattr(c.course, "credits", 0))
+        for c in completed_courses
+        if c.course and c.course.counts_for_total_units()
+    )
+
+    in_progress_credits = sum(
+        _safe_float(getattr(c.course, "credits", 0))
+        for c in in_progress_courses
+        if c.course
+    )
+    target_credits = 120
+    if hasattr(profile, "approximate_graduation_term"):
+        try:
+            _, _, calc_completed, calc_target = profile.approximate_graduation_term()
+            if calc_completed is not None:
+                completed_credits = _safe_float(calc_completed, completed_credits)
+            if calc_target is not None:
+                target_credits = _safe_int(calc_target, 120)
+        except Exception:
+            pass
+
+    remaining_credits = max(0, target_credits - int(completed_credits) - int(in_progress_credits))
+
+    raw_groups = []
+    if hasattr(profile, "requirement_group_progress"):
+        try:
+            raw_groups = profile.requirement_group_progress() or []
+        except Exception:
+            raw_groups = []
+
+    grouped = {}
+    for g in raw_groups:
+        bucket = _bucket_title(g.get("name", "Other"))
+        grouped.setdefault(bucket, []).append(g)
+
+    bucket_order = [
+        "General Education",
+        "Lower Division Requirements",
+        "Upper Division Requirements",
+        "University Requirements",
+        "Other Requirements",
+    ]
+
+    audit_groups = []
+    used_requirement_codes = set()
+
+    for bucket_name in bucket_order:
+        items = grouped.get(bucket_name, [])
+        if not items:
+            continue
+
+        subsections = []
+        group_required = 0.0
+        group_completed = 0.0
+        group_in_progress = 0.0
+
+        for item in items:
+            raw_name = (item.get("name") or "").strip()
+            # support both long names and short names
+
+            display_name_map = {
+                "A1": "A1 Oral Communication",
+                "A2": "A2 Written Communication",
+                "A3": "A3 Critical Thinking",
+                "B1": "B1 Physical Science",
+                "B2": "B2 Life Science",
+                "B3": "B3 Lab Activity",
+                "B4": "B4 Math / Quantitative Reasoning",
+                "B5": "B5 Upper Division Scientific Inquiry",
+                "C1": "C1 Arts",
+                "C2": "C2 Humanities",
+                "D1": "D1 Social Sciences",
+                "D3": "D3 Constitution of the U.S.",
+                "D4": "D4 California State and Local Government",
+                "E": "E Lifelong Learning",
+                "F": "F Comparative Cultural Studies",
+                "PRE": "Pre-Major",
+                "LDC": "Lower Division Core",
+                "LDE-A": "Lower Division Elective A",
+                "LDE-B": "Lower Division Elective B",
+                "STAT": "Probability / Statistics",
+                "UDC": "Upper Division Core",
+                "SE": "Senior Electives",
+                "ES": "Ethnic Studies",
+                "IC": "Information Competence",
+            }
+
+            display_name = display_name_map.get(raw_name, raw_name)
+            short_name = _short_group_name(display_name or raw_name)
+
+            # support alternate key names from requirement_group_progress()
+            # requirement_group_progress() returns block counts, not "required"
+            required = _safe_float(
+                item.get("min_required")
+                or item.get("required")
+                or item.get("credits_required")
+                or item.get("units_required")
+                or item.get("total_required")
+                or 0
+            )
+
+            completed = _safe_float(
+                item.get("completed")
+                or item.get("credits_completed")
+                or item.get("units_completed")
+                or 0
+            )
+
+            in_progress_from_group = _safe_float(
+                item.get("in_progress")
+                or item.get("credits_in_progress")
+                or item.get("units_in_progress")
+                or 0
+            )
+
+            done = bool(item.get("done", False))
+
+            matched_completed = []
+            matched_ip = []
+
+            req = profile.get_requirement()
+            block = None
+            if req:
+                block = req.blocks.filter(name=raw_name).first()
+                if not block:
+                    block = req.blocks.filter(name=display_name).first()
+                if not block:
+                    block = req.blocks.filter(name=short_name).first()
+
+            block_course_codes = set()
+            if block:
+                block_course_codes = {
+                    (c.code or "").upper()
+                    for c in block.courses.all()
+                }
+
+            for cc in completed_courses:
+                if cc.course and (cc.course.code or "").upper() in block_course_codes:
+                    matched_completed.append(cc)
+
+            for ic in in_progress_courses:
+                if ic.course and (ic.course.code or "").upper() in block_course_codes:
+                    matched_ip.append(ic)
+
+            matched_ip_credits = sum(_safe_float(getattr(x.course, "credits", 0)) for x in matched_ip)
+            ip_credits = max(in_progress_from_group, matched_ip_credits)
+            course_rows = []
+
+            for cc in matched_completed:
+                course_rows.append({
+                    "code": cc.course.code,
+                    "title": cc.course.title,
+                    "units": _safe_float(cc.course.credits),
+                    "grade": "Done",
+                    "status": "ok",
+            })
+
+            for ic in matched_ip:
+                course_rows.append({
+                    "code": ic.course.code,
+                    "title": ic.course.title,
+                    "units": _safe_float(ic.course.credits),
+                    "grade": "IP",
+                    "status": "ip",
+            })
+                
+            used_requirement_codes.update(
+                (cc.course.code or "").upper()
+                for cc in matched_completed
+                if cc.course and cc.course.code
+            )
+
+            used_requirement_codes.update(
+                (ic.course.code or "").upper()
+                for ic in matched_ip
+                if ic.course and ic.course.code
+            )
+
+
+            if not course_rows and not done:
+                missing_units = max(0.0, required - completed - ip_credits)
+                if missing_units > 0:
+                    course_rows.append({
+                        "code": "—",
+                        "title": "Course needed",
+                        "units": missing_units,
+                        "grade": "—",
+                        "status": "bad",
+            })
+
+            meta = _status_meta(done, completed, ip_credits, required)
+
+            subsection = {
+                "name": display_name or "Requirement",
+                "short": _short_group_name(display_name or raw_name or "Requirement"),
+                "required": required,
+                "completed": completed,
+                "in_progress": ip_credits,
+                "remaining": max(0.0, required - completed - ip_credits),
+                "done": done,
+                "courses": course_rows,
+                "status_label": meta["label"],
+                "tag_class": meta["tag_class"],
+                "icon": meta["icon"],
+            }
+
+            subsections.append(subsection)
+            group_required += required
+            group_completed += completed
+            group_in_progress += ip_credits
+
+        subsections.sort(key=lambda s: s.get("name", "").lower())
+
+        audit_groups.append({
+            "title": bucket_name,
+            "required": group_required,
+            "completed": group_completed,
+            "in_progress": group_in_progress,
+            "remaining": max(0.0, group_required - group_completed - group_in_progress),
+            "subsections": subsections,
+        })
+
+    additional_completed = [
+        cc for cc in completed_courses
+        if cc.course
+        and cc.course.code
+        and (cc.course.code or "").upper() not in used_requirement_codes
+        and cc.course.numeric_level() is not None
+        and cc.course.numeric_level() >= 100
+    ]
+
+    additional_in_progress = [
+        ic for ic in in_progress_courses
+        if ic.course
+        and ic.course.code
+        and (ic.course.code or "").upper() not in used_requirement_codes
+        and ic.course.numeric_level() is not None
+        and ic.course.numeric_level() >= 100
+    ]
+
+    context = {
+        "profile": profile,
+        "audit_groups": audit_groups,
+        "audit_summary": {
+            "completed": int(completed_credits),
+            "in_progress": int(in_progress_credits),
+            "remaining": int(remaining_credits),
+            "total": int(target_credits),
+        },
+        "quick_stats": {
+            "major": getattr(profile, "get_program_display", lambda: profile.program)(),
+            "catalog_year": getattr(profile, "catalog_year", ""),
+            "standing": "Junior" if completed_credits >= 60 else "Sophomore" if completed_credits >= 30 else "Freshman",
+        },
+        "latest_dpr": DPRUpload.objects.filter(user=request.user).order_by("-uploaded_at").first(),
+        "below_100_completed": below_100_completed,
+        "below_100_in_progress": below_100_in_progress,
+        "additional_completed": additional_completed,
+        "additional_in_progress": additional_in_progress,
+    }
+    return render(request, "audit.html", context)
 
 
 @profile_required
@@ -708,16 +1049,41 @@ def courses_page(request):
 
     q = request.GET.get("q", "").strip()
     if q:
-        base_qs = (
-            base_qs.filter(
-                Q(code__icontains=q)
-                | Q(title__icontains=q)
-                | Q(subject__icontains=q)
-                | Q(description__icontains=q)
-                | Q(tags__name__icontains=q)
-            )
-            .distinct()
-        )
+        raw_q = q
+        normalized_q = re.sub(r"[\s\-]+", "", raw_q.upper())
+
+        courses_for_search = list(base_qs)
+        matched_ids = []
+
+        for c in courses_for_search:
+            code = (c.code or "")
+            title = (c.title or "")
+            subject = (c.subject or "")
+            description = (c.description or "")
+
+            normalized_code = re.sub(r"[\s\-]+", "", code.upper())
+            normalized_subject = re.sub(r"[\s\-]+", "", subject.upper())
+            normalized_title = re.sub(r"[\s\-]+", "", title.upper())
+            normalized_description = re.sub(r"[\s\-]+", "", description.upper())
+
+            tag_names = " ".join(t.name for t in c.tags.all())
+            normalized_tags = re.sub(r"[\s\-]+", "", tag_names.upper())
+
+            if (
+                raw_q.lower() in code.lower()
+                or raw_q.lower() in title.lower()
+                or raw_q.lower() in subject.lower()
+                or raw_q.lower() in description.lower()
+                or raw_q.lower() in tag_names.lower()
+                or normalized_q in normalized_code
+                or normalized_q in normalized_subject
+                or normalized_q in normalized_title
+                or normalized_q in normalized_description
+                or normalized_q in normalized_tags
+            ):
+                matched_ids.append(c.id)
+
+        base_qs = base_qs.filter(id__in=matched_ids).distinct()
 
     courses = list(base_qs)
 

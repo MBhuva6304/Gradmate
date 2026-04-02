@@ -1,6 +1,235 @@
 {% extends "base.html" %}
 {% block page_title %}Audit — Gradmate{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'upload_dpr' %}"
+     class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700">
+    Upload DPR
+  </a>
+{% endblock %}
+
 {% block content %}
-  <h1 class="text-2xl font-semibold mb-4">Audit</h1>
-  <p class="text-slate-600">Progress-to-degree audit will appear here.</p>
+<style>
+  .audit-card{background:#fff;border:1px solid #e2e8f0;border-radius:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .audit-chip{min-width:110px;text-align:center;border:1px solid #e2e8f0;border-radius:.75rem;padding:.75rem .5rem;background:#f8fafc}
+  .audit-chip .n{font-weight:800;font-size:1.25rem}
+  .audit-chip .l{font-size:.75rem;color:#64748b}
+  .audit-bar{position:relative;height:18px;background:#eef2f7;border-radius:9999px;overflow:hidden}
+  .audit-seg{position:absolute;top:0;height:100%;border-radius:9999px}
+  .audit-seg.completed{left:0;background:#2563eb;z-index:2}
+  .audit-seg.ip{left:0;background:#f59e0b;z-index:1}
+  .audit-group{border:1px solid #e2e8f0;border-radius:1rem;overflow:hidden;background:#fff}
+  .audit-course{display:grid;grid-template-columns:1fr 90px 110px;gap:.75rem;align-items:center;padding:.625rem .75rem;border:1px solid #e2e8f0;border-radius:.75rem;background:#f8fafc}  
+  .audit-tag{font-size:.75rem;border-radius:9999px;padding:.3rem .6rem;font-weight:700;display:inline-flex;align-items:center;gap:.35rem}
+  .audit-tag.ok{background:#ecfdf5;color:#065f46}
+  .audit-tag.ip{background:#fff7ed;color:#92400e}
+  .audit-tag.bad{background:#fef2f2;color:#991b1b}
+  @media (max-width: 900px){
+    .audit-course{grid-template-columns:1fr}
+  }
+</style>
+
+<div class="space-y-6">
+  <div>
+    <h1 class="text-3xl font-bold text-slate-900">Audit</h1>
+    <p class="text-slate-600 mt-1">Your progress-to-degree audit based on imported DPR data and requirement groups.</p>
+    {% if latest_dpr %}
+      <p class="text-xs text-slate-500 mt-2">Latest DPR uploaded: {{ latest_dpr.uploaded_at|date:"M d, Y H:i" }}</p>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <section class="audit-card p-5">
+      <h2 class="text-xl font-semibold mb-4">Audit Summary</h2>
+
+      <div class="audit-bar mb-5">
+        {% with done=audit_summary.completed ip=audit_summary.in_progress total=audit_summary.total %}
+          {% widthratio done total 100 as done_pct %}
+          {% widthratio ip total 100 as ip_only_pct %}
+          {% widthratio done|add:ip total 100 as ip_total_pct %}
+
+          {% if ip > 0 %}
+            <div class="audit-seg ip" style="width: {{ ip_total_pct }}%;"></div>
+          {% endif %}
+          {% if done > 0 %}
+            <div class="audit-seg completed" style="width: {{ done_pct }}%;"></div>
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      <div class="flex flex-wrap gap-3">
+        <div class="audit-chip">
+          <div class="n">{{ audit_summary.completed }}</div>
+          <div class="l">Completed</div>
+        </div>
+        <div class="audit-chip">
+          <div class="n">{{ audit_summary.in_progress }}</div>
+          <div class="l">In Progress</div>
+        </div>
+        <div class="audit-chip">
+          <div class="n">{{ audit_summary.remaining }}</div>
+          <div class="l">Remaining</div>
+        </div>
+        <div class="audit-chip">
+          <div class="n">{{ audit_summary.total }}</div>
+          <div class="l">Total Units</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="audit-card p-5">
+      <h2 class="text-xl font-semibold mb-4">Quick Stats</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <div class="text-sm text-slate-500">Standing</div>
+          <div class="text-2xl font-bold">{{ quick_stats.standing }}</div>
+        </div>
+        <div>
+          <div class="text-sm text-slate-500">Major</div>
+          <div class="font-semibold">{{ quick_stats.major }}</div>
+        </div>
+        <div>
+          <div class="text-sm text-slate-500">Catalog Year</div>
+          <div class="font-semibold">{{ quick_stats.catalog_year }}</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="space-y-5">
+    {% for group in audit_groups %}
+      <div class="audit-group">
+        <div class="p-4 border-b border-slate-200">
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <h3 class="text-xl font-semibold">{{ group.title }} ({{ group.required|floatformat:0 }} required)</h3>
+            <div class="text-sm text-slate-500">{{ group.remaining|floatformat:0 }} requirements remaining</div>
+          </div>
+
+          <div class="mt-4 audit-bar">
+            {% widthratio group.completed group.required 100 as group_done_pct %}
+            {% widthratio group.completed|add:group.in_progress group.required 100 as group_ip_total_pct %}
+            {% if group.in_progress > 0 %}
+              <div class="audit-seg ip" style="width: {{ group_ip_total_pct }}%;"></div>
+            {% endif %}
+            {% if group.completed > 0 %}
+              <div class="audit-seg completed" style="width: {{ group_done_pct }}%;"></div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="p-4 space-y-5">
+          {% for sec in group.subsections %}
+            <div class="space-y-3">
+              <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-center">
+                <div class="font-medium text-slate-800">
+                  {{ sec.name }} ({{ sec.completed|floatformat:0 }}/{{ sec.required|floatformat:0 }})
+                </div>
+                <div class="audit-bar">
+                  {% widthratio sec.completed sec.required 100 as sec_done_pct %}
+                  {% widthratio sec.completed|add:sec.in_progress sec.required 100 as sec_ip_total_pct %}
+                  {% if sec.in_progress > 0 %}
+                    <div class="audit-seg ip" style="width: {{ sec_ip_total_pct }}%;"></div>
+                  {% endif %}
+                  {% if sec.completed > 0 %}
+                    <div class="audit-seg completed" style="width: {{ sec_done_pct }}%;"></div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                {% for c in sec.courses %}
+                  <div class="audit-course">
+                    <div><strong>{{ c.code }}</strong> — {{ c.title }}</div>
+                    <div class="text-sm text-slate-500">{{ c.units|floatformat:0 }} units</div>
+                    <div>
+                      <span class="audit-tag {{ c.status }}">
+                        <span>
+                          {% if c.status == "ok" %}✔{% elif c.status == "ip" %}●{% else %}✖{% endif %}
+                        </span>
+                        <span>
+                          {% if c.status == "ok" %}Completed{% elif c.status == "ip" %}In Progress{% else %}Missing{% endif %}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                {% empty %}
+                  <div class="text-sm text-slate-500">No course details available for this requirement yet.</div>
+                {% endfor %}
+              </div>
+            </div>
+          {% empty %}
+            <p class="text-slate-500 text-sm">No requirement data available yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    {% empty %}
+      <div class="audit-card p-6">
+        <h3 class="text-lg font-semibold mb-2">No audit data yet</h3>
+        <p class="text-slate-600 mb-4">Upload a DPR PDF to generate your audit view.</p>
+        <a href="{% url 'upload_dpr' %}"
+           class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700">
+          Upload DPR
+        </a>
+      </div>
+    {% endfor %}
+  </section>
+  {% if below_100_completed or below_100_in_progress %}
+  <section class="audit-card p-5">
+    <h2 class="text-xl font-semibold mb-2">Below 100 Level Courses</h2>
+    <p class="text-sm text-slate-500 mb-4">These courses appear in your record but do not count toward total degree units.</p>
+
+    <div class="space-y-2">
+      {% for r in below_100_completed %}
+        <div class="audit-course">
+          <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
+          <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
+          <div>
+            <span class="audit-tag ok">✔ Completed</span>
+          </div>
+        </div>
+      {% endfor %}
+
+      {% for r in below_100_in_progress %}
+        <div class="audit-course">
+          <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
+          <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
+          <div>
+            <span class="audit-tag ip">● In Progress</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+{% if additional_completed or additional_in_progress %}
+  <section class="audit-card p-5">
+    <h2 class="text-xl font-semibold mb-2">Additional Courses That Count Toward Total Units</h2>
+    <p class="text-sm text-slate-500 mb-4">
+      These courses count toward total earned units, but are not currently shown inside the main requirement sections.
+    </p>
+
+    <div class="space-y-2">
+      {% for r in additional_completed %}
+        <div class="audit-course">
+          <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
+          <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
+          <div>
+            <span class="audit-tag ok">✔ Completed</span>
+          </div>
+        </div>
+      {% endfor %}
+
+      {% for r in additional_in_progress %}
+        <div class="audit-course">
+          <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
+          <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
+          <div>
+            <span class="audit-tag ip">● In Progress</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+</div>
 {% endblock %}
