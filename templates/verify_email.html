@@ -28,7 +28,7 @@
     </p>
 
     <!-- Post to verify-signup; only the code field is required -->
-    <form method="post" action="{% url 'verify-signup' %}" class="space-y-4">
+    <form method="post" action="{% url 'verify_signup' %}" class="space-y-4">
       {% csrf_token %}
 
       <label class="block text-sm font-medium text-gray-700">6-digit code</label>
@@ -45,7 +45,7 @@
     </form>
 
     <div class="mt-6 flex items-center justify-between text-sm">
-      <a href="{% url 'verify-signup' %}?resend=1" class="text-blue-600 hover:underline">Resend code</a>
+      <a href="{% url 'verify_signup' %}?resend=1" class="text-blue-600 hover:underline">Resend code</a>
       <div class="space-x-4">
         <a href="{% url 'login' %}" class="text-gray-600 hover:underline">Back to login</a>
         <a href="{% url 'signup' %}" class="text-gray-600 hover:underline">Start over</a>

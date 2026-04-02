@@ -3,3 +3,6 @@ A simple, student-friendly way to understand where you stand on your degree—an
 In Progess
 
 Python
+
+python3 manage.py migrate
+python3 manage.py runserver

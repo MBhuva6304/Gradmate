@@ -216,7 +216,7 @@ def signup(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.is_active = False
+            user.is_active = False  
             user.save()
 
             profile, _ = StudentProfile.objects.update_or_create(
