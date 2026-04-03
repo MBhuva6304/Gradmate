@@ -378,28 +378,30 @@ def dashboard(request):
         "A3 Critical Thinking": "A3",
         "B1 Physical Science": "B1",
         "B2 Life Science": "B2",
-        "B3 Lab Activity": "B3",
+        "B3 Laboratory Activity": "B3",
         "B4 Math / Quantitative Reasoning": "B4",
         "B5 Upper Division Scientific Inquiry": "B5",
         "C1 Arts": "C1",
         "C2 Humanities": "C2",
+        "C3 American History": "C3",
         "D1 Social Sciences": "D1",
         "D3 Constitution of the U.S.": "D3",
         "D4 California State and Local Government": "D4",
         "E Lifelong Learning": "E",
         "F Comparative Cultural Studies": "F",
+        "Ethnic Studies": "ES",
+        "Basic Skills Information Competence": "BSIC",
+        "Subject Explorations Information Competence": "SEIC",
+        "General Education Upper Division": "UDGE",
     }
 
     major_mapping = {
-        "Pre-Major": "PRE",
-        "Lower Division Core": "LDC",
-        "Lower Division Elective A": "LDE-A",
-        "Lower Division Elective B": "LDE-B",
-        "Probability / Statistics": "STAT",
-        "Upper Division Core": "UDC",
+        "Lower Division Algorithms & Programming": "LDAP",
+        "Lower Division Major": "LDM",
+        "Lower Division Life Science": "LDLS",
+        "Lower Division Physical Science": "LDPS",
+        "Computer Science Upper Division Core": "UDC",
         "Senior Electives": "SE",
-        "Ethnic Studies": "ES",
-        "Information Competence": "IC",
     }
 
     ge_progress = []
@@ -415,22 +417,35 @@ def dashboard(request):
             major_progress.append(item)
 
     ge_order = {
-        "A1": 1, "A2": 2, "A3": 3,
-        "B1": 4, "B2": 5, "B3": 6, "B4": 7, "B5": 8,
-        "C1": 9, "C2": 10,
-        "D1": 11, "D3": 12, "D4": 13,
-        "E": 14, "F": 15,
+        "A1": 1,
+        "A2": 2,
+        "A3": 3,
+        "B1": 4,
+        "B2": 5,
+        "B3": 6,
+        "B4": 7,
+        "B5": 8,
+        "C1": 9,
+        "C2": 10,
+        "C3": 11,
+        "D1": 12,
+        "D3": 13,
+        "D4": 14,
+        "E": 15,
+        "F": 16,
+        "UDGE": 17,
+        "BSIC": 18,
+        "SEIC": 19,
+        "ES": 20,
     }
+
     major_order = {
-        "PRE": 1,
-        "LDC": 2,
-        "LDE-A": 3,
-        "LDE-B": 4,
-        "STAT": 5,
-        "UDC": 6,
-        "SE": 7,
-        "ES": 8,
-        "IC": 9,
+        "LDAP": 1,
+        "LDM": 2,
+        "LDLS": 3,
+        "LDPS": 4,
+        "UDC": 5,
+        "SE": 6,
     }
 
     ge_progress.sort(key=lambda g: ge_order.get(g["short"], 999))
@@ -522,25 +537,33 @@ def _short_group_name(name: str) -> str:
         "A3 Critical Thinking": "A3",
         "B1 Physical Science": "B1",
         "B2 Life Science": "B2",
-        "B3 Lab Activity": "B3",
+        "B3 Laboratory Activity": "B3",
         "B4 Math / Quantitative Reasoning": "B4",
         "B5 Upper Division Scientific Inquiry": "B5",
         "C1 Arts": "C1",
         "C2 Humanities": "C2",
+        "C3 American History": "C3",
         "D1 Social Sciences": "D1",
         "D3 Constitution of the U.S.": "D3",
         "D4 California State and Local Government": "D4",
         "E Lifelong Learning": "E",
         "F Comparative Cultural Studies": "F",
-        "Pre-Major": "PRE",
-        "Lower Division Core": "LDC",
-        "Lower Division Elective A": "LDE-A",
-        "Lower Division Elective B": "LDE-B",
-        "Probability / Statistics": "STAT",
-        "Upper Division Core": "UDC",
-        "Senior Electives": "SE",
         "Ethnic Studies": "ES",
-        "Information Competence": "IC",
+        "Basic Skills Information Competence": "BSIC",
+        "Subject Explorations Information Competence": "SEIC",
+
+        "Lower Division Algorithms & Programming": "LDAP",
+        "Lower Division Major": "LDM",
+        "Lower Division Life Science": "LDLS",
+        "Lower Division Physical Science": "LDPS",
+        "Computer Science Upper Division Core": "UDC",
+        "Senior Electives": "SE",
+
+        "General Education Upper Division": "UDGE",
+        "C Upper Division Arts and Humanities": "UD-C",
+        "D Upper Division Social Sciences": "UD-D",
+        "F Upper Division Comparative Cultural Studies": "UD-F",
+        "F Upper Division Comparative Cultural Studies 2": "UD-F2",
     }
     return mapping.get(name, name)
 
@@ -548,87 +571,49 @@ def _short_group_name(name: str) -> str:
 def _bucket_title(name: str) -> str:
     n = (name or "").strip()
 
-    # Heading 1: General Education Plan G
     if n in {
-        # Section A
         "A1 Oral Communication",
         "A2 Written Communication",
         "A3 Critical Thinking",
-
-        # Section B
         "B1 Physical Science",
         "B2 Life Science",
-        "B3 Lab Activity",
         "B3 Laboratory Activity",
         "B4 Math / Quantitative Reasoning",
-        "B4 Mathematics/Quantitative Reasoning",
         "B5 Upper Division Scientific Inquiry",
-        "B5 Upper Division Scientific Inquiry or Quantitative Reasoning",
-
-        # Section C
         "C1 Arts",
         "C2 Humanities",
         "C3 American History",
-
-        # Section D
         "D1 Social Sciences",
         "D3 Constitution of the U.S.",
-        "D3 Constitution of the United States",
         "D4 California State and Local Government",
-
-        # Section E / F
         "E Lifelong Learning",
-        "E Lifelong Learning Requirement",
         "F Comparative Cultural Studies",
-        "F Comparative Cultural Studies / Gender, Race, Class, Ethnicity Studies and Foreign Languages Requirement",
-
-        # General Education Upper Division
-        "Section C Upper Division Arts and Humanities",
-        "Section D Upper Division Social Sciences",
-        "Section F Upper Division Comparative Cultural Studies / Gender, Race, Class, Ethnicity Studies and Foreign Languages",
-
-        # Other GE-related sections
-        "Subject Explorations Information Competence Requirement",
-        "Basic Skills Information Competence Requirement",
-        "Ethnic Studies Graduation Requirement",
-        "Information Competence",
         "Ethnic Studies",
+        "Basic Skills Information Competence",
+        "Subject Explorations Information Competence",
+        "General Education Upper Division",
+
+        # helper UD blocks
+        "C Upper Division Arts and Humanities",
+        "D Upper Division Social Sciences",
+        "F Upper Division Comparative Cultural Studies",
+        "F Upper Division Comparative Cultural Studies 2",
     }:
         return "General Education"
 
-    # Heading 2: Computer Science Grade and Residency Requirements
     if n in {
-        "Computer Science Lower Division Core Requirements",
-        "LOWER DIVISION ALGORITHMS & PROGRAMMING Requirements",
         "Lower Division Algorithms & Programming",
-        "Lower Division Major Requirements",
         "Lower Division Major",
-
-        "Computer Science Lower Division Elective Requirements",
         "Lower Division Life Science",
         "Lower Division Physical Science",
-        "Lower Division Physical Sciene",
-
-        "Computer Science Upper Division Core Requirements",
-        "Upper Division Core",
-
-        "Senior Elective Requirement",
+        "Computer Science Upper Division Core",
         "Senior Electives",
-
-        # keep old names too if they appear
-        "Pre-Major",
-        "Lower Division Core",
-        "Lower Division Elective A",
-        "Lower Division Elective B",
-        "Probability / Statistics",
     }:
         return "Computer Science Grade and Residency Requirements"
 
-    # Heading 3
     if n == "Additional Courses Which Count Toward Total Units Required for a Degree":
         return "Additional Courses Which Count Toward Total Units Required for a Degree"
 
-    # Heading 4
     if n == "These courses do not provide unit credit toward a bachelor degree":
         return "These courses do not provide unit credit toward a bachelor degree"
 
@@ -732,31 +717,48 @@ def _build_requirement_audit_data(profile, user):
         for item in items:
             raw_name = (item.get("name") or "").strip()
 
+            if raw_name == "F Upper Division Comparative Cultural Studies 2":
+                continue
+
+            if raw_name in {
+                "C Upper Division Arts and Humanities",
+                "D Upper Division Social Sciences",
+                "F Upper Division Comparative Cultural Studies",
+                "F Upper Division Comparative Cultural Studies 2",
+            }:
+                continue
+
             display_name_map = {
-                "A1": "A1 Oral Communication",
-                "A2": "A2 Written Communication",
-                "A3": "A3 Critical Thinking",
-                "B1": "B1 Physical Science",
-                "B2": "B2 Life Science",
-                "B3": "B3 Lab Activity",
-                "B4": "B4 Math / Quantitative Reasoning",
-                "B5": "B5 Upper Division Scientific Inquiry",
-                "C1": "C1 Arts",
-                "C2": "C2 Humanities",
-                "D1": "D1 Social Sciences",
-                "D3": "D3 Constitution of the U.S.",
-                "D4": "D4 California State and Local Government",
-                "E": "E Lifelong Learning",
-                "F": "F Comparative Cultural Studies",
-                "PRE": "Pre-Major",
-                "LDC": "Lower Division Core",
-                "LDE-A": "Lower Division Elective A",
-                "LDE-B": "Lower Division Elective B",
-                "STAT": "Probability / Statistics",
-                "UDC": "Upper Division Core",
-                "SE": "Senior Electives",
-                "ES": "Ethnic Studies",
-                "IC": "Information Competence",
+                "A1 Oral Communication": "A1 Oral Communication",
+                "A2 Written Communication": "A2 Written Communication",
+                "A3 Critical Thinking": "A3 Critical Thinking",
+                "B1 Physical Science": "B1 Physical Science",
+                "B2 Life Science": "B2 Life Science",
+                "B3 Laboratory Activity": "B3 Laboratory Activity",
+                "B4 Math / Quantitative Reasoning": "B4 Math / Quantitative Reasoning",
+                "B5 Upper Division Scientific Inquiry": "B5 Upper Division Scientific Inquiry",
+                "C1 Arts": "C1 Arts",
+                "C2 Humanities": "C2 Humanities",
+                "C3 American History": "C3 American History",
+                "D1 Social Sciences": "D1 Social Sciences",
+                "D3 Constitution of the U.S.": "D3 Constitution of the U.S.",
+                "D4 California State and Local Government": "D4 California State and Local Government",
+                "E Lifelong Learning": "E Lifelong Learning",
+                "F Comparative Cultural Studies": "F Comparative Cultural Studies",
+                "Ethnic Studies": "Ethnic Studies",
+                "Basic Skills Information Competence": "Basic Skills Information Competence",
+                "Subject Explorations Information Competence": "Subject Explorations Information Competence",
+                "Lower Division Algorithms & Programming": "Lower Division Algorithms & Programming",
+                "Lower Division Major": "Lower Division Major",
+                "Lower Division Life Science": "Lower Division Life Science",
+                "Lower Division Physical Science": "Lower Division Physical Science",
+                "Computer Science Upper Division Core": "Computer Science Upper Division Core",
+                "Senior Electives": "Senior Electives",
+                "General Education Upper Division": "General Education Upper Division",
+                "C Upper Division Arts and Humanities": "UD C Arts and Humanities",
+                "D Upper Division Social Sciences": "UD D Social Sciences",
+                "F Upper Division Comparative Cultural Studies": "UD F Comparative Cultural Studies",
+                "F Upper Division Comparative Cultural Studies 2": "UD F Comparative Cultural Studies 2",
             }
 
             display_name = display_name_map.get(raw_name, raw_name)
@@ -879,7 +881,41 @@ def _build_requirement_audit_data(profile, user):
             group_completed += completed
             group_in_progress += ip_count
 
-        subsections.sort(key=lambda s: s.get("name", "").lower())
+        def _subsection_sort_key(section):
+            name = (section.get("name") or "").strip()
+
+            custom_order = {
+            "A1 Oral Communication": 1,
+            "A2 Written Communication": 2,
+            "A3 Critical Thinking": 3,
+            "B1 Physical Science": 4,
+            "B2 Life Science": 5,
+            "B3 Laboratory Activity": 6,
+            "B4 Math / Quantitative Reasoning": 7,
+            "B5 Upper Division Scientific Inquiry": 8,
+            "C1 Arts": 9,
+            "C2 Humanities": 10,
+            "C3 American History": 11,
+            "D1 Social Sciences": 12,
+            "D3 Constitution of the U.S.": 13,
+            "D4 California State and Local Government": 14,
+            "E Lifelong Learning": 15,
+            "F Comparative Cultural Studies": 16,
+            "General Education Upper Division": 17,
+            "Basic Skills Information Competence": 18,
+            "Subject Explorations Information Competence": 19,
+            "Ethnic Studies": 20,
+            "Lower Division Algorithms & Programming": 101,
+            "Lower Division Major": 102,
+            "Lower Division Life Science": 103,
+            "Lower Division Physical Science": 104,
+            "Computer Science Upper Division Core": 105,
+            "Senior Electives": 106,
+            }
+
+            return (custom_order.get(name, 999), name.lower())
+        
+        subsections.sort(key=_subsection_sort_key)
 
         audit_groups.append({
             "title": bucket_name,
