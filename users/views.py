@@ -548,22 +548,89 @@ def _short_group_name(name: str) -> str:
 def _bucket_title(name: str) -> str:
     n = (name or "").strip()
 
-    ge_prefixes = {"A1", "A2", "A3", "B1", "B2", "B3", "B4", "B5", "C1", "C2", "D1", "D3", "D4", "E", "F"}
-    lower_div = {"PRE", "LDC", "LDE-A", "LDE-B", "STAT"}
-    upper_div = {"UDC", "SE"}
-    university = {"ES", "IC"}
+    # Heading 1: General Education Plan G
+    if n in {
+        # Section A
+        "A1 Oral Communication",
+        "A2 Written Communication",
+        "A3 Critical Thinking",
 
-    if n in ge_prefixes or n.startswith(("A1", "A2", "A3", "B1", "B2", "B3", "B4", "B5", "C1", "C2", "D1", "D3", "D4", "E", "F")):
+        # Section B
+        "B1 Physical Science",
+        "B2 Life Science",
+        "B3 Lab Activity",
+        "B3 Laboratory Activity",
+        "B4 Math / Quantitative Reasoning",
+        "B4 Mathematics/Quantitative Reasoning",
+        "B5 Upper Division Scientific Inquiry",
+        "B5 Upper Division Scientific Inquiry or Quantitative Reasoning",
+
+        # Section C
+        "C1 Arts",
+        "C2 Humanities",
+        "C3 American History",
+
+        # Section D
+        "D1 Social Sciences",
+        "D3 Constitution of the U.S.",
+        "D3 Constitution of the United States",
+        "D4 California State and Local Government",
+
+        # Section E / F
+        "E Lifelong Learning",
+        "E Lifelong Learning Requirement",
+        "F Comparative Cultural Studies",
+        "F Comparative Cultural Studies / Gender, Race, Class, Ethnicity Studies and Foreign Languages Requirement",
+
+        # General Education Upper Division
+        "Section C Upper Division Arts and Humanities",
+        "Section D Upper Division Social Sciences",
+        "Section F Upper Division Comparative Cultural Studies / Gender, Race, Class, Ethnicity Studies and Foreign Languages",
+
+        # Other GE-related sections
+        "Subject Explorations Information Competence Requirement",
+        "Basic Skills Information Competence Requirement",
+        "Ethnic Studies Graduation Requirement",
+        "Information Competence",
+        "Ethnic Studies",
+    }:
         return "General Education"
 
-    if n in lower_div or n in {"Pre-Major", "Lower Division Core", "Lower Division Elective A", "Lower Division Elective B", "Probability / Statistics"}:
-        return "Lower Division Requirements"
+    # Heading 2: Computer Science Grade and Residency Requirements
+    if n in {
+        "Computer Science Lower Division Core Requirements",
+        "LOWER DIVISION ALGORITHMS & PROGRAMMING Requirements",
+        "Lower Division Algorithms & Programming",
+        "Lower Division Major Requirements",
+        "Lower Division Major",
 
-    if n in upper_div or n in {"Upper Division Core", "Senior Electives"}:
-        return "Upper Division Requirements"
+        "Computer Science Lower Division Elective Requirements",
+        "Lower Division Life Science",
+        "Lower Division Physical Science",
+        "Lower Division Physical Sciene",
 
-    if n in university or n in {"Ethnic Studies", "Information Competence"}:
-        return "University Requirements"
+        "Computer Science Upper Division Core Requirements",
+        "Upper Division Core",
+
+        "Senior Elective Requirement",
+        "Senior Electives",
+
+        # keep old names too if they appear
+        "Pre-Major",
+        "Lower Division Core",
+        "Lower Division Elective A",
+        "Lower Division Elective B",
+        "Probability / Statistics",
+    }:
+        return "Computer Science Grade and Residency Requirements"
+
+    # Heading 3
+    if n == "Additional Courses Which Count Toward Total Units Required for a Degree":
+        return "Additional Courses Which Count Toward Total Units Required for a Degree"
+
+    # Heading 4
+    if n == "These courses do not provide unit credit toward a bachelor degree":
+        return "These courses do not provide unit credit toward a bachelor degree"
 
     return "Other Requirements"
 
@@ -643,9 +710,9 @@ def _build_requirement_audit_data(profile, user):
 
     bucket_order = [
         "General Education",
-        "Lower Division Requirements",
-        "Upper Division Requirements",
-        "University Requirements",
+        "Computer Science Grade and Residency Requirements",
+        "Additional Courses Which Count Toward Total Units Required for a Degree",
+        "These courses do not provide unit credit toward a bachelor degree",
         "Other Requirements",
     ]
 
