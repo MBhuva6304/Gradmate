@@ -343,6 +343,21 @@ def settings_page(request):
     })
 
 @profile_required
+def clear_audit_data(request):
+    if request.method != "POST":
+        return redirect("settings")
+
+    profile = request.profile
+
+    CompletedClass.objects.filter(profile=profile).delete()
+    InProgressClass.objects.filter(profile=profile).delete()
+    profile.completed_codes = ""
+    profile.save(update_fields=["completed_codes"])
+
+    messages.success(request, "Current audit data was cleared. Your DPR history files were kept.")
+    return redirect("settings")
+
+@profile_required
 def dashboard(request):
     profile = StudentProfile.objects.select_related("user").get(user=request.user)
 

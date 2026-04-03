@@ -166,7 +166,6 @@
       </section>
 
       <!-- DPR History card -->
-      </section>
       <section class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mt-6 w-full">
         <h2 class="text-lg font-semibold mb-2">DPR History</h2>
         <p class="text-sm text-slate-500 mb-4">
@@ -259,6 +258,31 @@
           You haven't marked any courses as completed yet.
         </p>
           {% endif %}
+        </div>
+      </section>
+      <!-- Audit data reset card -->
+      <section class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200">
+        <div class="border-b border-slate-200 px-6 py-4">
+          <h2 class="font-semibold text-slate-900">Audit Data Reset</h2>
+          <p class="text-sm text-slate-600 mt-1">
+        This clears your current imported completed and in-progress audit data. Your DPR history files will remain available.
+          </p>
+        </div>
+
+        <div class="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div class="text-sm text-slate-700">
+        Use this if the wrong DPR was imported or you want to start fresh before uploading a new one.
+          </div>
+
+          <form method="post" action="{% url 'clear_audit_data' %}" onsubmit="return confirm('Are you sure you want to clear your current audit data?');">
+        {% csrf_token %}
+        <button
+          type="submit"
+          class="inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+        >
+          Clear Current Audit Data
+        </button>
+          </form>
         </div>
       </section>
     </div>

@@ -19,6 +19,8 @@ urlpatterns = [
 
     # DPR upload (dashboard modal uses this)
     path("dpr/upload/", users_views.upload_dpr, name="upload_dpr"),
+    # Clear Audit Cache
+    path("settings/clear-audit/", users_views.clear_audit_data, name="clear_audit_data"),
 
     path("setup-profile/", users_views.setup_profile, name="setup_profile"),
 
