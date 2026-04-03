@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import os
 import random
 import re
 from functools import wraps
@@ -324,13 +325,22 @@ def settings_page(request):
             messages.success(request, "Password changed.")
             return redirect("settings")
 
+    dpr_history = (
+        DPRUpload.objects
+        .filter(user=request.user)
+        .order_by("-uploaded_at")
+    )
+
+    for dpr in dpr_history:
+        dpr.display_name = os.path.basename(dpr.file.name or "")
+
     return render(request, "settings.html", {
         "profile_form": profile_form,
         "pwd_form": pwd_form,
         "profile": profile,
         "completed_courses": completed_courses,
+        "dpr_history": dpr_history,
     })
-
 
 @profile_required
 def dashboard(request):
@@ -424,9 +434,10 @@ def dashboard(request):
         int(target_credits - completed_credits - float(in_progress_credits))
     )
     denom = target_credits or 1
-    progress_percent = int(
-        ((completed_credits + float(in_progress_credits)) / denom) * 100
-    )
+    progress_percent = min(
+        100,
+        int(((completed_credits + float(in_progress_credits)) / denom) * 100)
+    ) 
 
     context = {
         "profile": profile,
@@ -541,10 +552,7 @@ def _bucket_title(name: str) -> str:
 
     return "Other Requirements"
 
-@profile_required
-def audit(request):
-    profile = request.profile
-
+def _build_requirement_audit_data(profile, user):
     completed_courses = list(
         CompletedClass.objects
         .filter(profile=profile)
@@ -581,17 +589,6 @@ def audit(request):
         if ic.course and ic.course.numeric_level() is not None and ic.course.numeric_level() < 100
     ]
 
-    completed_map = {
-        c.course_id: c
-        for c in completed_courses
-        if c.course_id
-    }
-    in_progress_map = {
-        c.course_id: c
-        for c in in_progress_courses
-        if c.course_id
-    }
-
     completed_credits = sum(
         _safe_float(getattr(c.course, "credits", 0))
         for c in completed_courses
@@ -603,6 +600,7 @@ def audit(request):
         for c in in_progress_courses
         if c.course
     )
+
     target_credits = 120
     if hasattr(profile, "approximate_graduation_term"):
         try:
@@ -651,7 +649,6 @@ def audit(request):
 
         for item in items:
             raw_name = (item.get("name") or "").strip()
-            # support both long names and short names
 
             display_name_map = {
                 "A1": "A1 Oral Communication",
@@ -683,8 +680,6 @@ def audit(request):
             display_name = display_name_map.get(raw_name, raw_name)
             short_name = _short_group_name(display_name or raw_name)
 
-            # support alternate key names from requirement_group_progress()
-            # requirement_group_progress() returns block counts, not "required"
             required = _safe_float(
                 item.get("min_required")
                 or item.get("required")
@@ -737,8 +732,7 @@ def audit(request):
                 if ic.course and (ic.course.code or "").upper() in block_course_codes:
                     matched_ip.append(ic)
 
-            matched_ip_credits = sum(_safe_float(getattr(x.course, "credits", 0)) for x in matched_ip)
-            ip_credits = max(in_progress_from_group, matched_ip_credits)
+            ip_count = max(int(in_progress_from_group), len(matched_ip))
             course_rows = []
 
             for cc in matched_completed:
@@ -748,7 +742,7 @@ def audit(request):
                     "units": _safe_float(cc.course.credits),
                     "grade": "Done",
                     "status": "ok",
-            })
+                })
 
             for ic in matched_ip:
                 course_rows.append({
@@ -757,8 +751,8 @@ def audit(request):
                     "units": _safe_float(ic.course.credits),
                     "grade": "IP",
                     "status": "ip",
-            })
-                
+                })
+
             used_requirement_codes.update(
                 (cc.course.code or "").upper()
                 for cc in matched_completed
@@ -771,27 +765,26 @@ def audit(request):
                 if ic.course and ic.course.code
             )
 
-
             if not course_rows and not done:
-                missing_units = max(0.0, required - completed - ip_credits)
-                if missing_units > 0:
+                missing_count = max(0.0, required - completed - ip_count)
+                if missing_count > 0:
                     course_rows.append({
                         "code": "—",
                         "title": "Course needed",
-                        "units": missing_units,
+                        "units": missing_count,
                         "grade": "—",
                         "status": "bad",
-            })
+                    })
 
-            meta = _status_meta(done, completed, ip_credits, required)
+            meta = _status_meta(done, completed, ip_count, required)
 
             subsection = {
                 "name": display_name or "Requirement",
                 "short": _short_group_name(display_name or raw_name or "Requirement"),
                 "required": required,
                 "completed": completed,
-                "in_progress": ip_credits,
-                "remaining": max(0.0, required - completed - ip_credits),
+                "in_progress": ip_count,
+                "remaining": max(0.0, required - completed - ip_count),
                 "done": done,
                 "courses": course_rows,
                 "status_label": meta["label"],
@@ -802,7 +795,7 @@ def audit(request):
             subsections.append(subsection)
             group_required += required
             group_completed += completed
-            group_in_progress += ip_credits
+            group_in_progress += ip_count
 
         subsections.sort(key=lambda s: s.get("name", "").lower())
 
@@ -833,8 +826,7 @@ def audit(request):
         and ic.course.numeric_level() >= 100
     ]
 
-    context = {
-        "profile": profile,
+    return {
         "audit_groups": audit_groups,
         "audit_summary": {
             "completed": int(completed_credits),
@@ -847,11 +839,22 @@ def audit(request):
             "catalog_year": getattr(profile, "catalog_year", ""),
             "standing": "Junior" if completed_credits >= 60 else "Sophomore" if completed_credits >= 30 else "Freshman",
         },
-        "latest_dpr": DPRUpload.objects.filter(user=request.user).order_by("-uploaded_at").first(),
+        "latest_dpr": DPRUpload.objects.filter(user=user).order_by("-uploaded_at").first(),
         "below_100_completed": below_100_completed,
         "below_100_in_progress": below_100_in_progress,
         "additional_completed": additional_completed,
         "additional_in_progress": additional_in_progress,
+    }
+
+@profile_required
+def audit(request):
+    profile = request.profile
+
+    shared = _build_requirement_audit_data(profile, request.user)
+
+    context = {
+        "profile": profile,
+        **shared,
     }
     return render(request, "audit.html", context)
 
@@ -952,12 +955,6 @@ def upload_dpr(request):
         return course, created
 
     with transaction.atomic():
-        # delete old uploaded DPR files + rows
-        old_uploads = DPRUpload.objects.filter(user=request.user)
-        for old in old_uploads:
-            if old.file:
-                old.file.delete(save=False)
-        old_uploads.delete()
 
         # save new DPR file
         DPRUpload.objects.create(user=request.user, file=uploaded_file)

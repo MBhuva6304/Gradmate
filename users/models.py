@@ -326,6 +326,7 @@ class StudentProfile(models.Model):
         - avoids double-counting by default
         - supports explicit double-counting with allow_double_count=True
         - supports path/either-or rules via PathRule
+        - counts BOTH completed and in-progress courses
         - falls back to old ProgramRequirementGroup logic if blocks are not configured
 
         IMPORTANT:
@@ -336,6 +337,8 @@ class StudentProfile(models.Model):
             return []
 
         completed_codes = self.completed_course_codes()
+        in_progress_codes = self.in_progress_course_codes()
+
         used_codes = set()
         out = []
 
@@ -347,23 +350,40 @@ class StudentProfile(models.Model):
             for b in blocks:
                 block_codes = [c.code.upper() for c in b.courses.all()]
 
-                available = []
+                assigned_completed = []
+                assigned_ip = []
+
                 for code in block_codes:
                     if code in completed_codes:
                         if b.allow_double_count or code not in used_codes:
-                            available.append(code)
+                            if code not in assigned_completed:
+                                assigned_completed.append(code)
+                        if len(assigned_completed) >= int(b.min_required):
+                            break
 
-                assigned = available[: int(b.min_required)]
+                remaining_slots = max(0, int(b.min_required) - len(assigned_completed))
+
+                if remaining_slots > 0:
+                    for code in block_codes:
+                        if remaining_slots <= 0:
+                            break
+                        if code in in_progress_codes and code not in assigned_completed:
+                            if b.allow_double_count or code not in used_codes:
+                                if code not in assigned_ip:
+                                    assigned_ip.append(code)
+                                    remaining_slots -= 1
 
                 if not b.allow_double_count:
-                    used_codes.update(assigned)
+                    used_codes.update(assigned_completed)
+                    used_codes.update(assigned_ip)
 
                 out.append({
                     "name": b.name,
                     "min_required": int(b.min_required),
-                    "completed": int(len(assigned)),
+                    "completed": int(len(assigned_completed)),
+                    "in_progress": int(len(assigned_ip)),
                     "total_options": int(len(block_codes)),
-                    "done": len(assigned) >= int(b.min_required),
+                    "done": len(assigned_completed) >= int(b.min_required),
                     "type": "block",
                     "allow_double_count": bool(b.allow_double_count),
                 })
@@ -390,6 +410,7 @@ class StudentProfile(models.Model):
                     "name": rule.name,
                     "min_required": int(target),
                     "completed": int(best_score),
+                    "in_progress": 0,
                     "total_options": int(len(rule.paths or [])),
                     "done": best_score >= target if target else False,
                     "type": "path",
@@ -397,21 +418,24 @@ class StudentProfile(models.Model):
 
             return out
 
-        # Fallback old group behavior
         groups = req.groups.prefetch_related("courses").all()
         for g in groups:
             group_codes = [c.code.upper() for c in g.courses.all()]
             completed_in_group = sum(1 for code in group_codes if code in completed_codes)
+            in_progress_in_group = sum(
+                1 for code in group_codes
+                if code in in_progress_codes and code not in completed_codes
+            )
             out.append({
                 "name": g.name,
                 "min_required": int(g.min_required),
                 "completed": int(completed_in_group),
+                "in_progress": int(in_progress_in_group),
                 "total_options": int(len(group_codes)),
                 "done": completed_in_group >= int(g.min_required),
                 "type": "group",
             })
         return out
-
 
 class Tag(models.Model):
     name = models.CharField(max_length=48, unique=True)
