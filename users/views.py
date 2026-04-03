@@ -619,6 +619,77 @@ def _bucket_title(name: str) -> str:
 
     return "Other Requirements"
 
+def _collect_block_course_rows(profile, block_names: list[str]):
+    completed_courses = list(
+        CompletedClass.objects
+        .filter(profile=profile)
+        .select_related("course")
+        .order_by("course__subject", "course__code")
+    )
+
+    in_progress_courses = list(
+        InProgressClass.objects
+        .filter(profile=profile)
+        .select_related("course")
+        .order_by("course__subject", "course__code")
+    )
+
+    req = profile.get_requirement()
+    if not req:
+        return []
+
+    label_map = {
+        "B5 Upper Division Scientific Inquiry": "Section B5 Upper Division Scientific Inquiry",
+        "C Upper Division Arts and Humanities": "Section C Upper Division Arts and Humanities",
+        "D Upper Division Social Sciences": "Section D Upper Division Social Sciences",
+        "F Upper Division Comparative Cultural Studies": "Section F Upper Division Comparative Cultural Studies",
+        "F Upper Division Comparative Cultural Studies 2": "Section F Upper Division Comparative Cultural Studies",
+    }
+
+    rows = []
+    seen_codes = set()
+
+    for block_name in block_names:
+        block = req.blocks.filter(name=block_name).first()
+        if not block:
+            continue
+
+        section_label = label_map.get(block_name, block_name)
+
+        block_course_codes = {
+            (c.code or "").upper()
+            for c in block.courses.all()
+            if c.code
+        }
+
+        for cc in completed_courses:
+            if cc.course and (cc.course.code or "").upper() in block_course_codes:
+                code = (cc.course.code or "").upper()
+                if code not in seen_codes:
+                    rows.append({
+                        "code": cc.course.code,
+                        "title": f"{section_label}: {cc.course.title}",
+                        "units": _safe_float(cc.course.credits),
+                        "grade": "Done",
+                        "status": "ok",
+                    })
+                    seen_codes.add(code)
+
+        for ic in in_progress_courses:
+            if ic.course and (ic.course.code or "").upper() in block_course_codes:
+                code = (ic.course.code or "").upper()
+                if code not in seen_codes:
+                    rows.append({
+                        "code": ic.course.code,
+                        "title": f"{section_label}: {ic.course.title}",
+                        "units": _safe_float(ic.course.credits),
+                        "grade": "IP",
+                        "status": "ip",
+                    })
+                    seen_codes.add(code)
+
+    return rows
+
 def _build_requirement_audit_data(profile, user):
     completed_courses = list(
         CompletedClass.objects
@@ -716,6 +787,67 @@ def _build_requirement_audit_data(profile, user):
 
         for item in items:
             raw_name = (item.get("name") or "").strip()
+
+            if raw_name == "General Education Upper Division":
+                required = _safe_float(
+                    item.get("min_required")
+                    or item.get("required")
+                    or item.get("credits_required")
+                    or item.get("units_required")
+                    or item.get("total_required")
+                    or 0
+                )
+
+                completed = _safe_float(
+                    item.get("completed")
+                    or item.get("credits_completed")
+                    or item.get("units_completed")
+                    or 0
+                )
+
+                done = bool(item.get("done", False))
+
+                course_rows = _collect_block_course_rows(profile, [
+                    "B5 Upper Division Scientific Inquiry",
+                    "C Upper Division Arts and Humanities",
+                    "D Upper Division Social Sciences",
+                    "F Upper Division Comparative Cultural Studies",
+                ])
+
+                ip_count = sum(1 for r in course_rows if r["status"] == "ip")
+
+                if not course_rows and not done:
+                    missing_count = max(0.0, required - completed - ip_count)
+                    if missing_count > 0:
+                        course_rows.append({
+                            "code": "—",
+                            "title": "Course needed",
+                            "units": missing_count,
+                            "grade": "—",
+                            "status": "bad",
+                        })
+
+                meta = _status_meta(done, completed, ip_count, required)
+
+                subsection = {
+                    "name": "General Education Upper Division",
+                    "short": _short_group_name("General Education Upper Division"),
+                    "required": required,
+                    "completed": completed,
+                    "in_progress": ip_count,
+                    "remaining": max(0.0, required - completed - ip_count),
+                    "done": done,
+                    "courses": course_rows,
+                    "status_label": meta["label"],
+                    "tag_class": meta["tag_class"],
+                    "icon": meta["icon"],
+                }
+
+                subsections.append(subsection)
+                group_required += required
+                group_completed += completed
+                group_in_progress += ip_count
+                continue
 
             if raw_name == "F Upper Division Comparative Cultural Studies 2":
                 continue
