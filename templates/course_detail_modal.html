@@ -15,6 +15,14 @@
           {{ c.title }}
         </p>
       {% endif %}
+
+      {% if progress_label %}
+      <div class="mt-3">
+        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ progress_badge_class }}">
+          {{ progress_label }}
+        </span>
+      </div>
+{% endif %}
     </div>
 
     <!-- Close button (handled by JS in courses.html) -->

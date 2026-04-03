@@ -64,41 +64,48 @@ class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
 
   <!-- Courses grid -->
   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-    {% for c in courses %}
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-4 flex flex-col justify-between">
-        <div>
-          <p class="text-sm font-semibold text-slate-900">
-            {{ c.code }} ({{ c.credits }})
-          </p>
-          <p class="mt-1 text-sm text-slate-700">
-            {{ c.title }}
-          </p>
+  {% for c in courses %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-4 flex flex-col justify-between">
+      <div>
+        <p class="text-sm font-semibold text-slate-900">
+          {{ c.code }} ({{ c.credits }})
+        </p>
 
-          <!-- tags row (only fulfillment tags) -->
-          <div class="mt-3 flex flex-wrap gap-2">
-            {% for t in c.tags.all %}
-              <span class="px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-700">
-                {{ t.name }}
-              </span>
-            {% endfor %}
+        <p class="mt-1 text-sm text-slate-700">
+          {{ c.title }}
+        </p>
+
+        {% if c.progress_label %}
+          <div class="mt-3">
+            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ c.progress_badge_class }}">
+              {{ c.progress_label }}
+            </span>
           </div>
-        </div>
+        {% endif %}
 
-        <!-- Details button -->
-        <div class="mt-4">
-          <a
-            href="{% url 'course_detail' c.id %}?partial=1"
-            data-course-url="{% url 'course_detail' c.id %}?partial=1"
-            class="inline-flex items-center justify-center rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700"
-          >
-            Details
-          </a>
+        <!-- tags row -->
+        <div class="mt-3 flex flex-wrap gap-2">
+          {% for t in c.tags.all %}
+            <span class="px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-700">
+              {{ t.name }}
+            </span>
+          {% endfor %}
         </div>
       </div>
-    {% empty %}
-      <p class="text-sm text-slate-600">No courses found for your program / catalog year.</p>
-    {% endfor %}
-  </div>
+
+      <div class="mt-4">
+        <a
+          href="{% url 'course_detail' c.id %}?partial=1"
+          data-course-url="{% url 'course_detail' c.id %}?partial=1"
+          class="inline-flex items-center justify-center rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700"
+        >
+          Details
+        </a>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-sm text-slate-600">No courses found for your program / catalog year.</p>
+  {% endfor %}
 </div>
 
 <!-- Slide-over panel backdrop -->

@@ -1334,6 +1334,27 @@ def courses_page(request):
 
     courses = list(base_qs)
 
+    completed_ids = set(
+        CompletedClass.objects.filter(profile=profile).values_list("course_id", flat=True)
+    )
+    in_progress_ids = set(
+        InProgressClass.objects.filter(profile=profile).values_list("course_id", flat=True)
+    )
+
+    for c in courses:
+        if c.id in completed_ids:
+            c.progress_status = "completed"
+            c.progress_label = "Completed"
+            c.progress_badge_class = "bg-emerald-100 text-emerald-700"
+        elif c.id in in_progress_ids:
+            c.progress_status = "in_progress"
+            c.progress_label = "In Progress"
+            c.progress_badge_class = "bg-amber-100 text-amber-700"
+        else:
+            c.progress_status = ""
+            c.progress_label = ""
+            c.progress_badge_class = ""
+
     level_param = request.GET.get("level", "").strip()
     LEVEL_RANGES = {
         "000-099": (0, 99),
@@ -1453,6 +1474,22 @@ def course_detail(request, pk: int):
         else []
     )
 
+    is_completed = CompletedClass.objects.filter(profile=profile, course=course).exists()
+    is_in_progress = InProgressClass.objects.filter(profile=profile, course=course).exists()
+
+    if is_completed:
+        progress_status = "completed"
+        progress_label = "Completed"
+        progress_badge_class = "bg-emerald-100 text-emerald-700"
+    elif is_in_progress:
+        progress_status = "in_progress"
+        progress_label = "In Progress"
+        progress_badge_class = "bg-amber-100 text-amber-700"
+    else:
+        progress_status = ""
+        progress_label = ""
+        progress_badge_class = ""
+
     ctx = {
         "c": course,
         "tags": tags,
@@ -1460,6 +1497,9 @@ def course_detail(request, pk: int):
         "groups": groups,
         "offered": offered,
         "profile": profile,
+        "progress_status": progress_status,
+        "progress_label": progress_label,
+        "progress_badge_class": progress_badge_class,
     }
 
     if _wants_partial(request):

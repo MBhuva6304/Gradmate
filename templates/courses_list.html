@@ -6,10 +6,18 @@
       <h3 class="text-lg font-semibold">
         {{ c.code }} <span class="text-slate-500">({{ c.credits|floatformat:1 }})</span>
       </h3>
-      {% if c.eligible %}
-        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">Eligible</span>
+      {% if c.progress_label %}
+        <span class="rounded-full px-3 py-1 text-xs font-medium {{ c.progress_badge_class }}">
+          {{ c.progress_label }}
+        </span>
+      {% elif c.eligible %}
+        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+          Eligible
+        </span>
       {% else %}
-        <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">Locked</span>
+        <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
+          Locked
+        </span>
       {% endif %}
     </div>
 
