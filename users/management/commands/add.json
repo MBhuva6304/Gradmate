@@ -1,0 +1,408 @@
+{
+  "courses": [
+    {
+      "code": "AAS 311",
+      "title": "Research Methods in Asian American Studies",
+      "credits": 3,
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": ["Completion of an AAS course"],
+      "corequisites": [],
+      "description": "Introduction to qualitative community-based research in Asian American communities, including theory, data collection, analysis, and presentation.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AAS 355",
+      "title": "Biracial and Multiracial Identity",
+      "credits": 3,
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Interdisciplinary study of multiracial identities, racial structures, and social and legal systems of racial classification.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AAS 390/F",
+      "title": "Asian American Communities: Field Practicum",
+      "credits": "2/1",
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": ["Concurrent enrollment in AAS 345 or other related course"],
+      "corequisites": ["AAS 390F"],
+      "description": "Fieldwork and seminar focusing on community institutions, including supervised experience and service learning.",
+      "tags": ["ES", "W.I.", "LL"],
+      "blocks": ["E.S. Ethnic Studies", "LL Lifelong Learning"]
+    },
+    {
+      "code": "AAS 440",
+      "title": "Urbanization and Asian American Communities",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [
+        "Completion of the lower division writing requirement",
+        "AAS 100"
+      ],
+      "corequisites": [],
+      "description": "Study of the development of Asian American communities in the U.S. from 1850 to present, with focus on urban Southern California.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AAS 453",
+      "title": "Asian American Families",
+      "credits": 3,
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Overview of demographic, cultural, and historical aspects of Asian American families in the U.S.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AAS 455",
+      "title": "Asian American Sexuality",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": ["Completion of the lower division writing requirement"],
+      "corequisites": [],
+      "description": "Explores identities and issues in Asian American sexuality, including gender roles, media, and social structures.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AFRS 168",
+      "title": "Introduction to the African Diaspora",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Students explore historical, theoretical, and cultural approaches to the African Diaspora across Africa, the Americas, and Europe, including identity formation and social movements.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AFRS 171",
+      "title": "History of African Civilizations",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Survey of major African societies from early human history to the 19th century, including leadership, culture, and social organization.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AFRS 351",
+      "title": "The Black Aesthetic",
+      "credits": 3,
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "In-depth exploration of African worldview through Black aesthetic expressions such as art, music, poetry, and spirituality.",
+      "tags": ["ES", "W.I."],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AFRS 362",
+      "title": "Diversity and Public Policy",
+      "credits": 3,
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": ["Introductory level course in history and government (Title 5)"],
+      "corequisites": [],
+      "description": "Examines how race, gender, class, and sexuality influence public policy, including issues like voting rights, welfare, criminal justice, and equity.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AFRS 367",
+      "title": "African American Social Movements",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Study of African American social movements including Civil Rights and Black Power, along with global activism and historical context.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AFRS 420",
+      "title": "The Black Child",
+      "credits": 3,
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Explores African American childhood development, socialization, and achievement.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "AFRS 417",
+      "title": "Equity and Diversity in Schools",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Examines educational equity, diversity, curriculum, and bias in schools. Not available for credit in addition to AAS 417, ARMN 417, CHS 417 or ELPS 417.",
+      "tags": [],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CAS 311",
+      "title": "The Central American Diaspora",
+      "credits": 3,
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Comparative survey of the socioeconomic conditions and cultural life of Central American peoples in the U.S., particularly in California.",
+      "tags": ["ES", "W.I."],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CAS 270/F",
+      "title": "Fieldwork in Central American Communities",
+      "credits": "1/2",
+      "prerequisites": [],
+      "preparatory": ["CAS 100", "CAS 102"],
+      "corequisites": ["CAS 270F"],
+      "description": "Field study in a selected Central American community with supervised placement and reflection.",
+      "tags": ["LL"],
+      "blocks": ["LL Lifelong Learning"]
+    },
+    {
+      "code": "CHS 270SOC/C/F",
+      "title": "Fieldwork in Barrio Studies",
+      "credits": "1/2",
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": ["CHS 270F"],
+      "description": "Fieldwork focused on social change in Chicana/o/Latina/o communities, including community engagement and reflection.",
+      "tags": ["ES", "LL"],
+      "blocks": ["E.S. Ethnic Studies", "LL Lifelong Learning"]
+    },
+    {
+      "code": "CHS 306",
+      "title": "The Chicana/o in Films",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": ["Completion of the lower division writing requirement"],
+      "corequisites": [],
+      "description": "Analysis of the representation of Chicana/o communities in film and documentaries.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 401",
+      "title": "Pre-Cuauhtemoc Meso-American Civilizations",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Survey of Meso-American civilizations prior to 1519, focusing on central Mexico.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 405",
+      "title": "Chicanas/os and the Media",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Analysis of portrayals of Chicanas/os in various media forms.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 417",
+      "title": "Equity and Diversity in Schools",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Examines educational equity, diversity, and bias in schools.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 430",
+      "title": "The Chicana/o Child",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Study of development and achievement of Chicana/o and Latina/o children.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 431",
+      "title": "The Chicana/o Adolescent",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": ["Completion of the lower division writing requirement"],
+      "corequisites": [],
+      "description": "Explores adolescent identity and development among Chicana/o and Latina/o youth.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 432",
+      "title": "Counseling the Chicana/o Child",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": ["Completion of the lower division writing requirement"],
+      "corequisites": [],
+      "description": "Examines psychological and educational factors affecting Chicana/o children.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 434",
+      "title": "Current Educational Theories of Chicana/os in the Schools",
+      "credits": 3,
+      "prerequisites": ["CHS 270"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Review of research on issues affecting Chicano students in schools and teacher responses, including classroom observation.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 448",
+      "title": "Chicana/o Public History",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Explores how public historical narratives are created and interpreted, focusing on Chicana/o perspectives.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 453",
+      "title": "Theory and the Chicana/o Experience",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Study of political, social, and cultural theories related to the Chicana/o experience in the U.S.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 460",
+      "title": "Politics of the Chicana/o",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Critical study of Chicana/o political issues, participation, and structures in the U.S.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 467",
+      "title": "Environmental Justice and Chicana/o Communities",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Examines environmental inequality and its impact on Chicana/o and other communities.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 473",
+      "title": "The Chicana/o and Social Institutions",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": ["Completion of the lower division writing requirement"],
+      "corequisites": [],
+      "description": "Study of interactions between Chicano communities and dominant social institutions.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 480/F",
+      "title": "Chicana/o-Latina/o Children’s Literature in Communities",
+      "credits": "2/1",
+      "prerequisites": [],
+      "preparatory": ["Completion of a lower division literature course or CHS 380"],
+      "corequisites": ["CHS 480F"],
+      "description": "Critical analysis and application of Chicana/o-Latina/o children’s literature in community and school settings.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "CHS 486A",
+      "title": "Nahuatl I",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Introduction to Classical Nahuatl language including phonology, syntax, and translation.",
+      "tags": ["ES"],
+      "blocks": ["E.S. Ethnic Studies"]
+    },
+    {
+      "code": "ENGL 215",
+      "title": "Critical Thinking About Research Writing",
+      "credits": 3,
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Focuses on composing, reading, and analyzing research writing with emphasis on critical thinking.",
+      "tags": ["I.C."],
+      "blocks": ["GE Area 1B Critical Thinking", "GE I.C. Information Competence"]
+    },
+    {
+      "code": "BIOL 362",
+      "title": "Genetics and Society",
+      "credits": 3,
+      "prerequisites": [
+        "BIOL 100 and BIOL 100L",
+        "or BIOL 101 and BIOL 101L",
+        "or BIOL 102/L",
+        "or BIOL 106 and BIOL 106L",
+        "or BIOL 107 and BIOL 107L",
+        "Completion of the lower division writing requirement"
+      ],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Non-technical introduction to genetics and its applications in society.",
+      "tags": ["I.C.", "W.I.", "UD"],
+      "blocks": [
+        "GE Area 5 Physical and Biological Sciences",
+        "GE I.C. Information Competence",
+        "GE UD Upper Division"
+      ]
+    },
+    {
+      "code": "RTM 310/L",
+      "title": "Adventure Recreation and Human Relations and Lab",
+      "credits": "2/1",
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": [],
+      "corequisites": ["RTM 310L"],
+      "description": "Explores cultural identity, diversity, and personal growth through experiential learning.",
+      "tags": ["I.C.", "W.I.", "LL", "UD"],
+      "blocks": [
+        "GE Section F Comparative Cultural Studies",
+        "GE I.C. Information Competence",
+        "GE UD Upper Division",
+        "LL Lifelong Learning"
+      ]
+    },
+    {
+      "code": "KIN 380/L",
+      "title": "Perspectives of Dance and Lab",
+      "credits": "2/1",
+      "prerequisites": ["Completion of the lower division writing requirement"],
+      "preparatory": [],
+      "corequisites": ["KIN 380L"],
+      "description": "Study of dance as performance, culture, and artistic expression with lab participation.",
+      "tags": ["W.I.", "UD"],
+      "blocks": ["GE Area 3A Arts", "GE UD Upper Division"]
+    }
+  ]
+}

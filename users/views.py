@@ -39,6 +39,10 @@ from .forms import (
 
 EMAIL_BACKEND_PATH = "users.backends.EmailBackend"
 
+HIDDEN_AUDIT_RULE_NAMES = {
+    "Need One Life Science Pair",
+    "Need One Physical Science Pair",
+}
 
 def _gen6() -> str:
     return f"{random.randint(0, 999999):06d}"
@@ -788,6 +792,13 @@ def _build_requirement_audit_data(profile, user):
         for item in items:
             raw_name = (item.get("name") or "").strip()
 
+            if raw_name in HIDDEN_AUDIT_RULE_NAMES:
+                continue
+            if raw_name in {
+                "Need One Life Science Pair",
+                "Need One Physical Science Pair",
+            }:
+                continue
             if raw_name == "General Education Upper Division":
                 required = _safe_float(
                     item.get("min_required")

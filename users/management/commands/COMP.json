@@ -1,0 +1,738 @@
+{
+  "courses": [
+    {
+      "code": "COMP 310",
+      "title": "Automata, Languages and Computation",
+      "credits": 3,
+      "prerequisites": ["COMP 256/L or MATH 326 (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Study of formal languages, automata, grammars, and computation theory.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 322/L",
+      "title": "Introduction to Operating Systems and System Architecture and Lab",
+      "credits": "3/1",
+      "prerequisites": ["COMP 222 or CIT 210/L or ECE 422 and ECE 425/L (C or better)"],
+      "preparatory": [],
+      "corequisites": ["COMP 322L"],
+      "description": "Introduction to operating systems, including process management, memory, storage, and system architecture.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 324",
+      "title": "Computer Networking and Security",
+      "credits": 3,
+      "prerequisites": ["COMP 282 (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Covers network architecture, protocols, and security issues in computer systems.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 333",
+      "title": "Concepts of Programming Languages",
+      "credits": 3,
+      "prerequisites": ["COMP 282 (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Study of programming language design, paradigms, and abstraction techniques.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 380/L",
+      "title": "Introduction to Software Engineering and Lab",
+      "credits": "2/1",
+      "prerequisites": [
+        "CIT 270/L or COMP 282 (C or better)",
+        "PHIL 230 or ECE 320/L (C- or better)",
+        "GE A1 Oral Communication"
+      ],
+      "preparatory": [],
+      "corequisites": ["COMP 380L"],
+      "description": "Software engineering principles including requirements, design, implementation, and testing.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 396A-Z",
+      "title": "Experimental Topics Courses in Computer Science",
+      "credits": "1-4",
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Course content varies by topic.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 410",
+      "title": "Logic Programming",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Programming in PROLOG and logic programming concepts.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 424",
+      "title": "Computer System Security",
+      "credits": 3,
+      "prerequisites": ["COMP 324 or IS 435 (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Security techniques for operating systems, databases, and networks.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 429",
+      "title": "Computer Network Software",
+      "credits": 3,
+      "prerequisites": ["COMP 324 (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Software design and systems for networking and distributed computing.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 430",
+      "title": "Language Design and Compilers",
+      "credits": 3,
+      "prerequisites": ["COMP 310 and COMP 380/L (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Design and implementation of programming languages and compilers.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 440",
+      "title": "Database Design",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Database models, schemas, and implementation techniques.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 442",
+      "title": "Machine Learning Principles",
+      "credits": 3,
+      "prerequisites": [
+        "COMP 182/L and MATH 444",
+        "or COMP 380/L and MATH 340 (C or better)"
+      ],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Introduction to machine learning concepts and algorithms.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 465/L",
+      "title": "Computer Graphic Systems and Design and Lab",
+      "credits": "2/1",
+      "prerequisites": ["MATH 262 (C or better)"],
+      "preparatory": [],
+      "corequisites": ["COMP 465L"],
+      "description": "Fundamentals of computer graphics and applications.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 467",
+      "title": "Multimedia Systems Design",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Design and development of multimedia systems and applications.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 482",
+      "title": "Algorithm Design and Analysis",
+      "credits": 3,
+      "prerequisites": [
+        "COMP 282 (C or better)",
+        "COMP 256/L or MATH 320 or MATH 326 (C- or better)"
+      ],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Analysis and design of algorithms and complexity.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 484/L",
+      "title": "Web Engineering I and Lab",
+      "credits": "2/1",
+      "prerequisites": ["COMP 322/L or COMP 380/L or CIT 360 (C or better)"],
+      "preparatory": [],
+      "corequisites": ["COMP 484L"],
+      "description": "Web systems, architectures, and application development.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 485",
+      "title": "Human-Computer Interaction",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L or CIT 360 (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Study of interaction between humans and computer systems.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 488",
+      "title": "Advanced Practicum in Information Technology",
+      "credits": "2-2-2",
+      "prerequisites": ["Department consent"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Hands-on practicum in IT systems design and deployment.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 490/L",
+      "title": "Senior Design Project I and Lab",
+      "credits": "2/1",
+      "prerequisites": ["COMP 380/L (C or better)"],
+      "preparatory": [],
+      "corequisites": ["COMP 490L"],
+      "description": "Capstone project applying software engineering principles.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 491/L",
+      "title": "Senior Design Project II and Lab",
+      "credits": "2/1",
+      "prerequisites": ["COMP 490/L (C or better)"],
+      "preparatory": [],
+      "corequisites": ["COMP 491L"],
+      "description": "Continuation and completion of senior design project.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 492",
+      "title": "Projects in Data Science",
+      "credits": 3,
+      "prerequisites": ["COMP 442 and MATH 445 (C or better)"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Practical data science project experience.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 494A-C",
+      "title": "Academic Internship",
+      "credits": "1-3",
+      "prerequisites": ["Junior standing", "Department approval"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Supervised professional internship experience.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 496A-Z",
+      "title": "Experimental Topics Courses in Computer Science",
+      "credits": "1-4",
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Course content varies by topic.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 499A-C",
+      "title": "Independent Study",
+      "credits": "1-3",
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Independent study under faculty supervision.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 502",
+      "title": "Programming for Data Science and Analytics",
+      "credits": 3,
+      "prerequisites": [
+        "Admission to M.S. Data Science or Engineering Management",
+        "or instructor consent"
+      ],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Programming techniques for data science using Python.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 521/L",
+      "title": "Advanced Operating Systems and Lab",
+      "credits": "2/1",
+      "prerequisites": ["COMP 322/L"],
+      "preparatory": [],
+      "corequisites": ["COMP 521L"],
+      "description": "Advanced topics in operating systems.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 522",
+      "title": "Embedded Applications",
+      "credits": 3,
+      "prerequisites": ["COMP 322/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Embedded systems programming and architecture.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 528",
+      "title": "Mobile Computing",
+      "credits": 3,
+      "prerequisites": ["COMP 322/L or COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Design and development of mobile systems.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 528L",
+      "title": "Mobile Computing Laboratory",
+      "credits": 1,
+      "prerequisites": ["COMP 322/L or COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Laboratory component for mobile computing.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 529/L",
+      "title": "Advanced Network Topics and Lab",
+      "credits": "2/1",
+      "prerequisites": ["COMP 429", "MATH 340"],
+      "preparatory": [],
+      "corequisites": ["COMP 529L"],
+      "description": "Advanced networking concepts and architectures.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 535/L",
+      "title": "Parallel and Distributed Computing and Lab",
+      "credits": "2/1",
+      "prerequisites": ["COMP 282", "COMP 322/L"],
+      "preparatory": [],
+      "corequisites": ["COMP 535L"],
+      "description": "Parallel and distributed computing systems.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 539",
+      "title": "Network Infrastructure",
+      "credits": 3,
+      "prerequisites": ["COMP 424 or COMP 429"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Administration of network and information infrastructure.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 541",
+      "title": "Data Mining",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L", "MATH 340 or MATH 341"],
+      "preparatory": ["Knowledge of Python programming"],
+      "corequisites": [],
+      "description": "Concepts and applications of data mining.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 542",
+      "title": "Machine Learning",
+      "credits": 3,
+      "prerequisites": [
+        "COMP 380/L",
+        "MATH 262",
+        "MATH 340 or MATH 341"
+      ],
+      "preparatory": ["Knowledge of Python programming"],
+      "corequisites": [],
+      "description": "Advanced machine learning techniques and applications.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 545",
+      "title": "Cloud Computing",
+      "credits": 3,
+      "prerequisites": ["COMP 322/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Concepts, architectures, and applications of cloud computing including infrastructure and services.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 560",
+      "title": "Expert Systems",
+      "credits": 3,
+      "prerequisites": ["COMP 569"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Study of expert systems, including rule-based systems and knowledge acquisition.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 565",
+      "title": "Advanced Computer Graphics",
+      "credits": 3,
+      "prerequisites": ["COMP 322/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Advanced techniques in computer graphics including 3D modeling and rendering.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 569",
+      "title": "Artificial Intelligence",
+      "credits": 3,
+      "prerequisites": [
+        "COMP 380/L",
+        "MATH 262",
+        "MATH 340 or MATH 341"
+      ],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Introduction to AI including search, reasoning, and problem-solving techniques.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 582",
+      "title": "Software Requirements Analysis and Specification",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Study of requirements engineering including modeling, validation, and documentation.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 583",
+      "title": "Software Engineering Management",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Management principles for software engineering projects and teams.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 584",
+      "title": "Advanced Web Engineering",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Advanced web application development, design, and architecture.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 585",
+      "title": "Graphical User Interfaces",
+      "credits": 3,
+      "prerequisites": ["COMP 322/L", "COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Design and development of graphical user interfaces.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 586",
+      "title": "Object-Oriented Software Development",
+      "credits": 3,
+      "prerequisites": ["COMP 322/L", "COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Advanced object-oriented design and development techniques.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 587",
+      "title": "Software Verification and Validation",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Testing strategies, verification, and validation of software systems.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 589",
+      "title": "Software Metrics",
+      "credits": 3,
+      "prerequisites": ["COMP 380/L", "MATH 340"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Measurement techniques and metrics in software engineering.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 595A-Z",
+      "title": "Experimental Topics Courses",
+      "credits": 3,
+      "prerequisites": [],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Course content varies by topic.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 598A-Z",
+      "title": "Advanced Selected Topics",
+      "credits": "1-4",
+      "prerequisites": ["Instructor consent"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Advanced topics in computer science.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 610",
+      "title": "Data Structures and Algorithms",
+      "credits": 3,
+      "prerequisites": ["COMP 310", "MATH 482"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Advanced data structures and algorithm design techniques.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 615",
+      "title": "Advanced Topics in Computation Theory",
+      "credits": 3,
+      "prerequisites": ["COMP 310", "MATH 482"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Advanced study of computation theory and formal languages.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 620",
+      "title": "Computer System Architecture",
+      "credits": 3,
+      "prerequisites": ["COMP 322/L", "COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Analysis and comparison of computer architectures.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 630",
+      "title": "Formal Semantics of Programming Languages",
+      "credits": 3,
+      "prerequisites": ["COMP 310", "COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Formal methods and semantics in programming languages.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 639",
+      "title": "Probability and Statistics for Data Science",
+      "credits": 3,
+      "prerequisites": ["MATH 340 or MATH 341", "COMP 502"],
+      "preparatory": ["Knowledge of Python programming"],
+      "corequisites": [],
+      "description": "Probability and statistics concepts applied to data science.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 640",
+      "title": "Database System Design",
+      "credits": 3,
+      "prerequisites": ["COMP 282", "COMP 502"],
+      "preparatory": ["Knowledge of Python programming"],
+      "corequisites": [],
+      "description": "Advanced database design and implementation techniques.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 641",
+      "title": "Fundamentals of Data Science",
+      "credits": 3,
+      "prerequisites": [
+        "MATH 262",
+        "COMP 639 or MATH 340 or MATH 341",
+        "COMP 282",
+        "COMP 502"
+      ],
+      "preparatory": ["Knowledge of Python programming"],
+      "corequisites": [],
+      "description": "Core concepts and techniques in data science.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 642",
+      "title": "Advanced Databases and Data Visualization",
+      "credits": 3,
+      "prerequisites": ["COMP 440 or COMP 640", "COMP 502"],
+      "preparatory": ["Knowledge of Python programming"],
+      "corequisites": [],
+      "description": "Advanced database systems and visualization techniques.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 643",
+      "title": "Deep Learning",
+      "credits": 3,
+      "prerequisites": ["COMP 442 or COMP 641 or COMP 542", "COMP 502"],
+      "preparatory": ["Knowledge of Python programming"],
+      "corequisites": [],
+      "description": "Advanced deep learning methods and neural networks.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 644",
+      "title": "Big Data",
+      "credits": 3,
+      "prerequisites": [
+        "COMP 442 or COMP 542",
+        "COMP 440 or COMP 640",
+        "COMP 502"
+      ],
+      "preparatory": ["Knowledge of Python programming"],
+      "corequisites": [],
+      "description": "Big data systems, storage, and analytics.",
+      "tags": [],
+      "blocks": []
+    },
+    {
+      "code": "COMP 680",
+      "title": "Advanced Topics in Software Engineering",
+      "credits": 3,
+      "prerequisites": ["COMP 322/L", "COMP 380/L"],
+      "preparatory": [],
+      "corequisites": [],
+      "description": "Emerging topics and practices in software engineering.",
+      "tags": [],
+      "blocks": []
+    },
+  {
+  "code": "COMP 684",
+  "title": "Software Architecture and Design",
+  "credits": 3,
+  "prerequisites": ["COMP 380/L", "COMP 582"],
+  "preparatory": [],
+  "corequisites": [],
+  "description": "Techniques, methods and tools for designing, building, analyzing and evaluating the structural, architectural and behavioral properties of software systems. It includes the study of the fundamental concepts and principles of software architectural design, structured design, object-oriented design, component-level design and design for reuse.",
+  "tags": [],
+  "blocks": []
+},
+{
+  "code": "COMP 695A-Z",
+  "title": "Experimental Topics Courses",
+  "credits": 3,
+  "prerequisites": [],
+  "preparatory": [],
+  "corequisites": [],
+  "description": "Course content to be determined.",
+  "tags": [],
+  "blocks": []
+},
+{
+  "code": "COMP 696A,C",
+  "title": "Directed Graduate Research",
+  "credits": [1, 3],
+  "prerequisites": ["Permission of project/thesis committee chair"],
+  "preparatory": [],
+  "corequisites": [],
+  "description": "Credit/No Credit only.",
+  "tags": [],
+  "blocks": []
+},
+{
+  "code": "COMP 698C",
+  "title": "Thesis",
+  "credits": 3,
+  "prerequisites": [],
+  "preparatory": [],
+  "corequisites": [],
+  "description": "Thesis",
+  "tags": [],
+  "blocks": []
+},
+{
+  "code": "COMP 698DS",
+  "title": "Graduate Project",
+  "credits": 3,
+  "prerequisites": ["Advisor approval"],
+  "preparatory": [],
+  "corequisites": [],
+  "description": "By completing a graduate project, students will get an opportunity to apply the knowledge and skills gained throughout the Data Science program to a real-world problem. During the project, students engage in the entire process of collecting and processing data, applying suitable and appropriate analytical and computational principles as well as methods.",
+  "tags": [],
+  "blocks": []
+},
+{
+  "code": "COMP 699A-C",
+  "title": "Independent Study",
+  "credits": [1, 3],
+  "prerequisites": [],
+  "preparatory": [],
+  "corequisites": [],
+  "description": "Independent Study",
+  "tags": [],
+  "blocks": []
+}
+  ]
+}
