@@ -1498,6 +1498,18 @@ def courses_page(request):
     if tag_param:
         courses = [c for c in courses if any(t.name == tag_param for t in c.tags.all())]
 
+    req = ProgramRequirement.objects.filter(
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    ).first()
+    
+    fulfillment_param = request.GET.get("fulfillment", "").strip()
+    if fulfillment_param and req:
+        block = req.blocks.filter(name=fulfillment_param).first()
+        if block:
+            block_course_ids = set(block.courses.values_list("id", flat=True))
+            courses = [c for c in courses if c.id in block_course_ids]
+
     level_choices = [
         ("", "All levels"),
         ("000-099", "000–099"),
@@ -1517,23 +1529,20 @@ def courses_page(request):
         ("5", "5 credits"),
     ]
 
-    fulfillment_labels = [
-        "GE Section A",
-        "GE Section B",
-        "GE Section C",
-        "GE Section D",
-        "GE Section E",
-        "GE Section F",
-        "GE Quantitative Reasoning",
-        "Lower Division Core",
-        "Lower Division Elective",
-        "Upper Division Core",
-        "Upper Division GE",
-        "Ethnic Studies",
-        "Writing Skills",
-        "Senior Elective Division",
+    req = ProgramRequirement.objects.filter(
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    ).first()
+
+    fulfillment_labels = []
+    if req:
+        fulfillment_labels = list(
+            req.blocks.order_by("name").values_list("name", flat=True).distinct()
+        )
+
+    fulfillment_choices = [("", "Any fulfillment")] + [
+        (label, label) for label in fulfillment_labels
     ]
-    fulfillment_choices = [("", "Any fulfillment")] + [(label, label) for label in fulfillment_labels]
 
     ctx = {
         "courses": courses,
@@ -1542,6 +1551,7 @@ def courses_page(request):
         "selected_level": level_param,
         "selected_credits": credits_param,
         "selected_tag": tag_param,
+        "selected_fulfillment": fulfillment_param,
         "level_choices": level_choices,
         "credit_choices": credit_choices,
         "fulfillment_choices": fulfillment_choices,

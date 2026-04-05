@@ -8,7 +8,7 @@ class Command(BaseCommand):
     help = "Auto-setup DPR requirement blocks for BS_CS catalog 2022 based on the uploaded DPR"
 
     PROGRAM = "BS_CS"
-    CATALOG_YEAR = 2022
+    CATALOG_YEAR = 2023
 
     def handle(self, *args, **options):
         with transaction.atomic():

@@ -44,14 +44,14 @@ class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
 
 <!-- Fulfillment (tags) -->
 <div>
-<label class="sr-only" for="tag">Fulfillment</label>
-<select id="tag"
-      name="tag"
+<label class="sr-only" for="fulfillment">Fulfillment</label>
+<select id="fulfillment"
+      name="fulfillment"
       class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
 >
 {% for value, label in fulfillment_choices %}
   <option value="{{ value }}"
-          {% if value == selected_tag %}selected{% endif %}>
+          {% if value == selected_fulfillment %}selected{% endif %}>
     {{ label }}
   </option>
 {% endfor %}

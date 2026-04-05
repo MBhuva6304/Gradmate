@@ -50,8 +50,9 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = (
         "code", "subject", "level", "section",
         "title", "credits", "prereq_mode",
+        "program", "catalog_year",
     )
-    list_filter = ("prereq_mode", "tags")
+    list_filter = ("prereq_mode", "tags", "program", "catalog_year")
     search_fields = ("code", "subject", "title", "description")
 
     filter_horizontal = ("tags", "prerequisites", "corequisites", "offered_in")
@@ -71,6 +72,8 @@ class CourseAdmin(admin.ModelAdmin):
                 "credits",
                 "level",
                 "description",
+                "program",
+                "catalog_year",
                 "prerequisites",
                 "corequisites",
                 "prereq_mode",
