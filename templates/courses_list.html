@@ -33,12 +33,47 @@
       {% endfor %}
     </div>
 
-    <div class="mt-4">
+    <div class="mt-4 flex flex-wrap gap-2">
       <a href="{% url 'course_detail' c.pk %}?partial=1"
-         class="open-course-modal inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-         data-course-id="{{ c.pk }}">
-        Details
+       class="open-course-modal inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+       data-course-id="{{ c.pk }}">
+      Details
       </a>
+
+      {% if c.can_remove %}
+      <form method="post" action="{% url 'remove_course_status' c.pk %}" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit"
+            class="inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700">
+        Remove
+        </button>
+      </form>
+      {% else %}
+      <details class="relative inline-block">
+        <summary class="list-none cursor-pointer inline-flex items-center rounded-lg bg-slate-800 px-4 py-2 text-white hover:bg-slate-900">
+        Add
+        </summary>
+
+        <div class="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white shadow-lg p-2 z-20">
+        <form method="post" action="{% url 'mark_course_completed' c.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="w-full text-left rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
+          Add to Completed
+          </button>
+        </form>
+
+        <form method="post" action="{% url 'mark_course_in_progress' c.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="w-full text-left rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
+          Add to In Progress
+          </button>
+        </form>
+        </div>
+      </details>
+      {% endif %}
     </div>
   </div>
   {% empty %}

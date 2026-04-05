@@ -1282,6 +1282,109 @@ def upload_dpr(request):
     )
     return redirect("dashboard")
 
+def _course_ui_state(profile, course):
+    is_completed = CompletedClass.objects.filter(profile=profile, course=course).exists()
+    is_in_progress = InProgressClass.objects.filter(profile=profile, course=course).exists()
+
+    if is_completed:
+        return {
+            "progress_status": "completed",
+            "progress_label": "Completed",
+            "progress_badge_class": "bg-emerald-100 text-emerald-700",
+            "action_label": "Remove",
+            "can_add": False,
+            "can_remove": True,
+        }
+
+    if is_in_progress:
+        return {
+            "progress_status": "in_progress",
+            "progress_label": "In Progress",
+            "progress_badge_class": "bg-amber-100 text-amber-700",
+            "action_label": "Remove",
+            "can_add": False,
+            "can_remove": True,
+        }
+
+    return {
+        "progress_status": "",
+        "progress_label": "",
+        "progress_badge_class": "",
+        "action_label": "Add",
+        "can_add": True,
+        "can_remove": False,
+    }
+
+
+def _apply_course_ui_state(course, state):
+    course.progress_status = state["progress_status"]
+    course.progress_label = state["progress_label"]
+    course.progress_badge_class = state["progress_badge_class"]
+    course.action_label = state["action_label"]
+    course.can_add = state["can_add"]
+    course.can_remove = state["can_remove"]
+
+
+def _post_action_redirect(request):
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or reverse("courses")
+    return redirect(next_url)
+
+@profile_required
+def mark_course_completed(request, pk: int):
+    if request.method != "POST":
+        return redirect("courses")
+
+    profile = request.profile
+    course = get_object_or_404(
+        Course,
+        pk=pk,
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    )
+
+    InProgressClass.objects.filter(profile=profile, course=course).delete()
+    CompletedClass.objects.get_or_create(profile=profile, course=course)
+
+    messages.success(request, f"{course.code} added to Completed.")
+    return _post_action_redirect(request)
+
+@profile_required
+def mark_course_in_progress(request, pk: int):
+    if request.method != "POST":
+        return redirect("courses")
+
+    profile = request.profile
+    course = get_object_or_404(
+        Course,
+        pk=pk,
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    )
+
+    CompletedClass.objects.filter(profile=profile, course=course).delete()
+    InProgressClass.objects.get_or_create(profile=profile, course=course)
+
+    messages.success(request, f"{course.code} added to In Progress.")
+    return _post_action_redirect(request)
+
+@profile_required
+def remove_course_status(request, pk: int):
+    if request.method != "POST":
+        return redirect("courses")
+
+    profile = request.profile
+    course = get_object_or_404(
+        Course,
+        pk=pk,
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    )
+
+    CompletedClass.objects.filter(profile=profile, course=course).delete()
+    InProgressClass.objects.filter(profile=profile, course=course).delete()
+
+    messages.success(request, f"{course.code} removed from your progress.")
+    return _post_action_redirect(request)
 
 @profile_required
 def courses_page(request):
@@ -1342,18 +1445,8 @@ def courses_page(request):
     )
 
     for c in courses:
-        if c.id in completed_ids:
-            c.progress_status = "completed"
-            c.progress_label = "Completed"
-            c.progress_badge_class = "bg-emerald-100 text-emerald-700"
-        elif c.id in in_progress_ids:
-            c.progress_status = "in_progress"
-            c.progress_label = "In Progress"
-            c.progress_badge_class = "bg-amber-100 text-amber-700"
-        else:
-            c.progress_status = ""
-            c.progress_label = ""
-            c.progress_badge_class = ""
+        state = _course_ui_state(profile, c)
+        _apply_course_ui_state(c, state)
 
     level_param = request.GET.get("level", "").strip()
     LEVEL_RANGES = {
@@ -1474,21 +1567,7 @@ def course_detail(request, pk: int):
         else []
     )
 
-    is_completed = CompletedClass.objects.filter(profile=profile, course=course).exists()
-    is_in_progress = InProgressClass.objects.filter(profile=profile, course=course).exists()
-
-    if is_completed:
-        progress_status = "completed"
-        progress_label = "Completed"
-        progress_badge_class = "bg-emerald-100 text-emerald-700"
-    elif is_in_progress:
-        progress_status = "in_progress"
-        progress_label = "In Progress"
-        progress_badge_class = "bg-amber-100 text-amber-700"
-    else:
-        progress_status = ""
-        progress_label = ""
-        progress_badge_class = ""
+    state = _course_ui_state(profile, course)
 
     ctx = {
         "c": course,
@@ -1497,9 +1576,12 @@ def course_detail(request, pk: int):
         "groups": groups,
         "offered": offered,
         "profile": profile,
-        "progress_status": progress_status,
-        "progress_label": progress_label,
-        "progress_badge_class": progress_badge_class,
+        "progress_status": state["progress_status"],
+        "progress_label": state["progress_label"],
+        "progress_badge_class": state["progress_badge_class"],
+        "can_add": state["can_add"],
+        "can_remove": state["can_remove"],
+        "action_label": state["action_label"],
     }
 
     if _wants_partial(request):

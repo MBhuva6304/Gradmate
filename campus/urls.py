@@ -16,7 +16,10 @@ urlpatterns = [
 
     path("courses/", users_views.courses_page, name="courses"),
     path("courses/<int:pk>/", users_views.course_detail, name="course_detail"),
-
+    path("courses/<int:pk>/mark-completed/", users_views.mark_course_completed, name="mark_course_completed"),
+    path("courses/<int:pk>/mark-in-progress/", users_views.mark_course_in_progress, name="mark_course_in_progress"),
+    path("courses/<int:pk>/remove-status/", users_views.remove_course_status, name="remove_course_status"),
+    
     # DPR upload (dashboard modal uses this)
     path("dpr/upload/", users_views.upload_dpr, name="upload_dpr"),
     # Clear Audit Cache

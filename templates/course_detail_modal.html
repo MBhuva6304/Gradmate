@@ -23,6 +23,36 @@
         </span>
       </div>
 {% endif %}
+<div class="mt-4 flex flex-wrap gap-2">
+  {% if can_remove %}
+    <form method="post" action="{% url 'remove_course_status' c.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'courses' %}">
+      <button type="submit"
+              class="inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700">
+        Remove
+      </button>
+    </form>
+  {% else %}
+    <form method="post" action="{% url 'mark_course_completed' c.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'courses' %}">
+      <button type="submit"
+              class="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700">
+        Add to Completed
+      </button>
+    </form>
+
+    <form method="post" action="{% url 'mark_course_in_progress' c.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'courses' %}">
+      <button type="submit"
+              class="inline-flex items-center rounded-lg bg-amber-600 px-4 py-2 text-white hover:bg-amber-700">
+        Add to In Progress
+      </button>
+    </form>
+  {% endif %}
+</div>
     </div>
 
     <!-- Close button (handled by JS in courses.html) -->
