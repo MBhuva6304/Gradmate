@@ -282,7 +282,7 @@
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
       <h2 class="text-sm font-semibold mb-1">Major Requirements</h2>
       <p class="text-xs text-slate-500 mb-4">
-        Blue = completed · Amber = in progress
+        Blue = completed · Amber = in progress · Gray = not started
       </p>
 
       {% if major_progress %}
@@ -290,7 +290,7 @@
           {% for g in major_progress %}
             <div>
               <div class="flex justify-between mb-1">
-                <span class="font-semibold">{{ g.short }}</span>
+                <span class="font-semibold">{{ g.name }}</span>
                 <span class="text-slate-500">{{ g.completed|add:g.in_progress }} / {{ g.min_required }}</span>
               </div>
 
@@ -306,8 +306,13 @@
               </div>
 
               {% if g.total_options %}
-                <div class="mt-1 text-[11px] text-slate-400">
-                  {{ g.total_options }} course option{{ g.total_options|pluralize }}
+                <div class="mt-1 text-[11px]">
+                  <a
+                    href="{% url 'courses' %}?fulfillment={{ g.name|urlencode }}"
+                    class="text-slate-400 hover:text-indigo-600 hover:underline"
+                  >
+                    View {{ g.total_options }} course option{{ g.total_options|pluralize }}
+                  </a>
                 </div>
               {% endif %}
             </div>
@@ -322,7 +327,7 @@
   <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 lg:max-h-[700px] flex flex-col overflow-hidden">
     <h2 class="text-sm font-semibold mb-1">GE Requirements by Category</h2>
     <p class="text-xs text-slate-500 mb-4">
-      Blue = completed · Amber = in progress
+      Blue = completed · Amber = in progress · Gray = not started
     </p>
 
     {% if ge_progress %}
@@ -330,7 +335,7 @@
         {% for g in ge_progress %}
           <div>
             <div class="flex justify-between mb-1">
-              <span class="font-semibold">{{ g.short }}</span>
+              <span class="font-semibold">{{ g.name }}</span>
               <span class="text-slate-500">{{ g.completed|add:g.in_progress }} / {{ g.min_required }}</span>
             </div>
 
@@ -346,9 +351,14 @@
             </div>
 
             {% if g.total_options %}
-              <div class="mt-1 text-[11px] text-slate-400">
-                {{ g.total_options }} course option{{ g.total_options|pluralize }}
-              </div>
+              <div class="mt-1 text-[11px]">
+                  <a
+                    href="{% url 'courses' %}?fulfillment={{ g.name|urlencode }}"
+                    class="text-slate-400 hover:text-indigo-600 hover:underline"
+                  >
+                    View {{ g.total_options }} course option{{ g.total_options|pluralize }}
+                  </a>
+                </div>
             {% endif %}
           </div>
         {% endfor %}
