@@ -294,14 +294,15 @@
                 <span class="text-slate-500">{{ g.completed|add:g.in_progress }} / {{ g.min_required }}</span>
               </div>
 
-              <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
-                {% widthratio g.completed|add:g.in_progress g.min_required 100 as pct %}
-                {% if g.done %}
-                  <div class="h-2 bg-blue-600" style="width: {{ pct }}%;"></div>
-                {% elif g.completed > 0 %}
-                  <div class="h-2 bg-amber-500" style="width: {{ pct }}%;"></div>
-                {% else %}
-                  <div class="h-2 bg-slate-300" style="width: {{ pct }}%;"></div>
+              <div class="h-2 rounded-full bg-slate-100 overflow-hidden relative">
+                {% widthratio g.completed|add:g.in_progress g.min_required 100 as ip_total_pct %}
+                {% widthratio g.completed g.min_required 100 as done_pct %}
+
+                {% if g.in_progress > 0 %}
+                  <div class="h-2 bg-amber-500 absolute left-0 top-0" style="width: {{ ip_total_pct }}%;"></div>
+                {% endif %}
+                {% if g.completed > 0 %}
+                  <div class="h-2 bg-blue-600 absolute left-0 top-0" style="width: {{ done_pct }}%;"></div>
                 {% endif %}
               </div>
 
@@ -339,14 +340,15 @@
               <span class="text-slate-500">{{ g.completed|add:g.in_progress }} / {{ g.min_required }}</span>
             </div>
 
-            <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
-              {% widthratio g.completed g.min_required 100 as pct %}
-              {% if g.done %}
-                <div class="h-2 bg-blue-600" style="width: {{ pct }}%;"></div>
-              {% elif g.completed > 0 or g.in_progress > 0 %}
-                <div class="h-2 bg-amber-500" style="width: {{ pct }}%;"></div>
-              {% else %}
-                <div class="h-2 bg-slate-300" style="width: {{ pct }}%;"></div>
+            <div class="h-2 rounded-full bg-slate-100 overflow-hidden relative">
+              {% widthratio g.completed|add:g.in_progress g.min_required 100 as ip_total_pct %}
+              {% widthratio g.completed g.min_required 100 as done_pct %}
+
+              {% if g.in_progress > 0 %}
+                <div class="h-2 bg-amber-500 absolute left-0 top-0" style="width: {{ ip_total_pct }}%;"></div>
+              {% endif %}
+              {% if g.completed > 0 %}
+                <div class="h-2 bg-blue-600 absolute left-0 top-0" style="width: {{ done_pct }}%;"></div>
               {% endif %}
             </div>
 

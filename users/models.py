@@ -390,7 +390,7 @@ class StudentProfile(models.Model):
                     "completed": int(len(assigned_completed)),
                     "in_progress": int(len(assigned_ip)),
                     "total_options": int(len(block_codes)),
-                    "done": (len(assigned_completed) + len(assigned_ip)) >= int(b.min_required),
+                    "done": len(assigned_completed) >= int(b.min_required),
                     "type": "block",
                     "allow_double_count": bool(b.allow_double_count),
                     "count_group": block_group,
