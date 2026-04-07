@@ -25,6 +25,14 @@
       <p class="mt-2 text-slate-800">{{ c.title }}</p>
     {% endif %}
 
+    {% if c.is_multi_count %}
+      <div class="mt-3">
+        <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-100">
+          Multi-count
+        </span>
+      </div>
+  {% endif %}
+
     <div class="mt-3 flex flex-wrap gap-2">
       {% if c.subject %}<span class="px-3 py-1 text-xs rounded-full bg-slate-100 text-slate-700">{{ c.subject|title }}</span>{% endif %}
       {% if c.level %}<span class="px-3 py-1 text-xs rounded-full bg-slate-100 text-slate-700">{{ c.level|upper }}</span>{% endif %}
@@ -35,9 +43,9 @@
 
     <div class="mt-4 flex flex-wrap gap-2">
       <a href="{% url 'course_detail' c.pk %}?partial=1"
-       class="open-course-modal inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-       data-course-id="{{ c.pk }}">
-      Details
+        data-course-url="{% url 'course_detail' c.pk %}?partial=1"
+        class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+        Details
       </a>
 
       {% if c.can_remove %}

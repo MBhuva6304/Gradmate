@@ -5,6 +5,7 @@ import io
 import os
 import random
 import re
+from .requirement_engine import build_course_counting_map
 from functools import wraps
 
 from django.conf import settings
@@ -844,6 +845,17 @@ def _build_requirement_audit_data(profile, user):
 
                 meta = _status_meta(done, completed, ip_count, required)
 
+                udge_completed_codes = {
+                    (r["code"] or "").upper()
+                    for r in course_rows
+                    if r["status"] == "ok" and r.get("code") and r["code"] != "—"
+                }
+                udge_ip_codes = {
+                    (r["code"] or "").upper()
+                    for r in course_rows
+                    if r["status"] == "ip" and r.get("code") and r["code"] != "—"
+                }
+
                 subsection = {
                     "name": "General Education Upper Division",
                     "short": _short_group_name("General Education Upper Division"),
@@ -852,6 +864,9 @@ def _build_requirement_audit_data(profile, user):
                     "in_progress": ip_count,
                     "remaining": max(0.0, required - completed - ip_count),
                     "done": done,
+                    "total_options": len(course_rows),
+                    "assigned_completed_codes": list(assigned_completed_codes),
+                    "assigned_in_progress_codes": list(assigned_ip_codes),
                     "courses": course_rows,
                     "status_label": meta["label"],
                     "tag_class": meta["tag_class"],
@@ -936,6 +951,15 @@ def _build_requirement_audit_data(profile, user):
 
             done = bool(item.get("done", False))
 
+            assigned_completed_codes = {
+                (code or "").upper()
+                for code in item.get("assigned_completed_codes", [])
+            }
+            assigned_ip_codes = {
+                (code or "").upper()
+                for code in item.get("assigned_in_progress_codes", [])
+            }
+
             matched_completed = []
             matched_ip = []
 
@@ -956,11 +980,11 @@ def _build_requirement_audit_data(profile, user):
                 }
 
             for cc in completed_courses:
-                if cc.course and (cc.course.code or "").upper() in block_course_codes:
+                if cc.course and (cc.course.code or "").upper() in assigned_completed_codes:
                     matched_completed.append(cc)
 
             for ic in in_progress_courses:
-                if ic.course and (ic.course.code or "").upper() in block_course_codes:
+                if ic.course and (ic.course.code or "").upper() in assigned_ip_codes:
                     matched_ip.append(ic)
 
             ip_count = max(int(in_progress_from_group), len(matched_ip))
@@ -1017,6 +1041,9 @@ def _build_requirement_audit_data(profile, user):
                 "in_progress": ip_count,
                 "remaining": max(0.0, required - completed - ip_count),
                 "done": done,
+                "total_options": len(block_course_codes),
+                "assigned_completed_codes": list(assigned_completed_codes),
+                "assigned_in_progress_codes": list(assigned_ip_codes),
                 "courses": course_rows,
                 "status_label": meta["label"],
                 "tag_class": meta["tag_class"],
@@ -1064,12 +1091,26 @@ def _build_requirement_audit_data(profile, user):
         
         subsections.sort(key=_subsection_sort_key)
 
+        group_required = sum(s["required"] for s in subsections)
+        group_completed = sum(s["completed"] for s in subsections)
+        group_remaining = sum(s["remaining"] for s in subsections)
+
+        group_in_progress_codes = set()
+        for s in subsections:
+            group_in_progress_codes.update(
+                (code or "").upper()
+                for code in s.get("assigned_in_progress_codes", [])
+                if code
+            )
+
+        group_in_progress = len(group_in_progress_codes)
+
         audit_groups.append({
             "title": bucket_name,
             "required": group_required,
             "completed": group_completed,
             "in_progress": group_in_progress,
-            "remaining": max(0.0, group_required - group_completed - group_in_progress),
+            "remaining": group_remaining,
             "subsections": subsections,
         })
 
@@ -1452,6 +1493,21 @@ def courses_page(request):
 
     courses = list(base_qs)
 
+    req = ProgramRequirement.objects.filter(
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    ).first()
+
+    count_map = build_course_counting_map(courses, req) if req else {}
+
+    for c in courses:
+        info = count_map.get(c.id, {})
+        c.eligible_blocks = info.get("eligible_names", [])
+        c.applied_blocks = info.get("applied_names", [])
+        c.eligible_count = info.get("eligible_count", 0)
+        c.applied_count = info.get("applied_count", 0)
+        c.is_multi_count = info.get("is_multi_count", False)
+
     completed_ids = set(
         CompletedClass.objects.filter(profile=profile).values_list("course_id", flat=True)
     )
@@ -1460,8 +1516,35 @@ def courses_page(request):
     )
 
     for c in courses:
-        state = _course_ui_state(profile, c)
-        _apply_course_ui_state(c, state)
+        if c.id in completed_ids:
+            state = {
+                "progress_status": "completed",
+                "progress_label": "Completed",
+                "progress_badge_class": "bg-emerald-100 text-emerald-700",
+                "action_label": "Remove",
+                "can_add": False,
+                "can_remove": True,
+            }
+        elif c.id in in_progress_ids:
+            state = {
+                "progress_status": "in_progress",
+                "progress_label": "In Progress",
+                "progress_badge_class": "bg-amber-100 text-amber-700",
+                "action_label": "Remove",
+                "can_add": False,
+                "can_remove": True,
+            }
+    else:
+        state = {
+            "progress_status": "",
+            "progress_label": "",
+            "progress_badge_class": "",
+            "action_label": "Add",
+            "can_add": True,
+            "can_remove": False,
+        }
+
+    _apply_course_ui_state(c, state)
 
     level_param = request.GET.get("level", "").strip()
     LEVEL_RANGES = {
@@ -1502,10 +1585,6 @@ def courses_page(request):
     if tag_param:
         courses = [c for c in courses if any(t.name == tag_param for t in c.tags.all())]
 
-    req = ProgramRequirement.objects.filter(
-        program=profile.program,
-        catalog_year=profile.catalog_year,
-    ).first()
     
     fulfillment_param = request.GET.get("fulfillment", "").strip()
     if fulfillment_param and req:
@@ -1513,6 +1592,11 @@ def courses_page(request):
         if block:
             block_course_ids = set(block.courses.values_list("id", flat=True))
             courses = [c for c in courses if c.id in block_course_ids]
+    count_type = request.GET.get("count_type", "").strip()
+    if count_type == "single":
+        courses = [c for c in courses if getattr(c, "applied_count", 0) == 1]
+    elif count_type == "multi":
+        courses = [c for c in courses if getattr(c, "applied_count", 0) > 1]
 
     level_choices = [
         ("", "All levels"),
@@ -1533,11 +1617,6 @@ def courses_page(request):
         ("5", "5 credits"),
     ]
 
-    req = ProgramRequirement.objects.filter(
-        program=profile.program,
-        catalog_year=profile.catalog_year,
-    ).first()
-
     fulfillment_labels = []
     if req:
         fulfillment_labels = list(
@@ -1546,6 +1625,12 @@ def courses_page(request):
 
     fulfillment_choices = [("", "Any fulfillment")] + [
         (label, label) for label in fulfillment_labels
+    ]
+
+    count_type_choices = [
+        ("", "Any count type"),
+        ("single", "Single Count"),
+        ("multi", "Multi Count"),
     ]
 
     ctx = {
@@ -1560,6 +1645,8 @@ def courses_page(request):
         "credit_choices": credit_choices,
         "fulfillment_choices": fulfillment_choices,
         "results_count": len(courses),
+        "count_type_choices": count_type_choices,
+        "selected_count_type": count_type,
     }
 
     if _wants_partial(request):
@@ -1578,6 +1665,20 @@ def course_detail(request, pk: int):
         program=profile.program,
         catalog_year=profile.catalog_year,
     )
+
+    req = ProgramRequirement.objects.filter(
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    ).first()
+
+    count_map = build_course_counting_map([course], req) if req else {}
+    count_info = count_map.get(course.id, {})
+
+    course.eligible_blocks = count_info.get("eligible_names", [])
+    course.applied_blocks = count_info.get("applied_names", [])
+    course.eligible_count = count_info.get("eligible_count", 0)
+    course.applied_count = count_info.get("applied_count", 0)
+    course.is_multi_count = count_info.get("is_multi_count", False)
 
     tags = course.tags.all().order_by("name")
     prereqs = course.prerequisites.all().order_by("subject", "level", "code")
@@ -1607,6 +1708,11 @@ def course_detail(request, pk: int):
         "can_add": state["can_add"],
         "can_remove": state["can_remove"],
         "action_label": state["action_label"],
+        "eligible_blocks": course.eligible_blocks,
+        "applied_blocks": course.applied_blocks,
+        "eligible_count": course.eligible_count,
+        "applied_count": course.applied_count,
+        "is_multi_count": course.is_multi_count,
     }
 
     if _wants_partial(request):

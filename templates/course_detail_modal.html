@@ -183,6 +183,49 @@
     {% endwith %}
 </section>
 {% endif %}
+<section>
+  <h3 class="font-semibold text-slate-900 uppercase tracking-wide text-xs">
+    Requirement counting
+  </h3>
+
+  {% if is_multi_count %}
+    <div class="mt-2">
+      <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-100">
+        Multi-count
+      </span>
+    </div>
+  {% endif %}
+
+  {% if eligible_blocks %}
+    <div class="mt-4">
+      <div class="text-xs font-medium text-slate-500 uppercase">
+        Can count toward these sections
+      </div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        {% for block_name in eligible_blocks %}
+          <span class="px-2 py-1 rounded-full bg-slate-100 text-xs text-slate-800">
+            {{ block_name }}
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if applied_blocks %}
+    <div class="mt-4">
+      <div class="text-xs font-medium text-slate-500 uppercase">
+        Counts simultaneously toward
+      </div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        {% for block_name in applied_blocks %}
+          <span class="px-2 py-1 rounded-full bg-indigo-50 text-xs text-indigo-700 border border-indigo-100">
+            {{ block_name }}
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</section>
 
     <!-- Tags -->
     <section>

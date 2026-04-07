@@ -339,25 +339,33 @@ class StudentProfile(models.Model):
         completed_codes = self.completed_course_codes()
         in_progress_codes = self.in_progress_course_codes()
 
-        used_codes = set()
         out = []
 
         blocks = list(req.blocks.prefetch_related("courses").all())
 
         if blocks:
-            blocks.sort(key=lambda b: (int(b.min_required), b.courses.count(), b.name))
+            blocks.sort(key=lambda b: (b.count_group or "group4", int(b.min_required), b.courses.count(), b.name))
+
+            used_by_group1 = set()
 
             for b in blocks:
                 block_codes = [c.code.upper() for c in b.courses.all()]
+                block_group = (b.count_group or "group4").strip() or "group4"
 
                 assigned_completed = []
                 assigned_ip = []
 
+                def code_allowed(code: str) -> bool:
+                    if b.allow_double_count:
+                        return True
+                    if block_group == "group1":
+                        return code not in used_by_group1
+                    return True
+
                 for code in block_codes:
                     if code in completed_codes:
-                        if b.allow_double_count or code not in used_codes:
-                            if code not in assigned_completed:
-                                assigned_completed.append(code)
+                        if code_allowed(code) and code not in assigned_completed:
+                            assigned_completed.append(code)
                         if len(assigned_completed) >= int(b.min_required):
                             break
 
@@ -368,14 +376,13 @@ class StudentProfile(models.Model):
                         if remaining_slots <= 0:
                             break
                         if code in in_progress_codes and code not in assigned_completed:
-                            if b.allow_double_count or code not in used_codes:
-                                if code not in assigned_ip:
-                                    assigned_ip.append(code)
-                                    remaining_slots -= 1
+                            if code_allowed(code) and code not in assigned_ip:
+                                assigned_ip.append(code)
+                                remaining_slots -= 1
 
-                if not b.allow_double_count:
-                    used_codes.update(assigned_completed)
-                    used_codes.update(assigned_ip)
+                if not b.allow_double_count and block_group == "group1":
+                    used_by_group1.update(assigned_completed)
+                    used_by_group1.update(assigned_ip)
 
                 out.append({
                     "name": b.name,
@@ -383,57 +390,38 @@ class StudentProfile(models.Model):
                     "completed": int(len(assigned_completed)),
                     "in_progress": int(len(assigned_ip)),
                     "total_options": int(len(block_codes)),
-                    "done": len(assigned_completed) >= int(b.min_required),
+                    "done": (len(assigned_completed) + len(assigned_ip)) >= int(b.min_required),
                     "type": "block",
                     "allow_double_count": bool(b.allow_double_count),
+                    "count_group": block_group,
+                    "assigned_completed_codes": assigned_completed,
+                    "assigned_in_progress_codes": assigned_ip,
                 })
+        udge_names = {
+            "B5 Upper Division Scientific Inquiry",
+            "C Upper Division Arts and Humanities",
+            "D Upper Division Social Sciences",
+            "F Upper Division Comparative Cultural Studies",
+        }
 
-            for rule in req.path_rules.all():
-                best_score = 0
-                target = 0
+        udge_blocks = [x for x in out if x.get("name") in udge_names]
 
-                for path in (rule.paths or []):
-                    if not isinstance(path, list):
-                        continue
-                    target = max(target, len(path))
-                    score = 0
-                    for block_name in path:
-                        block_result = next(
-                            (x for x in out if x["name"] == block_name and x.get("type") == "block"),
-                            None,
-                        )
-                        if block_result and block_result["done"]:
-                            score += 1
-                    best_score = max(best_score, score)
+        if udge_blocks and not any(x.get("name") == "General Education Upper Division" for x in out):
+            udge_completed = sum(int(x.get("completed", 0)) for x in udge_blocks)
+            udge_in_progress = sum(int(x.get("in_progress", 0)) for x in udge_blocks)
 
-                out.append({
-                    "name": rule.name,
-                    "min_required": int(target),
-                    "completed": int(best_score),
-                    "in_progress": 0,
-                    "total_options": int(len(rule.paths or [])),
-                    "done": best_score >= target if target else False,
-                    "type": "path",
-                })
-
-            return out
-
-        groups = req.groups.prefetch_related("courses").all()
-        for g in groups:
-            group_codes = [c.code.upper() for c in g.courses.all()]
-            completed_in_group = sum(1 for code in group_codes if code in completed_codes)
-            in_progress_in_group = sum(
-                1 for code in group_codes
-                if code in in_progress_codes and code not in completed_codes
-            )
             out.append({
-                "name": g.name,
-                "min_required": int(g.min_required),
-                "completed": int(completed_in_group),
-                "in_progress": int(in_progress_in_group),
-                "total_options": int(len(group_codes)),
-                "done": completed_in_group >= int(g.min_required),
-                "type": "group",
+                "name": "General Education Upper Division",
+                "min_required": 3,
+                "completed": udge_completed,
+                "in_progress": udge_in_progress,
+                "total_options": 0,
+                "done": (udge_completed + udge_in_progress) >= 3,
+                "type": "block",
+                "allow_double_count": False,
+                "count_group": "group4",
+                "assigned_completed_codes": [],
+                "assigned_in_progress_codes": [],
             })
         return out
 
@@ -552,6 +540,13 @@ class RequirementBlock(models.Model):
         Course,
         blank=True,
         related_name="requirement_blocks",
+    )
+
+    count_group = models.CharField(
+    max_length=20,
+    blank=True,
+    default="group4",
+    help_text="Use group1, group2, group3, or group4 for counting rules."
     )
 
     class Meta:

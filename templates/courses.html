@@ -8,7 +8,7 @@
 
   <!-- Filters row -->
 <form id="filters-form" method="get" action="{% url 'courses' %}"
-class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
 
 <!-- Level -->
 <div>
@@ -57,90 +57,36 @@ class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
 {% endfor %}
 </select>
 </div>
+
+<div>
+  <label class="sr-only" for="count_type">Count Type</label>
+  <select id="count_type"
+        name="count_type"
+        class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+  >
+  {% for value, label in count_type_choices %}
+    <option value="{{ value }}"
+            {% if value == selected_count_type %}selected{% endif %}>
+      {{ label }}
+    </option>
+  {% endfor %}
+  </select>
+</div>
 </form>
 
 
-  <p class="text-xs text-slate-500 mb-2">{{ courses|length }} results</p>
+<div class="mb-2 flex items-center justify-between">
+  <p class="text-xs text-slate-500">{{ courses|length }} results</p>
 
-  <!-- Courses grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-  {% for c in courses %}
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-4 flex flex-col justify-between">
-      <div>
-        <p class="text-sm font-semibold text-slate-900">
-          {{ c.code }} ({{ c.credits }})
-        </p>
+  <a href="{% url 'courses' %}"
+   class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+  Reset Filters
+</a>
+</div>
 
-        <p class="mt-1 text-sm text-slate-700">
-          {{ c.title }}
-        </p>
-
-        {% if c.progress_label %}
-          <div class="mt-3">
-            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ c.progress_badge_class }}">
-              {{ c.progress_label }}
-            </span>
-          </div>
-        {% endif %}
-
-        <!-- tags row -->
-        <div class="mt-3 flex flex-wrap gap-2">
-          {% for t in c.tags.all %}
-            <span class="px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-700">
-              {{ t.name }}
-            </span>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="mt-4 flex flex-wrap gap-2">
-        <a
-          href="{% url 'course_detail' c.id %}?partial=1"
-          data-course-url="{% url 'course_detail' c.id %}?partial=1"
-          class="inline-flex items-center justify-center rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700"
-        >
-          Details
-        </a>
-
-        {% if c.can_remove %}
-          <form method="post" action="{% url 'remove_course_status' c.id %}" class="inline">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button type="submit"
-              class="inline-flex items-center justify-center rounded-lg bg-rose-600 text-white px-4 py-2 text-sm font-medium hover:bg-rose-700">
-        Remove
-            </button>
-          </form>
-        {% else %}
-          <details class="relative inline-block">
-            <summary class="list-none cursor-pointer inline-flex items-center justify-center rounded-lg bg-slate-800 text-white px-4 py-2 text-sm font-medium hover:bg-slate-900">
-        Add
-            </summary>
-
-            <div class="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white shadow-lg p-2 z-20">
-        <form method="post" action="{% url 'mark_course_completed' c.id %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" class="w-full text-left rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
-            Add to Completed
-          </button>
-        </form>
-
-        <form method="post" action="{% url 'mark_course_in_progress' c.id %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" class="w-full text-left rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
-            Add to In Progress
-          </button>
-        </form>
-            </div>
-          </details>
-        {% endif %}
-      </div>
-    </div>
-  {% empty %}
-    <p class="text-sm text-slate-600">No courses found for your program / catalog year.</p>
-  {% endfor %}
+<!-- Courses grid -->
+<div id="courses-results">
+  {% include "courses_list.html" %}
 </div>
 
 <!-- Slide-over panel backdrop -->
