@@ -1,6 +1,362 @@
 {% extends "base.html" %}
 {% block page_title %}Degree Plan — Gradmate{% endblock %}
+
 {% block content %}
-  <h1 class="text-2xl font-semibold mb-4">Degree Plan</h1>
-  <p class="text-slate-600">Coming soon — visualize term-by-term selections here.</p>
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Degree Plan</h1>
+      <p class="text-sm text-slate-600">
+        Plan future semesters and track remaining requirements.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+        Auto Suggest
+      </button>
+      <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+        Add Semester
+      </button>
+    </div>
+  </div>
+
+  <!-- Student summary -->
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">Student Snapshot</h2>
+          <p class="mt-1 text-sm text-slate-500">BS Computer Science · Catalog 2023</p>
+        </div>
+        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+          Expected Graduation: Spring 2028
+        </span>
+      </div>
+
+      <div class="mt-5">
+        <div class="mb-2 flex items-center justify-between text-sm">
+          <span class="text-slate-600">Overall Progress</span>
+          <span class="font-medium text-slate-800">48 / 120 units</span>
+        </div>
+        <div class="h-3 w-full overflow-hidden rounded-full bg-slate-200">
+          <div class="h-3 rounded-full bg-blue-600" style="width: 40%;"></div>
+        </div>
+      </div>
+
+      <div class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div class="rounded-xl bg-slate-50 p-4">
+          <p class="text-xs text-slate-500">Completed</p>
+          <p class="mt-1 text-xl font-semibold text-slate-900">36</p>
+        </div>
+        <div class="rounded-xl bg-amber-50 p-4">
+          <p class="text-xs text-slate-500">In Progress</p>
+          <p class="mt-1 text-xl font-semibold text-slate-900">12</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 p-4">
+          <p class="text-xs text-slate-500">Remaining</p>
+          <p class="mt-1 text-xl font-semibold text-slate-900">72</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 p-4">
+          <p class="text-xs text-slate-500">Planned Terms</p>
+          <p class="mt-1 text-xl font-semibold text-slate-900">4</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 class="text-lg font-semibold text-slate-900">Quick Alerts</h2>
+      <div class="mt-4 space-y-3">
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <p class="text-sm font-medium text-amber-800">Probability & Statistics still missing</p>
+          <p class="mt-1 text-xs text-amber-700">Recommended: MATH 340</p>
+        </div>
+        <div class="rounded-xl border border-red-200 bg-red-50 p-3">
+          <p class="text-sm font-medium text-red-800">Upper Division Core not started</p>
+          <p class="mt-1 text-xs text-red-700">Start after lower-division sequence is complete.</p>
+        </div>
+        <div class="rounded-xl border border-blue-200 bg-blue-50 p-3">
+          <p class="text-sm font-medium text-blue-800">You can begin planning senior electives soon</p>
+          <p class="mt-1 text-xs text-blue-700">Keep 400/500-level elective space open in later terms.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main planner layout -->
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+    <!-- Left: Requirement progress -->
+    <div class="space-y-4">
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900">Requirement Progress</h2>
+        <p class="mt-1 text-sm text-slate-500">Mock data for layout only</p>
+
+        <div class="mt-5 space-y-4">
+          <div>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="text-slate-700">General Education</span>
+              <span class="text-slate-500">21 / 48</span>
+            </div>
+            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div class="h-2.5 rounded-full bg-blue-600" style="width: 44%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="text-slate-700">Lower Division Core</span>
+              <span class="text-slate-500">15 / 36</span>
+            </div>
+            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div class="h-2.5 rounded-full bg-blue-600" style="width: 42%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="text-slate-700">Lower Division Electives</span>
+              <span class="text-slate-500">4 / 12</span>
+            </div>
+            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div class="h-2.5 rounded-full bg-blue-600" style="width: 33%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="text-slate-700">Upper Division Core</span>
+              <span class="text-slate-500">0 / 24</span>
+            </div>
+            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div class="h-2.5 rounded-full bg-blue-600" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="text-slate-700">Senior Electives</span>
+              <span class="text-slate-500">0 / 15</span>
+            </div>
+            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div class="h-2.5 rounded-full bg-blue-600" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900">Recommended Next Courses</h2>
+        <div class="mt-4 space-y-3">
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="font-medium text-slate-900">COMP 222</p>
+            <p class="text-sm text-slate-500">Data Structures</p>
+            <span class="mt-2 inline-block rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">Major Core</span>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="font-medium text-slate-900">MATH 340</p>
+            <p class="text-sm text-slate-500">Probability & Statistics</p>
+            <span class="mt-2 inline-block rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">Important Requirement</span>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="font-medium text-slate-900">GE Area C course</p>
+            <p class="text-sm text-slate-500">Recommended to balance major load</p>
+            <span class="mt-2 inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">GE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: semester planner -->
+    <div class="xl:col-span-2 space-y-4">
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-slate-900">Semester Plan</h2>
+            <p class="mt-1 text-sm text-slate-500">Frontend sample only — no backend connected yet</p>
+          </div>
+          <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            Edit Plan
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <!-- Semester 1 -->
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-semibold text-slate-900">Fall 2026</h3>
+              <p class="text-sm text-slate-500">Planned Units: 13</p>
+            </div>
+            <span class="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+              Balanced
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <div class="rounded-xl bg-slate-50 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-medium text-slate-900">COMP 222</p>
+                  <p class="text-sm text-slate-500">3 units · Major Core</p>
+                </div>
+                <span class="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">Core</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-medium text-slate-900">COMP 282</p>
+                  <p class="text-sm text-slate-500">3 units · Lower Division Major</p>
+                </div>
+                <span class="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">Core</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-medium text-slate-900">MATH 340</p>
+                  <p class="text-sm text-slate-500">3 units · Probability & Statistics</p>
+                </div>
+                <span class="rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">Required</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-medium text-slate-900">GE Humanities Course</p>
+                  <p class="text-sm text-slate-500">4 units · General Education</p>
+                </div>
+                <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">GE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Semester 2 -->
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-semibold text-slate-900">Spring 2027</h3>
+              <p class="text-sm text-slate-500">Planned Units: 12</p>
+            </div>
+            <span class="rounded-full bg-yellow-50 px-3 py-1 text-xs font-medium text-yellow-700">
+              Review Load
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <div class="rounded-xl bg-slate-50 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-medium text-slate-900">COMP 310</p>
+                  <p class="text-sm text-slate-500">3 units · Upper Division B5</p>
+                </div>
+                <span class="rounded-full bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700">Upper Div</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-medium text-slate-900">COMP 322 / 322L</p>
+                  <p class="text-sm text-slate-500">4 units · Upper Division Core</p>
+                </div>
+                <span class="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">Core</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-medium text-slate-900">Upper Division GE Course</p>
+                  <p class="text-sm text-slate-500">3 units · UDGE</p>
+                </div>
+                <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">GE</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-red-200 bg-red-50 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-medium text-red-800">Senior Elective Placeholder</p>
+                  <p class="text-sm text-red-700">2 units shown only as sample — real senior electives should be 400/500 level COMP courses.</p>
+                </div>
+                <span class="rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">Warning</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Semester 3 -->
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-semibold text-slate-900">Fall 2027</h3>
+              <p class="text-sm text-slate-500">Planned Units: 12</p>
+            </div>
+            <span class="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+              Good
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p class="font-medium text-slate-900">COMP 333</p>
+              <p class="text-sm text-slate-500">3 units · Upper Division Core</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p class="font-medium text-slate-900">COMP 380 / 380L</p>
+              <p class="text-sm text-slate-500">4 units · Upper Division Core</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p class="font-medium text-slate-900">Senior Elective 1</p>
+              <p class="text-sm text-slate-500">3 units · Senior Elective</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p class="font-medium text-slate-900">Upper Division GE Course</p>
+              <p class="text-sm text-slate-500">2 units/sample filler</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Semester 4 -->
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-semibold text-slate-900">Spring 2028</h3>
+              <p class="text-sm text-slate-500">Planned Units: 12</p>
+            </div>
+            <span class="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+              Final Term
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p class="font-medium text-slate-900">Senior Elective 2</p>
+              <p class="text-sm text-slate-500">3 units · Senior Elective</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p class="font-medium text-slate-900">Senior Elective 3</p>
+              <p class="text-sm text-slate-500">3 units · Senior Elective</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p class="font-medium text-slate-900">Senior Elective 4</p>
+              <p class="text-sm text-slate-500">3 units · Senior Elective</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p class="font-medium text-slate-900">Free Elective / Remaining GE</p>
+              <p class="text-sm text-slate-500">3 units</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

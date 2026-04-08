@@ -698,6 +698,106 @@ def _collect_block_course_rows(profile, block_names: list[str]):
                     seen_codes.add(code)
 
     return rows
+def _build_udge_helper_options(profile, assigned_completed_codes: set[str], assigned_ip_codes: set[str]):
+    """
+    Display-only helper for UDGE options.
+    Does not change audit counting. It only tells the template which UDGE option
+    paths are still open / partially complete / complete.
+    """
+
+    option_defs = [
+        {
+            "name": "Option 1",
+            "label": "B5 + C + D",
+            "parts": [
+                ("B5 Upper Division Scientific Inquiry", "B5"),
+                ("C Upper Division Arts and Humanities", "C"),
+                ("D Upper Division Social Sciences", "D"),
+            ],
+        },
+        {
+            "name": "Option 2",
+            "label": "B5 + C + F",
+            "parts": [
+                ("B5 Upper Division Scientific Inquiry", "B5"),
+                ("C Upper Division Arts and Humanities", "C"),
+                ("F Upper Division Comparative Cultural Studies", "F"),
+            ],
+        },
+        {
+            "name": "Option 3",
+            "label": "B5 + D + F",
+            "parts": [
+                ("B5 Upper Division Scientific Inquiry", "B5"),
+                ("D Upper Division Social Sciences", "D"),
+                ("F Upper Division Comparative Cultural Studies", "F"),
+            ],
+        },
+        {
+            "name": "Option 4",
+            "label": "B5 + F + F",
+            "parts": [
+                ("B5 Upper Division Scientific Inquiry", "B5"),
+                ("F Upper Division Comparative Cultural Studies", "F"),
+                ("F Upper Division Comparative Cultural Studies 2", "F"),
+            ],
+        },
+    ]
+
+    req = profile.get_requirement()
+    if not req:
+        return []
+
+    completed_codes = {(c or "").upper() for c in assigned_completed_codes if c}
+    ip_codes = {(c or "").upper() for c in assigned_ip_codes if c}
+
+    options = []
+
+    for opt in option_defs:
+        part_rows = []
+        complete_parts = 0
+        ip_parts = 0
+
+        for block_name, short_label in opt["parts"]:
+            block = req.blocks.filter(name=block_name).first()
+            block_codes = set()
+
+            if block:
+                block_codes = {
+                    (c.code or "").upper()
+                    for c in block.courses.all()
+                    if c.code
+                }
+
+            matched_completed = sorted(block_codes & completed_codes)
+            matched_ip = sorted(block_codes & ip_codes)
+
+            is_done = bool(matched_completed)
+            is_ip = (not is_done) and bool(matched_ip)
+
+            if is_done:
+                complete_parts += 1
+            elif is_ip:
+                ip_parts += 1
+
+            part_rows.append({
+                "block_name": block_name,
+                "label": short_label,
+                "done": is_done,
+                "in_progress": is_ip,
+                "link_name": block_name,
+            })
+
+        options.append({
+            "name": opt["name"],
+            "label": opt["label"],
+            "parts": part_rows,
+            "done_count": complete_parts,
+            "ip_count": ip_parts,
+            "is_complete": complete_parts == 3,
+        })
+
+    return options
 
 def _build_requirement_audit_data(profile, user):
     completed_courses = list(
@@ -838,7 +938,7 @@ def _build_requirement_audit_data(profile, user):
                         course_rows.append({
                             "code": "—",
                             "title": "Course needed",
-                            "units": missing_count,
+                            "units": 0,
                             "grade": "—",
                             "status": "bad",
                         })
@@ -856,6 +956,12 @@ def _build_requirement_audit_data(profile, user):
                     if r["status"] == "ip" and r.get("code") and r["code"] != "—"
                 }
 
+                helper_options = _build_udge_helper_options(
+                    profile,
+                    udge_completed_codes,
+                    udge_ip_codes,
+                )
+
                 subsection = {
                     "name": "General Education Upper Division",
                     "short": _short_group_name("General Education Upper Division"),
@@ -865,8 +971,9 @@ def _build_requirement_audit_data(profile, user):
                     "remaining": max(0.0, required - completed - ip_count),
                     "done": done,
                     "total_options": len(course_rows),
-                    "assigned_completed_codes": list(assigned_completed_codes),
-                    "assigned_in_progress_codes": list(assigned_ip_codes),
+                    "assigned_completed_codes": list(udge_completed_codes),
+                    "assigned_in_progress_codes": list(udge_ip_codes),
+                    "helper_options": helper_options,
                     "courses": course_rows,
                     "status_label": meta["label"],
                     "tag_class": meta["tag_class"],
@@ -1026,7 +1133,8 @@ def _build_requirement_audit_data(profile, user):
                     course_rows.append({
                         "code": "—",
                         "title": "Course needed",
-                        "units": missing_count,
+                        "units": None,
+                        "missing_count": int(missing_count),
                         "grade": "—",
                         "status": "bad",
                     })
@@ -1534,17 +1642,17 @@ def courses_page(request):
                 "can_add": False,
                 "can_remove": True,
             }
-    else:
-        state = {
-            "progress_status": "",
-            "progress_label": "",
-            "progress_badge_class": "",
-            "action_label": "Add",
-            "can_add": True,
-            "can_remove": False,
-        }
+        else:
+            state = {
+                "progress_status": "",
+                "progress_label": "",
+                "progress_badge_class": "",
+                "action_label": "Add",
+                "can_add": True,
+                "can_remove": False,
+            }
 
-    _apply_course_ui_state(c, state)
+        _apply_course_ui_state(c, state)
 
     level_param = request.GET.get("level", "").strip()
     LEVEL_RANGES = {
@@ -1587,11 +1695,29 @@ def courses_page(request):
 
     
     fulfillment_param = request.GET.get("fulfillment", "").strip()
+    also_counts_for = request.GET.get("also_counts_for", "").strip()
     if fulfillment_param and req:
         block = req.blocks.filter(name=fulfillment_param).first()
         if block:
             block_course_ids = set(block.courses.values_list("id", flat=True))
             courses = [c for c in courses if c.id in block_course_ids]
+    if fulfillment_param and also_counts_for and req:
+        filtered = []
+
+        for c in courses:
+            applied = set(getattr(c, "applied_blocks", []) or [])
+            eligible = set(getattr(c, "eligible_blocks", []) or [])
+
+            # strict: course actually counts in both under current engine behavior
+            if fulfillment_param in applied and also_counts_for in applied:
+                filtered.append(c)
+                continue
+
+            # fallback: engine says it is a multi-count course and eligible for both
+            if getattr(c, "is_multi_count", False) and fulfillment_param in eligible and also_counts_for in eligible:
+                filtered.append(c)
+
+        courses = filtered
     count_type = request.GET.get("count_type", "").strip()
     if count_type == "single":
         courses = [c for c in courses if getattr(c, "applied_count", 0) == 1]
@@ -1619,11 +1745,28 @@ def courses_page(request):
 
     fulfillment_labels = []
     if req:
-        fulfillment_labels = list(
+        raw_labels = list(
             req.blocks.order_by("name").values_list("name", flat=True).distinct()
         )
 
+        label_aliases = {
+            "F Upper Division Comparative Cultural Studies 2": "F Upper Division Comparative Cultural Studies",
+        }
+
+        normalized = []
+        seen = set()
+        for label in raw_labels:
+            final_label = label_aliases.get(label, label)
+            if final_label not in seen:
+                normalized.append(final_label)
+                seen.add(final_label)
+
+        fulfillment_labels = normalized
+
     fulfillment_choices = [("", "Any fulfillment")] + [
+        (label, label) for label in fulfillment_labels
+    ]
+    also_counts_for_choices = [("", "Also Counts For")] + [
         (label, label) for label in fulfillment_labels
     ]
 
@@ -1647,6 +1790,8 @@ def courses_page(request):
         "results_count": len(courses),
         "count_type_choices": count_type_choices,
         "selected_count_type": count_type,
+        "also_counts_for_choices": also_counts_for_choices,
+        "selected_also_counts_for": also_counts_for,
     }
 
     if _wants_partial(request):

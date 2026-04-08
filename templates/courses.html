@@ -8,7 +8,7 @@
 
   <!-- Filters row -->
 <form id="filters-form" method="get" action="{% url 'courses' %}"
-class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
 
 <!-- Level -->
 <div>
@@ -58,6 +58,23 @@ class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
 </select>
 </div>
 
+<!-- Also Counts For (multi-count tags) -->
+ <div>
+<label class="sr-only" for="also_counts_for">Also Counts For</label>
+<select id="also_counts_for"
+      name="also_counts_for"
+      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+>
+{% for value, label in also_counts_for_choices %}
+  <option value="{{ value }}"
+          {% if value == selected_also_counts_for %}selected{% endif %}>
+    {{ label }}
+  </option>
+{% endfor %}
+</select>
+</div>
+
+<!-- Count Type -->
 <div>
   <label class="sr-only" for="count_type">Count Type</label>
   <select id="count_type"

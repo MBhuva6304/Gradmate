@@ -140,11 +140,53 @@
                 </div>
               </div>
 
+                            {% if sec.name == "General Education Upper Division" and not sec.done and sec.helper_options %}
+                <div class="space-y-3 mb-4">
+                  {% for opt in sec.helper_options %}
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div class="flex items-center justify-between gap-4 flex-wrap">
+                        <div class="font-semibold text-slate-900">{{ opt.name }}: {{ opt.label }}</div>
+                        <div class="text-xs text-slate-500">
+                          {{ opt.done_count }} completed
+                          {% if opt.ip_count > 0 %}• {{ opt.ip_count }} in progress{% endif %}
+                        </div>
+                      </div>
+
+                      <div class="mt-3 flex flex-wrap gap-2">
+                        {% for part in opt.parts %}
+                          <a
+                            href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
+                            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border
+                              {% if part.done %}
+                                bg-emerald-100 text-emerald-700 border-emerald-200
+                              {% elif part.in_progress %}
+                                bg-amber-100 text-amber-700 border-amber-200
+                              {% else %}
+                                bg-white text-slate-700 border-slate-200 hover:bg-slate-100
+                              {% endif %}">
+                            {{ part.label }}
+                            {% if part.done %}✓{% elif part.in_progress %}●{% endif %}
+                          </a>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
               <div class="space-y-2">
                 {% for c in sec.courses %}
                   <div class="audit-course">
                     <div><strong>{{ c.code }}</strong> — {{ c.title }}</div>
-                    <div class="text-sm text-slate-500">{{ c.units|floatformat:0 }} units</div>
+                    <div class="text-sm text-slate-500">
+                      {% if sec.name == "General Education Upper Division" and c.status == "bad" %}
+                        &nbsp;
+                      {% elif c.status == "bad" %}
+                        {{ c.missing_count|default:1 }} course{{ c.missing_count|default:1|pluralize }}
+                      {% else %}
+                        {{ c.units|floatformat:0 }} units
+                      {% endif %}
+                    </div>
                     <div>
                       <span class="audit-tag {{ c.status }}">
                         <span>
@@ -167,7 +209,11 @@
                     href="{% url 'courses' %}?fulfillment={{ sec.name|urlencode }}"
                     class="text-slate-400 hover:text-indigo-600 hover:underline"
                   >
-                    View {{ sec.total_options|floatformat:0 }} course option{{ sec.total_options|pluralize }}
+                    {% if sec.name == "General Education Upper Division" %}
+                      Choose one of the options above.
+                    {% else %}
+                      View {{ sec.total_options|floatformat:0 }} course option{{ sec.total_options|pluralize }}
+                    {% endif %}
                   </a>
                 </div>
               {% endif %}
