@@ -1,362 +1,875 @@
 {% extends "base.html" %}
 {% block page_title %}Degree Plan — Gradmate{% endblock %}
 
-{% block content %}
-<div class="space-y-6">
-  <!-- Header -->
-  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-    <div>
-      <h1 class="text-2xl font-semibold text-slate-900">Degree Plan</h1>
-      <p class="text-sm text-slate-600">
-        Plan future semesters and track remaining requirements.
-      </p>
-    </div>
-
-    <div class="flex flex-wrap gap-2">
-      <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+{% block topbar_actions %}
+  <div class="flex flex-wrap gap-2">
+    <form method="post" action="{% url 'auto_suggest_degree_plan' %}">
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+      >
         Auto Suggest
       </button>
-      <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+    </form>
+
+    <form method="post" action="{% url 'add_future_term' %}">
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+      >
         Add Semester
       </button>
-    </div>
+    </form>
   </div>
+{% endblock %}
 
-  <!-- Student summary -->
-  <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <h2 class="text-lg font-semibold text-slate-900">Student Snapshot</h2>
-          <p class="mt-1 text-sm text-slate-500">BS Computer Science · Catalog 2023</p>
-        </div>
-        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-          Expected Graduation: Spring 2028
-        </span>
-      </div>
+{% block content %}
+  <style>
+    .plan-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
 
-      <div class="mt-5">
-        <div class="mb-2 flex items-center justify-between text-sm">
-          <span class="text-slate-600">Overall Progress</span>
-          <span class="font-medium text-slate-800">48 / 120 units</span>
-        </div>
-        <div class="h-3 w-full overflow-hidden rounded-full bg-slate-200">
-          <div class="h-3 rounded-full bg-blue-600" style="width: 40%;"></div>
-        </div>
-      </div>
+    .plan-chip {
+      min-width: 92px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.85rem;
+      padding: 0.7rem 0.55rem;
+      background: #f8fafc;
+    }
 
-      <div class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div class="rounded-xl bg-slate-50 p-4">
-          <p class="text-xs text-slate-500">Completed</p>
-          <p class="mt-1 text-xl font-semibold text-slate-900">36</p>
-        </div>
-        <div class="rounded-xl bg-amber-50 p-4">
-          <p class="text-xs text-slate-500">In Progress</p>
-          <p class="mt-1 text-xl font-semibold text-slate-900">12</p>
-        </div>
-        <div class="rounded-xl bg-slate-50 p-4">
-          <p class="text-xs text-slate-500">Remaining</p>
-          <p class="mt-1 text-xl font-semibold text-slate-900">72</p>
-        </div>
-        <div class="rounded-xl bg-slate-50 p-4">
-          <p class="text-xs text-slate-500">Planned Terms</p>
-          <p class="mt-1 text-xl font-semibold text-slate-900">4</p>
-        </div>
-      </div>
-    </div>
+    .plan-chip .n {
+      font-weight: 800;
+      font-size: 1.1rem;
+      line-height: 1.1;
+    }
 
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 class="text-lg font-semibold text-slate-900">Quick Alerts</h2>
-      <div class="mt-4 space-y-3">
-        <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
-          <p class="text-sm font-medium text-amber-800">Probability & Statistics still missing</p>
-          <p class="mt-1 text-xs text-amber-700">Recommended: MATH 340</p>
-        </div>
-        <div class="rounded-xl border border-red-200 bg-red-50 p-3">
-          <p class="text-sm font-medium text-red-800">Upper Division Core not started</p>
-          <p class="mt-1 text-xs text-red-700">Start after lower-division sequence is complete.</p>
-        </div>
-        <div class="rounded-xl border border-blue-200 bg-blue-50 p-3">
-          <p class="text-sm font-medium text-blue-800">You can begin planning senior electives soon</p>
-          <p class="mt-1 text-xs text-blue-700">Keep 400/500-level elective space open in later terms.</p>
-        </div>
-      </div>
-    </div>
-  </div>
+    .plan-chip .l {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 0.2rem;
+    }
 
-  <!-- Main planner layout -->
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
-    <!-- Left: Requirement progress -->
-    <div class="space-y-4">
-      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900">Requirement Progress</h2>
-        <p class="mt-1 text-sm text-slate-500">Mock data for layout only</p>
+    .plan-course {
+      border: 1px solid #e2e8f0;
+      border-radius: 0.95rem;
+      padding: 0.9rem 1rem;
+      background: #f8fafc;
+    }
 
-        <div class="mt-5 space-y-4">
-          <div>
-            <div class="mb-1 flex justify-between text-sm">
-              <span class="text-slate-700">General Education</span>
-              <span class="text-slate-500">21 / 48</span>
-            </div>
-            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
-              <div class="h-2.5 rounded-full bg-blue-600" style="width: 44%;"></div>
-            </div>
-          </div>
+    .plan-empty {
+      border: 1px dashed #cbd5e1;
+      border-radius: 0.95rem;
+      padding: 1rem;
+      background: #f8fafc;
+    }
 
-          <div>
-            <div class="mb-1 flex justify-between text-sm">
-              <span class="text-slate-700">Lower Division Core</span>
-              <span class="text-slate-500">15 / 36</span>
-            </div>
-            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
-              <div class="h-2.5 rounded-full bg-blue-600" style="width: 42%;"></div>
-            </div>
-          </div>
+    .plan-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      padding: 0.28rem 0.65rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
 
-          <div>
-            <div class="mb-1 flex justify-between text-sm">
-              <span class="text-slate-700">Lower Division Electives</span>
-              <span class="text-slate-500">4 / 12</span>
-            </div>
-            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
-              <div class="h-2.5 rounded-full bg-blue-600" style="width: 33%;"></div>
-            </div>
-          </div>
+    .plan-badge.ip {
+      background: #fff7ed;
+      color: #92400e;
+    }
 
-          <div>
-            <div class="mb-1 flex justify-between text-sm">
-              <span class="text-slate-700">Upper Division Core</span>
-              <span class="text-slate-500">0 / 24</span>
-            </div>
-            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
-              <div class="h-2.5 rounded-full bg-blue-600" style="width: 0%;"></div>
-            </div>
-          </div>
+    .plan-badge.warn {
+      background: #fef2f2;
+      color: #991b1b;
+    }
 
-          <div>
-            <div class="mb-1 flex justify-between text-sm">
-              <span class="text-slate-700">Senior Electives</span>
-              <span class="text-slate-500">0 / 15</span>
-            </div>
-            <div class="h-2.5 overflow-hidden rounded-full bg-slate-200">
-              <div class="h-2.5 rounded-full bg-blue-600" style="width: 0%;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+    .plan-badge.info {
+      background: #eef2ff;
+      color: #3730a3;
+    }
 
-      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900">Recommended Next Courses</h2>
-        <div class="mt-4 space-y-3">
-          <div class="rounded-xl border border-slate-200 p-3">
-            <p class="font-medium text-slate-900">COMP 222</p>
-            <p class="text-sm text-slate-500">Data Structures</p>
-            <span class="mt-2 inline-block rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">Major Core</span>
-          </div>
-          <div class="rounded-xl border border-slate-200 p-3">
-            <p class="font-medium text-slate-900">MATH 340</p>
-            <p class="text-sm text-slate-500">Probability & Statistics</p>
-            <span class="mt-2 inline-block rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">Important Requirement</span>
-          </div>
-          <div class="rounded-xl border border-slate-200 p-3">
-            <p class="font-medium text-slate-900">GE Area C course</p>
-            <p class="text-sm text-slate-500">Recommended to balance major load</p>
-            <span class="mt-2 inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">GE</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    .plan-badge.neutral {
+      background: #f1f5f9;
+      color: #334155;
+    }
 
-    <!-- Right: semester planner -->
-    <div class="xl:col-span-2 space-y-4">
-      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-slate-900">Semester Plan</h2>
-            <p class="mt-1 text-sm text-slate-500">Frontend sample only — no backend connected yet</p>
-          </div>
-          <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            Edit Plan
-          </button>
-        </div>
-      </div>
+    .plan-badge.planned {
+      background: #dcfce7;
+      color: #166534;
+    }
 
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <!-- Semester 1 -->
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div class="mb-4 flex items-center justify-between">
+    .plan-bar {
+      position: relative;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 0.6rem;
+    }
+
+    .plan-bar-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: #2563eb;
+      border-radius: 9999px;
+    }
+
+    .bg-amber-500 {
+      background: #f59e0b;
+    }
+
+    .bg-green-500 {
+      background: #22c55e;
+    }
+
+    .plan-note-display {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .plan-mini-list {
+      border-top: 1px solid #e2e8f0;
+      margin-top: 0.9rem;
+      padding-top: 0.9rem;
+    }
+  </style>
+
+  <div class="space-y-6">
+    <section>
+      <h1 class="text-3xl font-bold text-slate-900">Degree Plan</h1>
+      <p class="mt-1 text-slate-600">
+        Focus on what is left and build your future semesters.
+      </p>
+    </section>
+
+    <section class="grid grid-cols-1 gap-6 xl:grid-cols-4">
+      <div class="plan-card p-4 xl:col-span-3">
+        <div class="flex flex-col gap-5">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h3 class="text-base font-semibold text-slate-900">Fall 2026</h3>
-              <p class="text-sm text-slate-500">Planned Units: 13</p>
+              <h2 class="text-lg font-semibold">Student Snapshot</h2>
+              <p class="mt-1 text-sm text-slate-500">
+                {{ profile.get_program_display }} — Catalog {{ profile.catalog_year }}
+              </p>
+              <p class="mt-1 text-xs text-slate-500">
+                Next planning term: {{ next_term }}
+                {% if grad_term %}• Estimated graduation: {{ grad_term }}{% endif %}
+              </p>
             </div>
-            <span class="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-              Balanced
-            </span>
+
+            <div class="text-xs text-slate-500">
+              Goal: {{ target_credits }} total units
+            </div>
           </div>
 
-          <div class="space-y-3">
-            <div class="rounded-xl bg-slate-50 p-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-medium text-slate-900">COMP 222</p>
-                  <p class="text-sm text-slate-500">3 units · Major Core</p>
+          <div class="space-y-5">
+            <div>
+              <div class="mb-1 flex items-center justify-between text-xs text-slate-500">
+                <span>Current Progress</span>
+                <span>{{ completed_credits|add:in_progress_credits }} / {{ target_credits }}</span>
+              </div>
+
+              <div class="plan-bar">
+                {% widthratio completed_credits target_credits 100 as current_done_pct %}
+                {% widthratio completed_credits|add:in_progress_credits target_credits 100 as current_ip_pct %}
+
+                {% if in_progress_credits > 0 %}
+                  <div class="plan-bar-fill bg-amber-500" style="width: {{ current_ip_pct }}%;"></div>
+                {% endif %}
+
+                {% if completed_credits > 0 %}
+                  <div class="plan-bar-fill" style="width: {{ current_done_pct }}%;"></div>
+                {% endif %}
+              </div>
+
+              <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div class="plan-chip">
+                  <div class="n">{{ completed_credits }}</div>
+                  <div class="l">Completed</div>
                 </div>
-                <span class="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">Core</span>
+                <div class="plan-chip">
+                  <div class="n">{{ in_progress_credits }}</div>
+                  <div class="l">In Progress</div>
+                </div>
+                <div class="plan-chip">
+                  <div class="n">{{ total_planned_units }}</div>
+                  <div class="l">Planned</div>
+                </div>
               </div>
             </div>
 
-            <div class="rounded-xl bg-slate-50 p-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-medium text-slate-900">COMP 282</p>
-                  <p class="text-sm text-slate-500">3 units · Lower Division Major</p>
+            <div>
+              <div class="mb-1 flex items-center justify-between text-xs text-slate-500">
+                <span>After Current Plan</span>
+                <span>{{ completed_credits|add:in_progress_credits|add:total_planned_units }} / {{ target_credits }}</span>
+              </div>
+
+              <div class="plan-bar">
+                {% widthratio completed_credits target_credits 100 as plan_done_pct %}
+                {% widthratio completed_credits|add:in_progress_credits target_credits 100 as plan_ip_pct %}
+                {% widthratio completed_credits|add:in_progress_credits|add:total_planned_units target_credits 100 as plan_total_pct %}
+
+                {% if total_planned_units > 0 %}
+                  <div class="plan-bar-fill bg-green-500" style="width: {{ plan_total_pct }}%;"></div>
+                {% endif %}
+
+                {% if in_progress_credits > 0 %}
+                  <div class="plan-bar-fill bg-amber-500" style="width: {{ plan_ip_pct }}%;"></div>
+                {% endif %}
+
+                {% if completed_credits > 0 %}
+                  <div class="plan-bar-fill" style="width: {{ plan_done_pct }}%;"></div>
+                {% endif %}
+              </div>
+
+              <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div class="plan-chip">
+                  <div class="n">{{ completed_credits|add:in_progress_credits|add:total_planned_units }}</div>
+                  <div class="l">Complete + IP + Planned</div>
                 </div>
-                <span class="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">Core</span>
+                <div class="plan-chip">
+                  <div class="n">{{ remaining_after_plan }}</div>
+                  <div class="l">Remain After Plan</div>
+                </div>
+                <div class="plan-chip">
+                  <div class="n">{{ max_credits_next_term }}</div>
+                  <div class="l">Max Next Semester</div>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div class="rounded-xl bg-slate-50 p-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-medium text-slate-900">MATH 340</p>
-                  <p class="text-sm text-slate-500">3 units · Probability & Statistics</p>
-                </div>
-                <span class="rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">Required</span>
-              </div>
+          <div class="grid grid-cols-1 gap-3 text-xs md:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">
+              Current bar shows completed and current in-progress coursework.
             </div>
-
-            <div class="rounded-xl bg-slate-50 p-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-medium text-slate-900">GE Humanities Course</p>
-                  <p class="text-sm text-slate-500">4 units · General Education</p>
-                </div>
-                <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">GE</span>
-              </div>
+            <div class="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-green-800">
+              Planned bar shows how your saved semesters could reduce what is left.
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Semester 2 -->
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div class="mb-4 flex items-center justify-between">
-            <div>
-              <h3 class="text-base font-semibold text-slate-900">Spring 2027</h3>
-              <p class="text-sm text-slate-500">Planned Units: 12</p>
+      <div class="plan-card p-4">
+        <h2 class="text-lg font-semibold">Planning Alerts</h2>
+        <div class="mt-3 space-y-3">
+          {% if req_missing %}
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p class="text-sm font-semibold text-amber-900">Requirement setup needed</p>
             </div>
-            <span class="rounded-full bg-yellow-50 px-3 py-1 text-xs font-medium text-yellow-700">
-              Review Load
-            </span>
-          </div>
+          {% endif %}
 
-          <div class="space-y-3">
-            <div class="rounded-xl bg-slate-50 p-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-medium text-slate-900">COMP 310</p>
-                  <p class="text-sm text-slate-500">3 units · Upper Division B5</p>
-                </div>
-                <span class="rounded-full bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700">Upper Div</span>
-              </div>
+          {% if show_upper_alert %}
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p class="text-sm font-semibold text-amber-900">Upper-division planning warning</p>
+              <p class="mt-1 text-xs text-amber-800">
+                Keep room for upper-division core and senior electives.
+              </p>
             </div>
+          {% endif %}
 
-            <div class="rounded-xl bg-slate-50 p-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-medium text-slate-900">COMP 322 / 322L</p>
-                  <p class="text-sm text-slate-500">4 units · Upper Division Core</p>
-                </div>
-                <span class="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">Core</span>
-              </div>
-            </div>
-
-            <div class="rounded-xl bg-slate-50 p-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-medium text-slate-900">Upper Division GE Course</p>
-                  <p class="text-sm text-slate-500">3 units · UDGE</p>
-                </div>
-                <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">GE</span>
-              </div>
-            </div>
-
+          {% if planned_warning_count > 0 %}
             <div class="rounded-xl border border-red-200 bg-red-50 p-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-medium text-red-800">Senior Elective Placeholder</p>
-                  <p class="text-sm text-red-700">2 units shown only as sample — real senior electives should be 400/500 level COMP courses.</p>
-                </div>
-                <span class="rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">Warning</span>
-              </div>
+              <p class="text-sm font-semibold text-red-900">
+                {{ planned_warning_count }} planned course{{ planned_warning_count|pluralize }} may not satisfy remaining requirements
+              </p>
+              <p class="mt-1 text-xs text-red-800">
+                Review your future semesters and remove unnecessary courses.
+              </p>
             </div>
-          </div>
-        </div>
+          {% endif %}
 
-        <!-- Semester 3 -->
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div class="mb-4 flex items-center justify-between">
-            <div>
-              <h3 class="text-base font-semibold text-slate-900">Fall 2027</h3>
-              <p class="text-sm text-slate-500">Planned Units: 12</p>
+          {% if locked_list %}
+            <div class="rounded-xl border border-red-200 bg-red-50 p-3">
+              <p class="text-sm font-semibold text-red-900">
+                {{ locked_list|length }} locked course{{ locked_list|length|pluralize }}
+              </p>
+              <p class="mt-1 text-xs text-red-800">These still need prerequisites.</p>
             </div>
-            <span class="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-              Good
-            </span>
-          </div>
-
-          <div class="space-y-3">
-            <div class="rounded-xl bg-slate-50 p-3">
-              <p class="font-medium text-slate-900">COMP 333</p>
-              <p class="text-sm text-slate-500">3 units · Upper Division Core</p>
-            </div>
-            <div class="rounded-xl bg-slate-50 p-3">
-              <p class="font-medium text-slate-900">COMP 380 / 380L</p>
-              <p class="text-sm text-slate-500">4 units · Upper Division Core</p>
-            </div>
-            <div class="rounded-xl bg-slate-50 p-3">
-              <p class="font-medium text-slate-900">Senior Elective 1</p>
-              <p class="text-sm text-slate-500">3 units · Senior Elective</p>
-            </div>
-            <div class="rounded-xl bg-slate-50 p-3">
-              <p class="font-medium text-slate-900">Upper Division GE Course</p>
-              <p class="text-sm text-slate-500">2 units/sample filler</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Semester 4 -->
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div class="mb-4 flex items-center justify-between">
-            <div>
-              <h3 class="text-base font-semibold text-slate-900">Spring 2028</h3>
-              <p class="text-sm text-slate-500">Planned Units: 12</p>
-            </div>
-            <span class="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-              Final Term
-            </span>
-          </div>
-
-          <div class="space-y-3">
-            <div class="rounded-xl bg-slate-50 p-3">
-              <p class="font-medium text-slate-900">Senior Elective 2</p>
-              <p class="text-sm text-slate-500">3 units · Senior Elective</p>
-            </div>
-            <div class="rounded-xl bg-slate-50 p-3">
-              <p class="font-medium text-slate-900">Senior Elective 3</p>
-              <p class="text-sm text-slate-500">3 units · Senior Elective</p>
-            </div>
-            <div class="rounded-xl bg-slate-50 p-3">
-              <p class="font-medium text-slate-900">Senior Elective 4</p>
-              <p class="text-sm text-slate-500">3 units · Senior Elective</p>
-            </div>
-            <div class="rounded-xl bg-slate-50 p-3">
-              <p class="font-medium text-slate-900">Free Elective / Remaining GE</p>
-              <p class="text-sm text-slate-500">3 units</p>
-            </div>
-          </div>
+          {% endif %}
         </div>
       </div>
+    </section>
+
+    <section class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      <aside class="space-y-6 xl:col-span-4">
+        <div class="plan-card p-5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Sections Left</h2>
+            <span class="plan-badge neutral">{{ sections_left|length }}</span>
+          </div>
+          <p class="mt-1 text-sm text-slate-500">
+            Only unfinished or in-progress sections are shown here.
+          </p>
+
+          <div class="mt-4 space-y-3">
+            {% if sections_left %}
+              {% for s in sections_left %}
+                <div class="plan-course">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <p class="font-medium text-slate-900">{{ s.name }}</p>
+                      <p class="mt-1 text-xs text-slate-500">
+                        {{ s.completed }} completed
+                        {% if s.in_progress > 0 %}• {{ s.in_progress }} in progress{% endif %}
+                        {% if s.planned > 0 %}• <span class="text-green-700">{{ s.planned }} planned</span>{% endif %}
+                        • {{ s.remaining }} left
+                      </p>
+
+                      <div class="plan-bar">
+                        {% widthratio s.completed s.required 100 as done_pct %}
+                        {% widthratio s.completed|add:s.in_progress s.required 100 as ip_total_pct %}
+                        {% widthratio s.completed|add:s.in_progress|add:s.planned s.required 100 as planned_total_pct %}
+
+                        {% if s.planned > 0 %}
+                          <div class="plan-bar-fill bg-green-500" style="width: {{ planned_total_pct }}%;"></div>
+                        {% endif %}
+
+                        {% if s.in_progress > 0 %}
+                          <div class="plan-bar-fill bg-amber-500" style="width: {{ ip_total_pct }}%;"></div>
+                        {% endif %}
+
+                        {% if s.completed > 0 %}
+                          <div class="plan-bar-fill" style="width: {{ done_pct }}%;"></div>
+                        {% endif %}
+                      </div>
+
+                      {% if s.total_options %}
+                        <div class="mt-2">
+                          <a
+                            href="{% url 'courses' %}?fulfillment={{ s.name|urlencode }}"
+                            class="text-xs text-indigo-700 hover:underline"
+                          >
+                            View {{ s.total_options }} option{{ s.total_options|pluralize }}
+                          </a>
+                        </div>
+                      {% else %}
+                        <div class="mt-2">
+                          <a
+                            href="{% url 'courses' %}?fulfillment={{ s.name|urlencode }}"
+                            class="text-xs text-indigo-700 hover:underline"
+                          >
+                            View options
+                          </a>
+                        </div>
+                      {% endif %}
+                    </div>
+
+                    <span class="plan-badge {{ s.badge_class }}">{{ s.state }}</span>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="plan-empty text-sm text-slate-500">
+                No unfinished sections left.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="plan-card p-5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Backup Options</h2>
+            <span class="plan-badge neutral">{{ backup_list|length }}</span>
+          </div>
+
+          <div class="mt-4 space-y-3">
+            {% if backup_list %}
+              {% for c in backup_list %}
+                <div class="plan-course">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <p class="font-medium text-slate-900">{{ c.code }}</p>
+                      <p class="mt-1 text-sm text-slate-600">{{ c.title }}</p>
+
+                      {% if c.applied_blocks %}
+                        <p class="mt-2 text-xs text-green-700">
+                          Counts for: {{ c.applied_blocks|join:", " }}
+                        </p>
+                      {% elif c.eligible_blocks %}
+                        <p class="mt-2 text-xs text-slate-500">
+                          Eligible for: {{ c.eligible_blocks|join:", " }}
+                        </p>
+                      {% endif %}
+                    </div>
+                    <div class="text-xs text-slate-500">{{ c.credits }} units</div>
+                  </div>
+
+                  <div class="mt-3 flex flex-col gap-2">
+                    <div class="flex items-center justify-between gap-3">
+                      <a
+                        href="{% url 'course_detail' c.id %}?partial=1"
+                        data-course-url="{% url 'course_detail' c.id %}?partial=1"
+                        class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        Details
+                      </a>
+                    </div>
+
+                    {% if semester_choices %}
+                      <form
+                        method="post"
+                        action="{% url 'add_planned_course_by_form' c.id %}"
+                        class="flex flex-wrap items-center gap-2"
+                      >
+                        {% csrf_token %}
+                        <select
+                          name="term_plan_id"
+                          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700"
+                        >
+                          {% for sem in semester_choices %}
+                            <option value="{{ sem.id }}">{{ sem.label }}</option>
+                          {% endfor %}
+                        </select>
+
+                        <button
+                          type="submit"
+                          class="text-xs font-medium text-indigo-700 hover:underline"
+                        >
+                          Add
+                        </button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="plan-empty text-sm text-slate-500">
+                No extra eligible backup courses right now.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </aside>
+
+      <main class="space-y-6 xl:col-span-8">
+        <div class="plan-card p-5">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 class="text-xl font-semibold">Future Semester Plan</h2>
+              <p class="mt-1 text-sm text-slate-500">
+                Build from the next suggested semester forward.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <form method="post" action="{% url 'clear_degree_plan' %}">
+                {% csrf_token %}
+                <button
+                  type="submit"
+                  class="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                >
+                  Clear Plan
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {% if not saved_terms %}
+            <div class="plan-card p-5 lg:col-span-2">
+              <div class="plan-empty text-sm text-slate-500">
+                No future semesters yet. Click Add Semester to start your degree plan.
+              </div>
+            </div>
+          {% endif %}
+
+          {% for sem in saved_terms %}
+            <section class="plan-card p-5">
+              <div class="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="text-base font-semibold text-slate-900">{{ sem.term }}</h3>
+                  <p class="mt-1 text-sm text-slate-500">{{ sem.units }} planned units</p>
+                </div>
+
+                <div class="flex flex-col items-end gap-2">
+                  {% if sem.is_over_limit %}
+                    <span class="plan-badge warn">Over Limit</span>
+                  {% elif forloop.first %}
+                    <span class="plan-badge info">Next</span>
+                  {% else %}
+                    <span class="plan-badge neutral">Future</span>
+                  {% endif %}
+
+                  {% if sem.has_warning %}
+                    <span class="plan-badge warn">Warning</span>
+                  {% endif %}
+
+                  <form method="post" action="{% url 'remove_term_plan' sem.id %}">
+                    {% csrf_token %}
+                    <button
+                      type="submit"
+                      class="text-xs font-medium text-red-700 hover:underline"
+                    >
+                      Remove Semester
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              {% if sem.has_warning %}
+                <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3">
+                  <p class="text-sm font-semibold text-red-900">
+                    Some planned courses in this semester may not satisfy remaining requirements.
+                  </p>
+                  <p class="mt-1 text-xs text-red-800">
+                    Review this semester before keeping extra courses.
+                  </p>
+                </div>
+              {% endif %}
+
+              <details class="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <summary class="cursor-pointer text-sm font-medium text-slate-700">
+                  {% if sem.notes %}Edit Note{% else %}Add Note{% endif %}
+                </summary>
+
+                {% if sem.notes %}
+                  <div class="plan-note-display mb-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                    {{ sem.notes }}
+                  </div>
+                {% endif %}
+
+                <form method="post" action="{% url 'save_term_notes' sem.id %}" class="mt-3">
+                  {% csrf_token %}
+                  <div class="space-y-2">
+                    <textarea
+                      name="notes"
+                      rows="3"
+                      maxlength="500"
+                      placeholder="Add semester notes..."
+                      class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    >{{ sem.notes }}</textarea>
+                    <div class="flex items-center justify-between">
+                      <span class="text-[11px] text-slate-500">Maximum 500 characters</span>
+                      <button
+                        type="submit"
+                        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        Save Notes
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </details>
+
+              {% if sem.courses %}
+                <div class="space-y-3">
+                  {% for pc in sem.courses %}
+                    <div class="plan-course">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <p class="font-medium text-slate-900">{{ pc.course.code }}</p>
+                          <p class="mt-1 text-sm text-slate-600">{{ pc.course.title }}</p>
+
+                          {% if pc.applied_blocks %}
+                            <p class="mt-2 text-xs text-green-700">
+                              Counts for: {{ pc.applied_blocks|join:", " }}
+                            </p>
+                          {% elif pc.eligible_blocks %}
+                            <p class="mt-2 text-xs text-slate-500">
+                              Eligible for: {{ pc.eligible_blocks|join:", " }}
+                            </p>
+                          {% endif %}
+
+                          {% if pc.is_potentially_unnecessary %}
+                            <p class="mt-2 text-xs text-red-600">
+                              This course may not satisfy any remaining requirement.
+                            </p>
+                          {% endif %}
+                        </div>
+                        <div class="text-xs text-slate-500">{{ pc.course.credits }} units</div>
+                      </div>
+
+                      <div class="mt-3 flex flex-col gap-3">
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="plan-badge planned">Planned</span>
+
+                          <div class="flex items-center gap-3">
+                            <a
+                              href="{% url 'course_detail' pc.course.id %}?partial=1"
+                              data-course-url="{% url 'course_detail' pc.course.id %}?partial=1"
+                              class="text-xs font-medium text-slate-700 hover:underline"
+                            >
+                              Details
+                            </a>
+
+                            <form method="post" action="{% url 'remove_planned_course' pc.id %}">
+                              {% csrf_token %}
+                              <button
+                                type="submit"
+                                class="text-xs font-medium text-red-700 hover:underline"
+                              >
+                                Remove
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+
+                        <form
+                          method="post"
+                          action="{% url 'move_planned_course' pc.id %}"
+                          class="flex flex-wrap items-center gap-2"
+                        >
+                          {% csrf_token %}
+                          <select
+                            name="target_term_plan_id"
+                            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700"
+                          >
+                            {% for choice in semester_choices %}
+                              {% if choice.id != sem.id %}
+                                <option value="{{ choice.id }}">{{ choice.label }}</option>
+                              {% endif %}
+                            {% endfor %}
+                          </select>
+
+                          <button
+                            type="submit"
+                            class="text-xs font-medium text-indigo-700 hover:underline"
+                          >
+                            Move
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% elif forloop.first and next_list %}
+                <div class="space-y-3">
+                  {% for c in next_list %}
+                    <div class="plan-course">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <p class="font-medium text-slate-900">{{ c.code }}</p>
+                          <p class="mt-1 text-sm text-slate-600">{{ c.title }}</p>
+
+                          {% if c.applied_blocks %}
+                            <p class="mt-2 text-xs text-green-700">
+                              Counts for: {{ c.applied_blocks|join:", " }}
+                            </p>
+                          {% elif c.eligible_blocks %}
+                            <p class="mt-2 text-xs text-slate-500">
+                              Eligible for: {{ c.eligible_blocks|join:", " }}
+                            </p>
+                          {% endif %}
+                        </div>
+                        <div class="text-xs text-slate-500">{{ c.credits }} units</div>
+                      </div>
+
+                      <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+                        <span class="plan-badge info">Suggested</span>
+
+                        <div class="flex items-center gap-3">
+                          <a
+                            href="{% url 'course_detail' c.id %}?partial=1"
+                            data-course-url="{% url 'course_detail' c.id %}?partial=1"
+                            class="text-xs font-medium text-slate-700 hover:underline"
+                          >
+                            Details
+                          </a>
+
+                          <form
+                            method="post"
+                            action="{% url 'add_suggested_course_to_term' sem.id c.id %}"
+                            class="flex flex-wrap items-center gap-2"
+                          >
+                            {% csrf_token %}
+                            <button
+                              type="submit"
+                              class="text-xs font-medium text-indigo-700 hover:underline"
+                            >
+                              Add
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="plan-empty text-sm text-slate-500">
+                  No courses planned for this semester yet.
+                </div>
+              {% endif %}
+
+              {% for rec in semester_recommendations %}
+                {% if rec.term_plan_id == sem.id and rec.courses %}
+                  <div class="plan-mini-list">
+                    <p class="mb-2 text-xs font-semibold text-slate-700">
+                      Recommended for {{ rec.term_label }}
+                    </p>
+
+                    <div class="space-y-2">
+                      {% for rc in rec.courses|slice:":3" %}
+                        <div class="flex items-center justify-between gap-3 text-xs">
+                          <div class="min-w-0">
+                            <div>
+                              <span class="font-medium text-slate-900">{{ rc.code }}</span>
+                              <span class="text-slate-600">— {{ rc.title }}</span>
+                            </div>
+
+                            {% if rc.applied_blocks %}
+                              <p class="text-[11px] text-green-700">
+                                Counts for: {{ rc.applied_blocks|join:", " }}
+                              </p>
+                            {% elif rc.eligible_blocks %}
+                              <p class="text-[11px] text-slate-500">
+                                Eligible for: {{ rc.eligible_blocks|join:", " }}
+                              </p>
+                            {% endif %}
+                          </div>
+
+                          <div class="flex items-center gap-2">
+                            <a
+                              href="{% url 'course_detail' rc.id %}?partial=1"
+                              data-course-url="{% url 'course_detail' rc.id %}?partial=1"
+                              class="text-slate-600 hover:underline"
+                            >
+                              Details
+                            </a>
+
+                            <form method="post" action="{% url 'add_suggested_course_to_term' sem.id rc.id %}">
+                              {% csrf_token %}
+                              <button
+                                type="submit"
+                                class="font-medium text-indigo-700 hover:underline"
+                              >
+                                Add
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+
+              <div class="mt-4">
+                <a
+                  href="{% url 'courses' %}"
+                  class="text-xs font-medium text-indigo-700 hover:underline"
+                >
+                  Browse catalog and add more courses
+                </a>
+              </div>
+            </section>
+          {% endfor %}
+
+          <section class="plan-card p-5 lg:col-span-2">
+            <div class="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 class="text-base font-semibold text-slate-900">Locked Until Prerequisites</h3>
+                <p class="mt-1 text-sm text-slate-500">These are not ready for planning yet</p>
+              </div>
+              <span class="plan-badge warn">{{ locked_list|length }}</span>
+            </div>
+
+            {% if locked_list %}
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {% for c in locked_list %}
+                  <div class="plan-course">
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <p class="font-medium text-slate-900">{{ c.code }}</p>
+                        <p class="mt-1 text-sm text-slate-600">{{ c.title }}</p>
+                        <p class="mt-2 text-xs text-red-600">Prerequisites not yet satisfied.</p>
+                      </div>
+                      <div class="text-xs text-slate-500">{{ c.credits }} units</div>
+                    </div>
+                    <div class="mt-3">
+                      <a
+                        href="{% url 'course_detail' c.id %}?partial=1"
+                        data-course-url="{% url 'course_detail' c.id %}?partial=1"
+                        class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        Details
+                      </a>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="plan-empty text-sm text-slate-500">
+                No locked courses right now.
+              </div>
+            {% endif %}
+          </section>
+        </div>
+      </main>
+    </section>
+  </div>
+
+  <div id="course-detail-backdrop" class="hidden fixed inset-0 bg-black/30 z-40"></div>
+
+  <div
+    id="course-detail-panel"
+    class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-md border-l border-slate-200 bg-white shadow-xl"
+  >
+    <div class="flex h-full flex-col">
+      <div class="flex items-center px-5 py-3 border-b border-slate-200">
+        <h2 class="text-sm font-semibold text-slate-900">Course details</h2>
+      </div>
+
+      <div id="course-detail-content" class="flex-1 overflow-y-auto px-5 py-4 text-sm text-slate-800"></div>
     </div>
   </div>
-</div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const backdrop = document.getElementById("course-detail-backdrop");
+      const panel = document.getElementById("course-detail-panel");
+      const panelContent = document.getElementById("course-detail-content");
+
+      function openPanelWithUrl(url) {
+        if (!panel || !panelContent || !backdrop) return;
+
+        fetch(url, { headers: { "X-Requested-With": "fetch" } })
+          .then(response => response.text())
+          .then(html => {
+            panelContent.innerHTML = html;
+            panel.classList.remove("hidden");
+            backdrop.classList.remove("hidden");
+          })
+          .catch(err => {
+            console.error("Error loading course detail:", err);
+          });
+      }
+
+      document.querySelectorAll("[data-course-url]").forEach(link => {
+        link.addEventListener("click", function (event) {
+          event.preventDefault();
+          const url = this.getAttribute("data-course-url");
+          if (url) openPanelWithUrl(url);
+        });
+      });
+
+      function closePanel() {
+        if (!panel || !backdrop) return;
+        panel.classList.add("hidden");
+        backdrop.classList.add("hidden");
+        if (panelContent) {
+          panelContent.innerHTML = "";
+        }
+      }
+
+      if (backdrop) {
+        backdrop.addEventListener("click", closePanel);
+      }
+
+      document.addEventListener("click", function (e) {
+        if (e.target && e.target.id === "course-detail-close") {
+          e.preventDefault();
+          closePanel();
+        }
+      });
+    });
+  </script>
 {% endblock %}

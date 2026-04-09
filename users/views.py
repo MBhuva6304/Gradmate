@@ -20,14 +20,17 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from .models import (
     Course,
     StudentProfile,
     Term,
+    TermPlan,
     ProgramRequirement,
     CompletedClass,
     InProgressClass,
+    PlannedCourse,
     DPRUpload,
 )
 from .forms import (
@@ -375,7 +378,9 @@ def dashboard(request):
     next_list, next_credits, next_term = profile.recommend_next_term()
     grad_term, remaining_credits, completed_credits, target_credits = profile.approximate_graduation_term()
 
-    group_progress_raw = profile.requirement_group_progress()
+    group_progress_raw = profile.requirement_group_progress_with_planned()
+    planned_credits = int(profile.total_planned_units())
+    remaining_after_plan = int(profile.remaining_credits_after_plan())
 
     ge_mapping = {
         "A1 Oral Communication": "A1",
@@ -495,14 +500,619 @@ def dashboard(request):
         "next_term": next_term,
         "req_missing": req_missing,
         "incomplete_block_count": incomplete_block_count,
+        "planned_credits": planned_credits,
+        "remaining_after_plan": remaining_after_plan,
     }
 
     return render(request, "dashboard.html", context)
 
+
+@profile_required
+@require_POST
+def remove_term_plan(request, term_plan_id):
+    profile = request.profile
+
+    term_plan = get_object_or_404(
+        TermPlan,
+        id=term_plan_id,
+        profile=profile,
+    )
+
+    term_label = str(term_plan.term)
+    term_plan.delete()
+
+    remaining_terms = profile.term_plans.order_by("position", "term__year", "term__season")
+    for idx, tp in enumerate(remaining_terms, start=1):
+        if tp.position != idx:
+            tp.position = idx
+            tp.save(update_fields=["position"])
+
+    messages.success(request, f"{term_label} was removed from your degree plan.")
+    return redirect("degree_plan")
+
 @profile_required
 def degree_plan(request):
-    return render(request, "degree_plan.html", {"profile": request.profile})
+    profile = request.profile
 
+    req_missing = not ProgramRequirement.objects.filter(
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    ).exists()
+
+    remaining = list(profile.remaining_required_courses())
+    next_list, _, next_term = profile.recommend_next_term()
+    next_list = list(next_list)
+
+    grad_term, _, completed_credits, target_credits = profile.approximate_graduation_term()
+    group_progress_raw = profile.requirement_group_progress_with_planned()
+
+    ge_mapping = {
+        "A1 Oral Communication": "A1",
+        "A2 Written Communication": "A2",
+        "A3 Critical Thinking": "A3",
+        "B1 Physical Science": "B1",
+        "B2 Life Science": "B2",
+        "B3 Laboratory Activity": "B3",
+        "B4 Math / Quantitative Reasoning": "B4",
+        "B5 Upper Division Scientific Inquiry": "B5",
+        "C1 Arts": "C1",
+        "C2 Humanities": "C2",
+        "C3 American History": "C3",
+        "D1 Social Sciences": "D1",
+        "D3 Constitution of the U.S.": "D3",
+        "D4 California State and Local Government": "D4",
+        "E Lifelong Learning": "E",
+        "F Comparative Cultural Studies": "F",
+        "Ethnic Studies": "ES",
+        "Basic Skills Information Competence": "BSIC",
+        "Subject Explorations Information Competence": "SEIC",
+        "General Education Upper Division": "UDGE",
+    }
+
+    major_mapping = {
+        "Lower Division Algorithms & Programming": "LDAP",
+        "Lower Division Major": "LDM",
+        "Lower Division Life Science": "LDLS",
+        "Lower Division Physical Science": "LDPS",
+        "Computer Science Upper Division Core": "UDC",
+        "Senior Electives": "SE",
+    }
+
+    ge_order = {
+        "A1": 1, "A2": 2, "A3": 3,
+        "B1": 4, "B2": 5, "B3": 6, "B4": 7, "B5": 8,
+        "C1": 9, "C2": 10, "C3": 11,
+        "D1": 12, "D3": 13, "D4": 14,
+        "E": 15, "F": 16,
+        "UDGE": 17, "BSIC": 18, "SEIC": 19, "ES": 20,
+    }
+
+    major_order = {
+        "LDAP": 1,
+        "LDM": 2,
+        "LDLS": 3,
+        "LDPS": 4,
+        "UDC": 5,
+        "SE": 6,
+    }
+
+    ge_progress = []
+    major_progress = []
+
+    for g in group_progress_raw:
+        item = dict(g)
+        if g["name"] in ge_mapping:
+            item["short"] = ge_mapping[g["name"]]
+            ge_progress.append(item)
+        elif g["name"] in major_mapping:
+            item["short"] = major_mapping[g["name"]]
+            major_progress.append(item)
+
+    ge_progress.sort(key=lambda g: ge_order.get(g["short"], 999))
+    major_progress.sort(key=lambda g: major_order.get(g["short"], 999))
+
+    in_progress_qs = InProgressClass.objects.filter(profile=profile).select_related("course")
+    in_progress_credits = sum(
+        float(row.course.credits or 0)
+        for row in in_progress_qs
+        if row.course
+    )
+
+    total_planned_units = int(profile.total_planned_units())
+    remaining_credits = max(
+        0,
+        int(target_credits - completed_credits - float(in_progress_credits))
+    )
+    remaining_after_plan = int(profile.remaining_credits_after_plan())
+    planned_warning_count = profile.planned_warning_count()
+
+    term_plans = profile.get_or_create_future_term_plans(count=4)
+    saved_terms = []
+
+    req = profile.get_requirement()
+
+    planned_courses_flat = []
+    for term_plan in term_plans:
+        planned_courses = list(
+            term_plan.planned_courses.select_related("course").all()
+        )
+        planned_courses_flat.extend([pc.course for pc in planned_courses if pc.course])
+
+        units = int(profile.term_plan_total_units(term_plan))
+        saved_terms.append({
+            "id": term_plan.id,
+            "term_plan": term_plan,
+            "term": term_plan.term,
+            "position": term_plan.position,
+            "notes": term_plan.notes,
+            "courses": planned_courses,
+            "units": units,
+            "is_over_limit": units > int(profile.max_credits_next_term or 15),
+        })
+
+    semester_choices = [
+        {
+            "id": sem["id"],
+            "label": str(sem["term"]),
+        }
+        for sem in saved_terms
+    ]
+
+    all_for_counting = []
+    all_for_counting.extend(remaining)
+    all_for_counting.extend(next_list)
+    all_for_counting.extend(planned_courses_flat)
+
+    if req and all_for_counting:
+        count_map = build_course_counting_map(all_for_counting, req)
+    else:
+        count_map = {}
+
+    for sem in saved_terms:
+        for pc in sem["courses"]:
+            if not pc.course:
+                continue
+            info = count_map.get(pc.course.id, {})
+            pc.applied_blocks = info.get("applied_names", [])
+            pc.eligible_blocks = info.get("eligible_names", [])
+            pc.is_potentially_unnecessary = not profile.course_still_useful_for_requirements(pc.course)
+
+    for c in next_list:
+        info = count_map.get(c.id, {})
+        c.applied_blocks = info.get("applied_names", [])
+        c.eligible_blocks = info.get("eligible_names", [])
+
+    for c in remaining:
+        info = count_map.get(c.id, {})
+        c.applied_blocks = info.get("applied_names", [])
+        c.eligible_blocks = info.get("eligible_names", [])
+
+    next_codes = {(c.code or "").upper() for c in next_list if c.code}
+
+    backup_list = []
+    locked_list = []
+
+    for c in remaining:
+        code = (c.code or "").upper()
+        if code in next_codes:
+            continue
+
+        can_fit_somewhere = False
+        for sem in saved_terms:
+            ok, _reason = profile.can_add_course_to_term_plan(c, sem["term_plan"])
+            if ok:
+                can_fit_somewhere = True
+                break
+
+        if can_fit_somewhere:
+            backup_list.append(c)
+        else:
+            locked_list.append(c)
+
+    semester_recommendations = []
+    for sem in saved_terms:
+        term_plan = sem["term_plan"]
+        eligible_for_sem = []
+
+        for c in remaining:
+            ok, _reason = profile.can_add_course_to_term_plan(c, term_plan)
+            if ok:
+                eligible_for_sem.append(c)
+
+        semester_recommendations.append({
+            "term_plan_id": sem["id"],
+            "term_label": str(sem["term"]),
+            "courses": eligible_for_sem[:5],
+        })
+
+    sections_left = []
+    for g in major_progress + ge_progress:
+        completed = int(g.get("completed", 0))
+        in_progress = int(g.get("in_progress", 0))
+        planned = int(g.get("planned", 0))
+        required = int(g.get("min_required", 0))
+        remaining_count = max(0, required - completed - in_progress - planned)
+
+        if completed >= required and in_progress == 0 and planned == 0:
+            continue
+
+        if planned > 0:
+            state = "Planned"
+            badge_class = "planned"
+        elif in_progress > 0 and remaining_count == 0:
+            state = "Finishing"
+            badge_class = "ip"
+        elif in_progress > 0:
+            state = "In Progress"
+            badge_class = "ip"
+        elif completed > 0:
+            state = "Remaining"
+            badge_class = "neutral"
+        else:
+            state = "Not Started"
+            badge_class = "warn"
+
+        sections_left.append({
+            "name": g.get("name"),
+            "short": g.get("short"),
+            "required": required,
+            "completed": completed,
+            "in_progress": in_progress,
+            "planned": planned,
+            "remaining": remaining_count,
+            "state": state,
+            "badge_class": badge_class,
+            "total_options": g.get("total_options", 0),
+        })
+
+    sections_left.sort(key=lambda x: (x["remaining"] == 0, x["name"] or ""))
+
+    show_upper_alert = any(
+        not g.get("done") for g in major_progress
+        if g.get("short") in {"UDC", "SE"}
+    )
+
+    context = {
+        "profile": profile,
+        "grad_term": grad_term,
+        "completed_credits": int(completed_credits),
+        "in_progress_credits": int(float(in_progress_credits)),
+        "remaining_credits": remaining_credits,
+        "target_credits": int(target_credits),
+        "next_list": next_list,
+        "next_credits": int(sum(float(c.credits or 0) for c in next_list)),
+        "next_term": next_term,
+        "req_missing": req_missing,
+        "saved_terms": saved_terms,
+        "semester_choices": semester_choices,
+        "backup_list": backup_list[:12],
+        "locked_list": locked_list[:12],
+        "max_credits_next_term": int(profile.max_credits_next_term or 15),
+        "show_upper_alert": show_upper_alert,
+        "sections_left": sections_left,
+        "total_planned_units": total_planned_units,
+        "remaining_after_plan": remaining_after_plan,
+        "semester_recommendations": semester_recommendations,
+        "planned_warning_count": planned_warning_count,
+    }
+
+    return render(request, "degree_plan.html", context)
+@profile_required
+def auto_suggest_degree_plan(request):
+    if request.method != "POST":
+        return redirect("degree_plan")
+
+    profile = request.profile
+
+    term_plans = profile.get_or_create_future_term_plans(count=4)
+    if not term_plans:
+        messages.error(request, "Could not create future semesters.")
+        return redirect("degree_plan")
+
+    first_term = term_plans[0]
+
+    PlannedCourse.objects.filter(term_plan=first_term).delete()
+
+    next_list, _, _ = profile.recommend_next_term()
+
+    created = 0
+    for idx, course in enumerate(next_list, start=1):
+        PlannedCourse.objects.get_or_create(
+            term_plan=first_term,
+            course=course,
+            defaults={
+                "position": idx,
+                "status": "planned",
+            },
+        )
+        created += 1
+
+    messages.success(request, f"Auto-suggested {created} course(s) into {first_term.term}.")
+    return redirect("degree_plan")
+
+@profile_required
+@require_POST
+def add_suggested_course_to_term(request, term_plan_id, course_id):
+    profile = request.profile
+
+    term_plan = get_object_or_404(
+        TermPlan,
+        id=term_plan_id,
+        profile=profile,
+    )
+
+    course = get_object_or_404(
+        Course,
+        id=course_id,
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    )
+
+    ok, reason = profile.can_add_course_to_term_plan(course, term_plan)
+    if not ok:
+        messages.error(request, reason)
+        return redirect("degree_plan")
+
+    missing_coreqs = profile.missing_corequisites_for_term(course, term_plan)
+
+    for coreq in missing_coreqs:
+        ok2, reason2 = profile.can_add_course_to_term_plan(coreq, term_plan)
+        if not ok2:
+            messages.error(request, f"{course.code} needs corequisite {coreq.code}, but it cannot be added: {reason2}")
+            return redirect("degree_plan")
+
+    next_position = (
+        term_plan.planned_courses.aggregate(mx=Sum("position")).get("mx") or 0
+    ) + 1
+
+    added_codes = []
+
+    PlannedCourse.objects.create(
+        term_plan=term_plan,
+        course=course,
+        position=next_position,
+        status="planned",
+    )
+    added_codes.append(course.code)
+
+    for coreq in missing_coreqs:
+        next_position += 1
+        PlannedCourse.objects.create(
+            term_plan=term_plan,
+            course=coreq,
+            position=next_position,
+            status="planned",
+        )
+        added_codes.append(coreq.code)
+
+    messages.success(request, f"Added to {term_plan.term}: {', '.join(added_codes)}.")
+    return redirect("degree_plan")
+
+@profile_required
+@require_POST
+def add_planned_course(request, term_plan_id, course_id):
+    profile = request.profile
+
+    term_plan = get_object_or_404(
+        TermPlan,
+        id=term_plan_id,
+        profile=profile,
+    )
+
+    course = get_object_or_404(
+        Course,
+        id=course_id,
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    )
+
+    ok, reason = profile.can_add_course_to_term_plan(course, term_plan)
+    if not ok:
+        messages.error(request, reason)
+        return redirect("degree_plan")
+
+    next_position = (
+        term_plan.planned_courses.aggregate(mx=Sum("position")).get("mx") or 0
+    ) + 1
+
+    PlannedCourse.objects.create(
+        term_plan=term_plan,
+        course=course,
+        position=next_position,
+        status="planned",
+    )
+
+    messages.success(request, f"{course.code} added to {term_plan.term}.")
+    return redirect("degree_plan")
+
+@profile_required
+@require_POST
+def add_planned_course_by_form(request, course_id):
+    profile = request.profile
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or reverse("degree_plan")
+
+    term_plan_id = request.POST.get("term_plan_id")
+    if not term_plan_id:
+        messages.error(request, "Please choose a semester.")
+        return redirect(next_url)
+
+    term_plan = get_object_or_404(
+        TermPlan,
+        id=term_plan_id,
+        profile=profile,
+    )
+
+    course = get_object_or_404(
+        Course,
+        id=course_id,
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    )
+
+    ok, reason = profile.can_add_course_to_term_plan(course, term_plan)
+    if not ok:
+        messages.error(request, reason)
+        return redirect(next_url)
+
+    missing_coreqs = profile.missing_corequisites_for_term(course, term_plan)
+
+    for coreq in missing_coreqs:
+        ok2, reason2 = profile.can_add_course_to_term_plan(coreq, term_plan)
+        if not ok2:
+            messages.error(
+                request,
+                f"{course.code} needs corequisite {coreq.code}, but it cannot be added: {reason2}"
+            )
+            return redirect(next_url)
+
+    next_position = (
+        term_plan.planned_courses.aggregate(mx=Sum("position")).get("mx") or 0
+    ) + 1
+
+    added_codes = []
+
+    PlannedCourse.objects.create(
+        term_plan=term_plan,
+        course=course,
+        position=next_position,
+        status="planned",
+    )
+    added_codes.append(course.code)
+
+    for coreq in missing_coreqs:
+        next_position += 1
+        PlannedCourse.objects.create(
+            term_plan=term_plan,
+            course=coreq,
+            position=next_position,
+            status="planned",
+        )
+        added_codes.append(coreq.code)
+
+    if not profile.course_still_useful_for_requirements(course):
+        messages.warning(
+            request,
+            f"{course.code} was added, but it may not satisfy any remaining requirement."
+        )
+    else:
+        messages.success(request, f"Added to {term_plan.term}: {', '.join(added_codes)}.")
+
+    return redirect(next_url)
+@profile_required
+@require_POST
+def remove_planned_course(request, planned_course_id):
+    profile = request.profile
+
+    planned_course = get_object_or_404(
+        PlannedCourse.objects.select_related("term_plan", "course"),
+        id=planned_course_id,
+        term_plan__profile=profile,
+    )
+
+    course_code = planned_course.course.code
+    term_label = str(planned_course.term_plan.term)
+    planned_course.delete()
+
+    messages.success(request, f"{course_code} removed from {term_label}.")
+    return redirect("degree_plan")
+
+@profile_required
+@require_POST
+def move_planned_course(request, planned_course_id):
+    profile = request.profile
+
+    target_term_plan_id = request.POST.get("target_term_plan_id")
+    if not target_term_plan_id:
+        messages.error(request, "Please choose a target semester.")
+        return redirect("degree_plan")
+
+    planned_course = get_object_or_404(
+        PlannedCourse.objects.select_related("term_plan", "course"),
+        id=planned_course_id,
+        term_plan__profile=profile,
+    )
+
+    target_term_plan = get_object_or_404(
+        TermPlan,
+        id=target_term_plan_id,
+        profile=profile,
+    )
+
+    ok, reason = profile.can_move_planned_course(planned_course, target_term_plan)
+    if not ok:
+        messages.error(request, reason)
+        return redirect("degree_plan")
+
+    old_term = str(planned_course.term_plan.term)
+
+    next_position = (
+        target_term_plan.planned_courses.aggregate(mx=Sum("position")).get("mx") or 0
+    ) + 1
+
+    source_term_plan = planned_course.term_plan
+    planned_course.term_plan = target_term_plan
+    planned_course.position = next_position
+    planned_course.save(update_fields=["term_plan", "position"])
+
+    profile.renumber_term_plan_positions(source_term_plan)
+    profile.renumber_term_plan_positions(target_term_plan)
+
+    messages.success(
+        request,
+        f"{planned_course.course.code} moved from {old_term} to {target_term_plan.term}."
+    )
+    return redirect("degree_plan")
+
+@profile_required
+@require_POST
+def save_term_notes(request, term_plan_id):
+    profile = request.profile
+
+    term_plan = get_object_or_404(
+        TermPlan,
+        id=term_plan_id,
+        profile=profile,
+    )
+
+    notes = (request.POST.get("notes") or "").strip()
+    max_len = 500
+    if len(notes) > max_len:
+        messages.error(request, f"Notes must be {max_len} characters or fewer.")
+        return redirect("degree_plan")
+
+    term_plan.notes = notes
+    term_plan.save(update_fields=["notes"])
+
+    messages.success(request, f"Notes saved for {term_plan.term}.")
+    return redirect("degree_plan")
+@profile_required
+@require_POST
+def add_future_term(request):
+    profile = request.profile
+
+    next_term = profile.get_next_unused_term()
+    next_position = (profile.term_plans.aggregate(mx=Sum("position")).get("mx") or 0) + 1
+
+    TermPlan.objects.create(
+        profile=profile,
+        term=next_term,
+        position=next_position,
+    )
+
+    messages.success(request, f"{next_term} added to your degree plan.")
+    return redirect("degree_plan")
+
+@profile_required
+@require_POST
+def clear_degree_plan(request):
+    profile = request.profile
+
+    PlannedCourse.objects.filter(
+        term_plan__profile=profile
+    ).delete()
+
+    messages.success(request, "Your saved degree plan was cleared.")
+    return redirect("degree_plan")
 
 def _safe_float(v, default=0.0):
     try:
@@ -518,8 +1128,7 @@ def _safe_int(v, default=0):
         return int(default)
 
 
-def _status_meta(done: bool, completed: float, in_progress: float, required: float):
-    used = completed + in_progress
+def _status_meta(done: bool, completed: float, in_progress: float, required: float, planned: float = 0):
     if done or (required > 0 and completed >= required):
         return {
             "label": "Completed",
@@ -532,13 +1141,17 @@ def _status_meta(done: bool, completed: float, in_progress: float, required: flo
             "tag_class": "ip",
             "icon": "●",
         }
+    if planned > 0:
+        return {
+            "label": "Planned",
+            "tag_class": "planned",
+            "icon": "○",
+        }
     return {
         "label": "Missing",
         "tag_class": "bad",
         "icon": "✖",
     }
-
-
 def _short_group_name(name: str) -> str:
     mapping = {
         "A1 Oral Communication": "A1",
@@ -643,6 +1256,13 @@ def _collect_block_course_rows(profile, block_names: list[str]):
         .order_by("course__subject", "course__code")
     )
 
+    planned_courses = list(
+        PlannedCourse.objects
+        .filter(term_plan__profile=profile)
+        .select_related("course", "term_plan")
+        .order_by("term_plan__position", "position")
+    )
+
     req = profile.get_requirement()
     if not req:
         return []
@@ -697,14 +1317,26 @@ def _collect_block_course_rows(profile, block_names: list[str]):
                     })
                     seen_codes.add(code)
 
-    return rows
-def _build_udge_helper_options(profile, assigned_completed_codes: set[str], assigned_ip_codes: set[str]):
-    """
-    Display-only helper for UDGE options.
-    Does not change audit counting. It only tells the template which UDGE option
-    paths are still open / partially complete / complete.
-    """
+        for pc in planned_courses:
+            if pc.course and (pc.course.code or "").upper() in block_course_codes:
+                code = (pc.course.code or "").upper()
+                if code not in seen_codes:
+                    rows.append({
+                        "code": pc.course.code,
+                        "title": f"{section_label}: {pc.course.title}",
+                        "units": _safe_float(pc.course.credits),
+                        "grade": "Planned",
+                        "status": "planned",
+                    })
+                    seen_codes.add(code)
 
+    return rows
+def _build_udge_helper_options(
+    profile,
+    assigned_completed_codes: set[str],
+    assigned_ip_codes: set[str],
+    assigned_planned_codes: set[str],
+):
     option_defs = [
         {
             "name": "Option 1",
@@ -750,6 +1382,7 @@ def _build_udge_helper_options(profile, assigned_completed_codes: set[str], assi
 
     completed_codes = {(c or "").upper() for c in assigned_completed_codes if c}
     ip_codes = {(c or "").upper() for c in assigned_ip_codes if c}
+    planned_codes = {(c or "").upper() for c in assigned_planned_codes if c}
 
     options = []
 
@@ -757,6 +1390,7 @@ def _build_udge_helper_options(profile, assigned_completed_codes: set[str], assi
         part_rows = []
         complete_parts = 0
         ip_parts = 0
+        planned_parts = 0
 
         for block_name, short_label in opt["parts"]:
             block = req.blocks.filter(name=block_name).first()
@@ -771,20 +1405,25 @@ def _build_udge_helper_options(profile, assigned_completed_codes: set[str], assi
 
             matched_completed = sorted(block_codes & completed_codes)
             matched_ip = sorted(block_codes & ip_codes)
+            matched_planned = sorted(block_codes & planned_codes)
 
             is_done = bool(matched_completed)
             is_ip = (not is_done) and bool(matched_ip)
+            is_planned = (not is_done) and (not is_ip) and bool(matched_planned)
 
             if is_done:
                 complete_parts += 1
             elif is_ip:
                 ip_parts += 1
+            elif is_planned:
+                planned_parts += 1
 
             part_rows.append({
                 "block_name": block_name,
                 "label": short_label,
                 "done": is_done,
                 "in_progress": is_ip,
+                "planned": is_planned,
                 "link_name": block_name,
             })
 
@@ -794,11 +1433,11 @@ def _build_udge_helper_options(profile, assigned_completed_codes: set[str], assi
             "parts": part_rows,
             "done_count": complete_parts,
             "ip_count": ip_parts,
+            "planned_count": planned_parts,
             "is_complete": complete_parts == 3,
         })
 
     return options
-
 def _build_requirement_audit_data(profile, user):
     completed_courses = list(
         CompletedClass.objects
@@ -812,6 +1451,13 @@ def _build_requirement_audit_data(profile, user):
         .filter(profile=profile)
         .select_related("course")
         .order_by("course__subject", "course__code")
+    )
+
+    planned_courses = list(
+        PlannedCourse.objects
+        .filter(term_plan__profile=profile)
+        .select_related("course", "term_plan", "term_plan__term")
+        .order_by("term_plan__position", "position")
     )
 
     completed_codes_all = {
@@ -862,7 +1508,12 @@ def _build_requirement_audit_data(profile, user):
     remaining_credits = max(0, target_credits - int(completed_credits) - int(in_progress_credits))
 
     raw_groups = []
-    if hasattr(profile, "requirement_group_progress"):
+    if hasattr(profile, "requirement_group_progress_with_planned"):
+        try:
+            raw_groups = profile.requirement_group_progress_with_planned() or []
+        except Exception:
+            raw_groups = []
+    elif hasattr(profile, "requirement_group_progress"):
         try:
             raw_groups = profile.requirement_group_progress() or []
         except Exception:
@@ -883,6 +1534,7 @@ def _build_requirement_audit_data(profile, user):
 
     audit_groups = []
     used_requirement_codes = set()
+    used_display_codes = set()
 
     for bucket_name in bucket_order:
         items = grouped.get(bucket_name, [])
@@ -894,8 +1546,12 @@ def _build_requirement_audit_data(profile, user):
         group_completed = 0.0
         group_in_progress = 0.0
 
+        udge_helper_items = []
+        has_udge_summary = False
+
         for item in items:
             raw_name = (item.get("name") or "").strip()
+
 
             if raw_name in HIDDEN_AUDIT_RULE_NAMES:
                 continue
@@ -905,6 +1561,8 @@ def _build_requirement_audit_data(profile, user):
             }:
                 continue
             if raw_name == "General Education Upper Division":
+                has_udge_summary = True
+
                 required = _safe_float(
                     item.get("min_required")
                     or item.get("required")
@@ -921,6 +1579,13 @@ def _build_requirement_audit_data(profile, user):
                     or 0
                 )
 
+                planned = _safe_float(
+                    item.get("planned")
+                    or item.get("credits_planned")
+                    or item.get("units_planned")
+                    or 0
+                )
+
                 done = bool(item.get("done", False))
 
                 course_rows = _collect_block_course_rows(profile, [
@@ -928,12 +1593,14 @@ def _build_requirement_audit_data(profile, user):
                     "C Upper Division Arts and Humanities",
                     "D Upper Division Social Sciences",
                     "F Upper Division Comparative Cultural Studies",
+                    "F Upper Division Comparative Cultural Studies 2",
                 ])
 
                 ip_count = sum(1 for r in course_rows if r["status"] == "ip")
+                planned_count = sum(1 for r in course_rows if r["status"] == "planned")
 
                 if not course_rows and not done:
-                    missing_count = max(0.0, required - completed - ip_count)
+                    missing_count = max(0.0, required - completed - ip_count - planned_count)
                     if missing_count > 0:
                         course_rows.append({
                             "code": "—",
@@ -943,7 +1610,7 @@ def _build_requirement_audit_data(profile, user):
                             "status": "bad",
                         })
 
-                meta = _status_meta(done, completed, ip_count, required)
+                meta = _status_meta(done, completed, ip_count, required, planned_count)
 
                 udge_completed_codes = {
                     (r["code"] or "").upper()
@@ -955,11 +1622,17 @@ def _build_requirement_audit_data(profile, user):
                     for r in course_rows
                     if r["status"] == "ip" and r.get("code") and r["code"] != "—"
                 }
+                udge_planned_codes = {
+                    (r["code"] or "").upper()
+                    for r in course_rows
+                    if r["status"] == "planned" and r.get("code") and r["code"] != "—"
+                }
 
                 helper_options = _build_udge_helper_options(
                     profile,
                     udge_completed_codes,
                     udge_ip_codes,
+                    udge_planned_codes,
                 )
 
                 subsection = {
@@ -968,11 +1641,13 @@ def _build_requirement_audit_data(profile, user):
                     "required": required,
                     "completed": completed,
                     "in_progress": ip_count,
-                    "remaining": max(0.0, required - completed - ip_count),
+                    "planned": planned_count,
+                    "remaining": max(0.0, required - completed - ip_count - planned_count),
                     "done": done,
                     "total_options": len(course_rows),
                     "assigned_completed_codes": list(udge_completed_codes),
                     "assigned_in_progress_codes": list(udge_ip_codes),
+                    "assigned_planned_codes": list(udge_planned_codes),
                     "helper_options": helper_options,
                     "courses": course_rows,
                     "status_label": meta["label"],
@@ -986,15 +1661,13 @@ def _build_requirement_audit_data(profile, user):
                 group_in_progress += ip_count
                 continue
 
-            if raw_name == "F Upper Division Comparative Cultural Studies 2":
-                continue
-
             if raw_name in {
                 "C Upper Division Arts and Humanities",
                 "D Upper Division Social Sciences",
                 "F Upper Division Comparative Cultural Studies",
                 "F Upper Division Comparative Cultural Studies 2",
             }:
+                udge_helper_items.append(item)
                 continue
 
             display_name_map = {
@@ -1056,6 +1729,13 @@ def _build_requirement_audit_data(profile, user):
                 or 0
             )
 
+            planned_from_group = _safe_float(
+                item.get("planned")
+                or item.get("credits_planned")
+                or item.get("units_planned")
+                or 0
+            )
+
             done = bool(item.get("done", False))
 
             assigned_completed_codes = {
@@ -1066,9 +1746,10 @@ def _build_requirement_audit_data(profile, user):
                 (code or "").upper()
                 for code in item.get("assigned_in_progress_codes", [])
             }
-
-            matched_completed = []
-            matched_ip = []
+            assigned_planned_codes = {
+                (code or "").upper()
+                for code in item.get("assigned_planned_codes", [])
+            }
 
             req = profile.get_requirement()
             block = None
@@ -1084,62 +1765,148 @@ def _build_requirement_audit_data(profile, user):
                 block_course_codes = {
                     (c.code or "").upper()
                     for c in block.courses.all()
+                    if c.code
                 }
 
+            matched_completed = []
+            matched_ip = []
+            matched_planned = []
+
             for cc in completed_courses:
-                if cc.course and (cc.course.code or "").upper() in assigned_completed_codes:
+                code = (cc.course.code or "").upper() if cc.course else ""
+                if cc.course and code in assigned_completed_codes:
                     matched_completed.append(cc)
 
             for ic in in_progress_courses:
-                if ic.course and (ic.course.code or "").upper() in assigned_ip_codes:
+                code = (ic.course.code or "").upper() if ic.course else ""
+                if ic.course and code in assigned_ip_codes:
                     matched_ip.append(ic)
 
-            ip_count = max(int(in_progress_from_group), len(matched_ip))
+            for pc in planned_courses:
+                code = (pc.course.code or "").upper() if pc.course else ""
+                if pc.course and code in assigned_planned_codes:
+                    matched_planned.append(pc)
+
+            if not matched_completed and completed > 0 and block_course_codes:
+                for cc in completed_courses:
+                    code = (cc.course.code or "").upper() if cc.course else ""
+                    if (
+                        cc.course
+                        and code in block_course_codes
+                        and code not in used_display_codes
+                    ):
+                        matched_completed.append(cc)
+                        break
+
+            if not matched_ip and in_progress_from_group > 0 and block_course_codes:
+                for ic in in_progress_courses:
+                    code = (ic.course.code or "").upper() if ic.course else ""
+                    if (
+                        ic.course
+                        and code in block_course_codes
+                        and code not in used_display_codes
+                    ):
+                        matched_ip.append(ic)
+                        break
+
+            if not matched_planned and planned_from_group > 0 and block_course_codes:
+                for pc in planned_courses:
+                    code = (pc.course.code or "").upper() if pc.course else ""
+                    if (
+                        pc.course
+                        and code in block_course_codes
+                        and code not in used_display_codes
+                    ):
+                        matched_planned.append(pc)
+                        break
+
+            seen_codes = set()
             course_rows = []
 
             for cc in matched_completed:
-                course_rows.append({
-                    "code": cc.course.code,
-                    "title": cc.course.title,
-                    "units": _safe_float(cc.course.credits),
-                    "grade": "Done",
-                    "status": "ok",
-                })
+                code = (cc.course.code or "").upper()
+                if code not in seen_codes:
+                    course_rows.append({
+                        "code": cc.course.code,
+                        "title": cc.course.title,
+                        "units": _safe_float(cc.course.credits),
+                        "grade": "Done",
+                        "status": "ok",
+                    })
+                    seen_codes.add(code)
+                    used_display_codes.add(code)
 
             for ic in matched_ip:
-                course_rows.append({
-                    "code": ic.course.code,
-                    "title": ic.course.title,
-                    "units": _safe_float(ic.course.credits),
-                    "grade": "IP",
-                    "status": "ip",
-                })
+                code = (ic.course.code or "").upper()
+                if code not in seen_codes:
+                    course_rows.append({
+                        "code": ic.course.code,
+                        "title": ic.course.title,
+                        "units": _safe_float(ic.course.credits),
+                        "grade": "IP",
+                        "status": "ip",
+                    })
+                    seen_codes.add(code)
+                    used_display_codes.add(code)
+
+            for pc in matched_planned:
+                code = (pc.course.code or "").upper()
+                if code not in seen_codes:
+                    course_rows.append({
+                        "code": pc.course.code,
+                        "title": pc.course.title,
+                        "units": _safe_float(pc.course.credits),
+                        "grade": "Planned",
+                        "status": "planned",
+                    })
+                    seen_codes.add(code)
+                    used_display_codes.add(code)
+
+            ip_count = max(int(in_progress_from_group), len(matched_ip))
+            planned_count = max(int(planned_from_group), len(matched_planned))
 
             used_requirement_codes.update(
                 (cc.course.code or "").upper()
                 for cc in matched_completed
                 if cc.course and cc.course.code
             )
-
             used_requirement_codes.update(
                 (ic.course.code or "").upper()
                 for ic in matched_ip
                 if ic.course and ic.course.code
             )
+            used_requirement_codes.update(
+                (pc.course.code or "").upper()
+                for pc in matched_planned
+                if pc.course and pc.course.code
+            )
 
-            if not course_rows and not done:
-                missing_count = max(0.0, required - completed - ip_count)
-                if missing_count > 0:
+            if not course_rows:
+                if done or completed > 0 or ip_count > 0 or planned_count > 0:
                     course_rows.append({
                         "code": "—",
-                        "title": "Course needed",
+                        "title": "Requirement satisfied by audit assignment",
                         "units": None,
-                        "missing_count": int(missing_count),
                         "grade": "—",
-                        "status": "bad",
+                        "status": (
+                            "ok" if completed > 0
+                            else "ip" if ip_count > 0
+                            else "planned"
+                        ),
                     })
+                else:
+                    missing_count = max(0.0, required - completed - ip_count - planned_count)
+                    if missing_count > 0:
+                        course_rows.append({
+                            "code": "—",
+                            "title": "Course needed",
+                            "units": None,
+                            "missing_count": int(missing_count),
+                            "grade": "—",
+                            "status": "bad",
+                        })
 
-            meta = _status_meta(done, completed, ip_count, required)
+            meta = _status_meta(done, completed, ip_count, required, planned_count)
 
             subsection = {
                 "name": display_name or "Requirement",
@@ -1147,11 +1914,13 @@ def _build_requirement_audit_data(profile, user):
                 "required": required,
                 "completed": completed,
                 "in_progress": ip_count,
-                "remaining": max(0.0, required - completed - ip_count),
+                "planned": planned_count,
+                "remaining": max(0.0, required - completed - ip_count - planned_count),
                 "done": done,
                 "total_options": len(block_course_codes),
                 "assigned_completed_codes": list(assigned_completed_codes),
                 "assigned_in_progress_codes": list(assigned_ip_codes),
+                "assigned_planned_codes": list(assigned_planned_codes),
                 "courses": course_rows,
                 "status_label": meta["label"],
                 "tag_class": meta["tag_class"],
@@ -1162,6 +1931,94 @@ def _build_requirement_audit_data(profile, user):
             group_required += required
             group_completed += completed
             group_in_progress += ip_count
+
+        if bucket_name == "General Education" and not has_udge_summary and udge_helper_items:
+            helper_block_names = [
+                "B5 Upper Division Scientific Inquiry",
+                "C Upper Division Arts and Humanities",
+                "D Upper Division Social Sciences",
+                "F Upper Division Comparative Cultural Studies",
+                "F Upper Division Comparative Cultural Studies 2",
+            ]
+
+            course_rows = _collect_block_course_rows(profile, helper_block_names)
+
+            udge_completed_codes = {
+                (r["code"] or "").upper()
+                for r in course_rows
+                if r["status"] == "ok" and r.get("code") and r["code"] != "—"
+            }
+            udge_ip_codes = {
+                (r["code"] or "").upper()
+                for r in course_rows
+                if r["status"] == "ip" and r.get("code") and r["code"] != "—"
+            }
+            udge_planned_codes = {
+                (r["code"] or "").upper()
+                for r in course_rows
+                if r["status"] == "planned" and r.get("code") and r["code"] != "—"
+            }
+
+            helper_options = _build_udge_helper_options(
+                profile,
+                udge_completed_codes,
+                udge_ip_codes,
+                udge_planned_codes,
+            )
+
+            if helper_options:
+                best_option = max(
+                    helper_options,
+                    key=lambda opt: (
+                        opt["done_count"] + opt["ip_count"] + opt["planned_count"],
+                        opt["done_count"],
+                        opt["ip_count"],
+                        opt["planned_count"],
+                    ),
+                )
+                completed = float(best_option["done_count"])
+                ip_count = float(best_option["ip_count"])
+                planned_count = float(best_option["planned_count"])
+            else:
+                completed = 0.0
+                ip_count = 0.0
+                planned_count = 0.0
+
+            required = 3.0
+            done = completed >= required
+
+            if not course_rows and not done:
+                missing_count = max(0.0, required - completed - ip_count - planned_count)
+                if missing_count > 0:
+                    course_rows.append({
+                        "code": "—",
+                        "title": "Course needed",
+                        "units": 0,
+                        "grade": "—",
+                        "status": "bad",
+                    })
+
+            meta = _status_meta(done, completed, ip_count, required, planned_count)
+
+            subsections.append({
+                "name": "General Education Upper Division",
+                "short": _short_group_name("General Education Upper Division"),
+                "required": required,
+                "completed": completed,
+                "in_progress": ip_count,
+                "planned": planned_count,
+                "remaining": max(0.0, required - completed - ip_count - planned_count),
+                "done": done,
+                "total_options": len(course_rows),
+                "assigned_completed_codes": list(udge_completed_codes),
+                "assigned_in_progress_codes": list(udge_ip_codes),
+                "assigned_planned_codes": list(udge_planned_codes),
+                "helper_options": helper_options,
+                "courses": course_rows,
+                "status_label": meta["label"],
+                "tag_class": meta["tag_class"],
+                "icon": meta["icon"],
+            })
 
         def _subsection_sort_key(section):
             name = (section.get("name") or "").strip()
@@ -1202,6 +2059,7 @@ def _build_requirement_audit_data(profile, user):
         group_required = sum(s["required"] for s in subsections)
         group_completed = sum(s["completed"] for s in subsections)
         group_remaining = sum(s["remaining"] for s in subsections)
+        group_planned = sum(_safe_float(s.get("planned", 0)) for s in subsections)
 
         group_in_progress_codes = set()
         for s in subsections:
@@ -1217,6 +2075,7 @@ def _build_requirement_audit_data(profile, user):
             "title": bucket_name,
             "required": group_required,
             "completed": group_completed,
+            "planned": group_planned,
             "in_progress": group_in_progress,
             "remaining": group_remaining,
             "subsections": subsections,
@@ -1245,6 +2104,13 @@ def _build_requirement_audit_data(profile, user):
         "audit_summary": {
             "completed": int(completed_credits),
             "in_progress": int(in_progress_credits),
+            "planned": int(
+                sum(
+                    _safe_float(getattr(pc.course, "credits", 0))
+                    for pc in planned_courses
+                    if pc.course
+                )
+            ),
             "remaining": int(remaining_credits),
             "total": int(target_credits),
         },
@@ -1554,6 +2420,15 @@ def remove_course_status(request, pk: int):
 def courses_page(request):
     profile = get_object_or_404(StudentProfile, user=request.user)
 
+    term_plans = profile.get_or_create_future_term_plans(count=4)
+    semester_choices = [
+        {
+            "id": tp.id,
+            "label": str(tp.term),
+        }
+        for tp in term_plans
+    ]
+
     base_qs = (
         Course.objects
         .filter(program=profile.program, catalog_year=profile.catalog_year)
@@ -1562,25 +2437,26 @@ def courses_page(request):
     )
 
     q = request.GET.get("q", "").strip()
+    courses = list(base_qs)
+
     if q:
         raw_q = q
         normalized_q = re.sub(r"[\s\-]+", "", raw_q.upper())
+        filtered_courses = []
 
-        courses_for_search = list(base_qs)
-        matched_ids = []
-
-        for c in courses_for_search:
-            code = (c.code or "")
-            title = (c.title or "")
-            subject = (c.subject or "")
-            description = (c.description or "")
+        for c in courses:
+            code = c.code or ""
+            title = c.title or ""
+            subject = c.subject or ""
+            description = c.description or ""
+            section = c.section or ""
+            tag_names = " ".join(t.name for t in c.tags.all())
 
             normalized_code = re.sub(r"[\s\-]+", "", code.upper())
-            normalized_subject = re.sub(r"[\s\-]+", "", subject.upper())
             normalized_title = re.sub(r"[\s\-]+", "", title.upper())
+            normalized_subject = re.sub(r"[\s\-]+", "", subject.upper())
             normalized_description = re.sub(r"[\s\-]+", "", description.upper())
-
-            tag_names = " ".join(t.name for t in c.tags.all())
+            normalized_section = re.sub(r"[\s\-]+", "", section.upper())
             normalized_tags = re.sub(r"[\s\-]+", "", tag_names.upper())
 
             if (
@@ -1588,18 +2464,18 @@ def courses_page(request):
                 or raw_q.lower() in title.lower()
                 or raw_q.lower() in subject.lower()
                 or raw_q.lower() in description.lower()
+                or raw_q.lower() in section.lower()
                 or raw_q.lower() in tag_names.lower()
                 or normalized_q in normalized_code
-                or normalized_q in normalized_subject
                 or normalized_q in normalized_title
+                or normalized_q in normalized_subject
                 or normalized_q in normalized_description
+                or normalized_q in normalized_section
                 or normalized_q in normalized_tags
             ):
-                matched_ids.append(c.id)
+                filtered_courses.append(c)
 
-        base_qs = base_qs.filter(id__in=matched_ids).distinct()
-
-    courses = list(base_qs)
+        courses = filtered_courses
 
     req = ProgramRequirement.objects.filter(
         program=profile.program,
@@ -1622,6 +2498,18 @@ def courses_page(request):
     in_progress_ids = set(
         InProgressClass.objects.filter(profile=profile).values_list("course_id", flat=True)
     )
+    planned_course_ids = set(
+        PlannedCourse.objects.filter(term_plan__profile=profile).values_list("course_id", flat=True)
+    )
+
+    planned_map = {}
+    for pc in (
+        PlannedCourse.objects
+        .filter(term_plan__profile=profile)
+        .select_related("course", "term_plan", "term_plan__term")
+    ):
+        if pc.course_id not in planned_map:
+            planned_map[pc.course_id] = str(pc.term_plan.term)
 
     for c in courses:
         if c.id in completed_ids:
@@ -1653,6 +2541,8 @@ def courses_page(request):
             }
 
         _apply_course_ui_state(c, state)
+        c.planned_term_label = planned_map.get(c.id, "")
+        c.is_planned = c.id in planned_course_ids
 
     level_param = request.GET.get("level", "").strip()
     LEVEL_RANGES = {
@@ -1693,14 +2583,15 @@ def courses_page(request):
     if tag_param:
         courses = [c for c in courses if any(t.name == tag_param for t in c.tags.all())]
 
-    
     fulfillment_param = request.GET.get("fulfillment", "").strip()
     also_counts_for = request.GET.get("also_counts_for", "").strip()
+
     if fulfillment_param and req:
         block = req.blocks.filter(name=fulfillment_param).first()
         if block:
             block_course_ids = set(block.courses.values_list("id", flat=True))
             courses = [c for c in courses if c.id in block_course_ids]
+
     if fulfillment_param and also_counts_for and req:
         filtered = []
 
@@ -1708,21 +2599,70 @@ def courses_page(request):
             applied = set(getattr(c, "applied_blocks", []) or [])
             eligible = set(getattr(c, "eligible_blocks", []) or [])
 
-            # strict: course actually counts in both under current engine behavior
             if fulfillment_param in applied and also_counts_for in applied:
                 filtered.append(c)
                 continue
 
-            # fallback: engine says it is a multi-count course and eligible for both
-            if getattr(c, "is_multi_count", False) and fulfillment_param in eligible and also_counts_for in eligible:
+            if (
+                getattr(c, "is_multi_count", False)
+                and fulfillment_param in eligible
+                and also_counts_for in eligible
+            ):
                 filtered.append(c)
 
         courses = filtered
+
     count_type = request.GET.get("count_type", "").strip()
     if count_type == "single":
         courses = [c for c in courses if getattr(c, "applied_count", 0) == 1]
     elif count_type == "multi":
         courses = [c for c in courses if getattr(c, "applied_count", 0) > 1]
+
+    def _course_sort_key(course):
+        code = (getattr(course, "code", "") or "").upper()
+        title = (getattr(course, "title", "") or "").upper()
+
+        if q:
+            normalized_query = re.sub(r"[\s\-]+", "", q.upper())
+            normalized_code = re.sub(r"[\s\-]+", "", code)
+            normalized_title = re.sub(r"[\s\-]+", "", title)
+
+            if normalized_code == normalized_query:
+                search_rank = 0
+            elif normalized_code.startswith(normalized_query):
+                search_rank = 1
+            elif normalized_query in normalized_code:
+                search_rank = 2
+            elif normalized_title.startswith(normalized_query):
+                search_rank = 3
+            elif normalized_query in normalized_title:
+                search_rank = 4
+            else:
+                search_rank = 5
+
+            is_completed = getattr(course, "progress_status", "") == "completed"
+            is_in_progress = getattr(course, "progress_status", "") == "in_progress"
+
+
+            return (
+                1 if is_in_progress else 0,
+                1 if is_completed else 0,
+                search_rank,
+                code,
+                title,
+            )
+
+        is_in_progress = getattr(course, "progress_status", "") == "in_progress"
+        is_planned = bool(getattr(course, "is_planned", False))
+
+        return (
+            0 if is_in_progress else 1,
+            0 if is_planned else 1,
+            code,
+            title,
+        )
+
+    courses.sort(key=_course_sort_key)
 
     level_choices = [
         ("", "All levels"),
@@ -1775,7 +2715,8 @@ def courses_page(request):
         ("single", "Single Count"),
         ("multi", "Multi Count"),
     ]
-
+    if q:
+        courses = courses[:24]
     ctx = {
         "courses": courses,
         "profile": profile,
@@ -1792,6 +2733,7 @@ def courses_page(request):
         "selected_count_type": count_type,
         "also_counts_for_choices": also_counts_for_choices,
         "selected_also_counts_for": also_counts_for,
+        "semester_choices": semester_choices,
     }
 
     if _wants_partial(request):
@@ -1799,6 +2741,30 @@ def courses_page(request):
 
     return render(request, "courses.html", ctx)
 
+@profile_required
+@require_POST
+def remove_course_from_plan(request, course_id):
+    profile = request.profile
+
+    course = get_object_or_404(
+        Course,
+        id=course_id,
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    )
+
+    deleted_count, _ = PlannedCourse.objects.filter(
+        term_plan__profile=profile,
+        course=course,
+    ).delete()
+
+    if deleted_count:
+        messages.success(request, f"{course.code} removed from your degree plan.")
+    else:
+        messages.info(request, f"{course.code} was not in your degree plan.")
+
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or reverse("courses")
+    return redirect(next_url)
 
 @login_required
 def course_detail(request, pk: int):
@@ -1840,6 +2806,23 @@ def course_detail(request, pk: int):
 
     state = _course_ui_state(profile, course)
 
+    term_plans = profile.get_or_create_future_term_plans(count=4)
+    semester_choices = [
+        {"id": tp.id, "label": str(tp.term)}
+        for tp in term_plans
+    ]
+
+    planned_term_label = ""
+    planned_pc = (
+        PlannedCourse.objects
+        .filter(term_plan__profile=profile, course=course)
+        .select_related("term_plan", "term_plan__term")
+        .order_by("term_plan__position")
+        .first()
+    )
+    if planned_pc:
+        planned_term_label = str(planned_pc.term_plan.term)
+
     ctx = {
         "c": course,
         "tags": tags,
@@ -1858,6 +2841,8 @@ def course_detail(request, pk: int):
         "eligible_count": course.eligible_count,
         "applied_count": course.applied_count,
         "is_multi_count": course.is_multi_count,
+        "semester_choices": semester_choices,
+        "planned_term_label": planned_term_label,
     }
 
     if _wants_partial(request):

@@ -1,4 +1,5 @@
 from django.db import models
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.conf import settings
@@ -299,6 +300,361 @@ class StudentProfile(models.Model):
                 total += float(c.credits)
 
         return take, total, next_term
+    
+    def requirement_group_progress_with_planned(self):
+        base = self.requirement_group_progress() or []
+        req = self.get_requirement()
+        if not req:
+            return base
+
+        planned_codes = self.planned_course_codes()
+        used_by_group1 = set()
+
+        out = []
+        blocks = list(req.blocks.prefetch_related("courses").all())
+
+        if not blocks:
+            for row in base:
+                item = dict(row)
+                item["planned"] = 0
+                item["assigned_planned_codes"] = []
+                out.append(item)
+            return out
+
+        blocks.sort(key=lambda b: (b.count_group or "group4", int(b.min_required), b.courses.count(), b.name))
+
+        completed_codes = self.completed_course_codes()
+        in_progress_codes = self.in_progress_course_codes()
+
+        for b in blocks:
+            block_codes = [c.code.upper() for c in b.courses.all()]
+            block_group = (b.count_group or "group4").strip() or "group4"
+
+            assigned_completed = []
+            assigned_ip = []
+            assigned_planned = []
+
+            def code_allowed(code: str) -> bool:
+                if b.allow_double_count:
+                    return True
+                if block_group == "group1":
+                    return code not in used_by_group1
+                return True
+
+            for code in block_codes:
+                if code in completed_codes and code_allowed(code):
+                    if code not in assigned_completed:
+                        assigned_completed.append(code)
+                    if len(assigned_completed) >= int(b.min_required):
+                        break
+
+            remaining_slots = max(0, int(b.min_required) - len(assigned_completed))
+
+            if remaining_slots > 0:
+                for code in block_codes:
+                    if remaining_slots <= 0:
+                        break
+                    if code in in_progress_codes and code not in assigned_completed and code_allowed(code):
+                        if code not in assigned_ip:
+                            assigned_ip.append(code)
+                            remaining_slots -= 1
+
+            if remaining_slots > 0:
+                for code in block_codes:
+                    if remaining_slots <= 0:
+                        break
+                    if code in planned_codes and code not in assigned_completed and code not in assigned_ip and code_allowed(code):
+                        if code not in assigned_planned:
+                            assigned_planned.append(code)
+                            remaining_slots -= 1
+
+            if not b.allow_double_count and block_group == "group1":
+                used_by_group1.update(assigned_completed)
+                used_by_group1.update(assigned_ip)
+                used_by_group1.update(assigned_planned)
+
+            out.append({
+                "name": b.name,
+                "min_required": int(b.min_required),
+                "completed": int(len(assigned_completed)),
+                "in_progress": int(len(assigned_ip)),
+                "planned": int(len(assigned_planned)),
+                "total_options": int(len(block_codes)),
+                "done": len(assigned_completed) >= int(b.min_required),
+                "type": "block",
+                "allow_double_count": bool(b.allow_double_count),
+                "count_group": block_group,
+                "assigned_completed_codes": assigned_completed,
+                "assigned_in_progress_codes": assigned_ip,
+                "assigned_planned_codes": assigned_planned,
+            })
+
+        return out
+    
+    def get_or_create_future_term_plans(self, count=4):
+        TermPlanModel = apps.get_model("users", "TermPlan")
+
+        current = Term.from_date()
+        term = current.next()
+        created_or_found = []
+
+        for i in range(count):
+            term_plan, _ = TermPlanModel.objects.get_or_create(
+                profile=self,
+                term=term,
+                defaults={"position": i + 1},
+            )
+
+            if term_plan.position != i + 1:
+                term_plan.position = i + 1
+                term_plan.save(update_fields=["position"])
+
+            created_or_found.append(term_plan)
+            term = term.next()
+
+        return created_or_found
+
+    def planned_course_codes(self) -> set[str]:
+        PlannedCourseModel = apps.get_model("users", "PlannedCourse")
+        return {
+            (code or "").upper()
+            for code in PlannedCourseModel.objects.filter(term_plan__profile=self)
+            .values_list("course__code", flat=True)
+        }
+
+    def term_plan_total_units(self, term_plan) -> float:
+        return sum(
+            float(pc.course.credits or 0)
+            for pc in term_plan.planned_courses.select_related("course").all()
+            if pc.course
+        )
+
+    def total_planned_units(self) -> float:
+        PlannedCourseModel = apps.get_model("users", "PlannedCourse")
+        return sum(
+            float(pc.course.credits or 0)
+            for pc in PlannedCourseModel.objects.filter(term_plan__profile=self).select_related("course")
+            if pc.course
+        )
+
+    def planned_courses_by_term(self):
+        return (
+            PlannedCourse.objects
+            .filter(term_plan__profile=self)
+            .select_related("course", "term_plan", "term_plan__term")
+            .order_by("term_plan__position", "position", "id")
+        )
+
+    def planned_warning_count(self) -> int:
+        count = 0
+        for pc in self.planned_courses_by_term():
+            if pc.course and not self.course_still_useful_for_requirements(pc.course):
+                count += 1
+        return count
+
+    def remaining_credits_after_plan(self) -> int:
+        _, _, completed_credits, target_credits = self.approximate_graduation_term()
+        in_progress_units = sum(
+            float(c.course.credits or 0)
+            for c in InProgressClass.objects.filter(profile=self).select_related("course")
+            if c.course
+        )
+        planned_units = self.total_planned_units()
+        return max(0, int(target_credits - completed_credits - in_progress_units - planned_units))
+
+    def missing_corequisites_for_term(self, course, term_plan) -> list:
+        PlannedCourseModel = apps.get_model("users", "PlannedCourse")
+
+        taken_codes = self.taken_course_codes()
+        planned_same_term_codes = {
+            (pc.course.code or "").upper()
+            for pc in PlannedCourseModel.objects.filter(term_plan=term_plan).select_related("course")
+            if pc.course and pc.course.code
+        }
+
+        missing = []
+        for coreq in course.corequisites.all():
+            if coreq.program != self.program or coreq.catalog_year != self.catalog_year:
+                continue
+            code = (coreq.code or "").upper()
+            if code not in taken_codes and code not in planned_same_term_codes:
+                missing.append(coreq)
+
+        return missing
+
+    def course_still_useful_for_requirements(self, course) -> bool:
+        req = self.get_requirement()
+        if not req or not course:
+            return True
+
+        code = (course.code or "").upper()
+        taken_codes = self.taken_course_codes()
+
+        if code in taken_codes:
+            return False
+
+        group_progress = self.requirement_group_progress() or []
+        incomplete_names = {
+            g.get("name")
+            for g in group_progress
+            if not g.get("done")
+        }
+
+        for block in req.blocks.prefetch_related("courses").all():
+            if block.name in incomplete_names:
+                block_codes = {(c.code or "").upper() for c in block.courses.all()}
+                if code in block_codes:
+                    return True
+
+        return False
+
+    def can_add_course_to_term_plan(self, course, term_plan) -> tuple[bool, str]:
+        PlannedCourseModel = apps.get_model("users", "PlannedCourse")
+
+        if not course:
+            return False, "Invalid course."
+
+        if course.program != self.program or course.catalog_year != self.catalog_year:
+            return False, "Course does not belong to your program/catalog."
+
+        code = (course.code or "").upper()
+
+        if code in self.completed_course_codes():
+            return False, "Course already completed."
+
+        if code in self.in_progress_course_codes():
+            return False, "Course already in progress."
+
+        already_planned_elsewhere = PlannedCourseModel.objects.filter(
+            term_plan__profile=self,
+            course=course,
+        ).exclude(term_plan=term_plan).exists()
+
+        if already_planned_elsewhere:
+            return False, "Course already planned in another semester."
+
+        if PlannedCourseModel.objects.filter(term_plan=term_plan, course=course).exists():
+            return False, "Course already planned in this semester."
+
+        if not self.planner_prerequisites_satisfied(course, term_plan):
+            return False, "Prerequisites are not satisfied for that semester."
+
+        current_units = self.term_plan_total_units(term_plan)
+        next_units = current_units + float(course.credits or 0)
+
+        if next_units > float(self.max_credits_next_term or 15):
+            return False, "Adding this course would exceed your term unit limit."
+
+        return True, ""
+
+    def can_move_planned_course(self, planned_course, target_term_plan) -> tuple[bool, str]:
+        PlannedCourseModel = apps.get_model("users", "PlannedCourse")
+
+        if not planned_course or not planned_course.course:
+            return False, "Invalid planned course."
+
+        if planned_course.term_plan.profile_id != self.id:
+            return False, "That course is not in your degree plan."
+
+        if target_term_plan.profile_id != self.id:
+            return False, "Invalid target semester."
+
+        if planned_course.term_plan_id == target_term_plan.id:
+            return False, "Course is already in that semester."
+
+        course = planned_course.course
+        code = (course.code or "").upper()
+
+        if code in self.completed_course_codes():
+            return False, "Course already completed."
+
+        if code in self.in_progress_course_codes():
+            return False, "Course already in progress."
+
+        duplicate_in_target = PlannedCourseModel.objects.filter(
+            term_plan=target_term_plan,
+            course=course,
+        ).exists()
+        if duplicate_in_target:
+            return False, "Course already exists in the target semester."
+
+        current_units = self.term_plan_total_units(target_term_plan)
+        next_units = current_units + float(course.credits or 0)
+        if next_units > float(self.max_credits_next_term or 15):
+            return False, "Moving this course would exceed the target semester unit limit."
+
+        if not self.planner_prerequisites_satisfied(course, target_term_plan):
+            return False, "Prerequisites are not satisfied for the target semester."
+
+        return True, ""
+
+    def renumber_term_plan_positions(self, term_plan):
+        PlannedCourseModel = apps.get_model("users", "PlannedCourse")
+        rows = list(
+            PlannedCourseModel.objects.filter(term_plan=term_plan).order_by("position", "id")
+        )
+        for idx, row in enumerate(rows, start=1):
+            if row.position != idx:
+                row.position = idx
+                row.save(update_fields=["position"])
+
+    
+    def planner_prerequisites_satisfied(self, course, target_term_plan) -> bool:
+        """
+        Planner-aware prerequisite check.
+
+        A course is allowed if its prerequisites are satisfied by:
+        - completed courses
+        - in-progress courses
+        - courses planned in earlier term plans only
+        """
+        completed_codes = self.completed_course_codes()
+        in_progress_codes = self.in_progress_course_codes()
+
+        earlier_planned_codes = set()
+        earlier_terms = self.term_plans.filter(position__lt=target_term_plan.position).order_by("position")
+
+        for tp in earlier_terms:
+            for pc in tp.planned_courses.select_related("course").all():
+                if pc.course and pc.course.code:
+                    earlier_planned_codes.add(pc.course.code.upper())
+
+        available_codes = completed_codes | in_progress_codes | earlier_planned_codes
+
+        prereq_codes = {
+            c.code.upper()
+            for c in course.prerequisites.all()
+            if c.program == self.program and c.catalog_year == self.catalog_year
+        }
+
+        base_ok = True
+        if prereq_codes:
+            if course.prereq_mode == "ANY":
+                base_ok = len(prereq_codes & available_codes) >= 1
+            else:
+                base_ok = prereq_codes.issubset(available_codes)
+
+        if not base_ok:
+            return False
+
+        for grp in course.prereq_groups.all():
+            option_codes = {c.code.upper() for c in grp.options.all()}
+            if not option_codes:
+                continue
+            if len(option_codes & available_codes) < grp.min_required:
+                return False
+
+        return True
+
+    def get_next_unused_term(self):
+        existing_term_ids = set(
+            self.term_plans.values_list("term_id", flat=True)
+        )
+
+        term = Term.from_date().next()
+        while term.id in existing_term_ids:
+            term = term.next()
+        return term
 
     def approximate_graduation_term(self):
         req = self.get_requirement()
@@ -409,19 +765,22 @@ class StudentProfile(models.Model):
         if udge_blocks and not any(x.get("name") == "General Education Upper Division" for x in out):
             udge_completed = sum(int(x.get("completed", 0)) for x in udge_blocks)
             udge_in_progress = sum(int(x.get("in_progress", 0)) for x in udge_blocks)
+            udge_planned = sum(int(x.get("planned", 0)) for x in udge_blocks)
 
             out.append({
                 "name": "General Education Upper Division",
                 "min_required": 3,
                 "completed": udge_completed,
                 "in_progress": udge_in_progress,
+                "planned": udge_planned,
                 "total_options": 0,
-                "done": (udge_completed + udge_in_progress) >= 3,
+                "done": (udge_completed + udge_in_progress + udge_planned) >= 3,
                 "type": "block",
                 "allow_double_count": False,
                 "count_group": "group4",
                 "assigned_completed_codes": [],
                 "assigned_in_progress_codes": [],
+                "assigned_planned_codes": [],
             })
         return out
 
@@ -605,6 +964,53 @@ class InProgressClass(models.Model):
         who = self.profile.user.get_full_name() or self.profile.user.email or self.profile.user.username
         return f"{who} • {self.course.code} (IP)"
 
+class TermPlan(models.Model):
+    profile = models.ForeignKey(
+        StudentProfile,
+        on_delete=models.CASCADE,
+        related_name="term_plans",
+    )
+    term = models.ForeignKey(
+        Term,
+        on_delete=models.CASCADE,
+        related_name="term_plans",
+    )
+    position = models.PositiveSmallIntegerField(default=1)
+    notes = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        ordering = ["position", "term__year", "term__season"]
+        unique_together = (("profile", "term"),)
+
+    def __str__(self):
+        who = self.profile.user.get_full_name() or self.profile.user.email or self.profile.user.username
+        return f"{who} • {self.term}"
+
+
+class PlannedCourse(models.Model):
+    STATUS_CHOICES = [
+        ("planned", "Planned"),
+    ]
+
+    term_plan = models.ForeignKey(
+        TermPlan,
+        on_delete=models.CASCADE,
+        related_name="planned_courses",
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="planned_courses",
+    )
+    position = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="planned")
+
+    class Meta:
+        ordering = ["position", "id"]
+        unique_together = (("term_plan", "course"),)
+
+    def __str__(self):
+        return f"{self.term_plan} • {self.course.code}"
 
 class PrerequisiteGroup(models.Model):
     for_course = models.ForeignKey(

@@ -1,89 +1,150 @@
 {# campus/templates/courses_list.html #}
 <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3" id="courses-grid">
   {% for c in courses %}
-  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm course-card">
-    <div class="flex items-center justify-between">
-      <h3 class="text-lg font-semibold">
-        {{ c.code }} <span class="text-slate-500">({{ c.credits|floatformat:1 }})</span>
-      </h3>
-      {% if c.progress_label %}
-        <span class="rounded-full px-3 py-1 text-xs font-medium {{ c.progress_badge_class }}">
-          {{ c.progress_label }}
-        </span>
-      {% elif c.eligible %}
-        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-          Eligible
-        </span>
-      {% else %}
-        <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
-          Locked
-        </span>
-      {% endif %}
-    </div>
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm course-card">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold">
+          {{ c.code }} <span class="text-slate-500">({{ c.credits|floatformat:1 }})</span>
+        </h3>
 
-    {% if c.title %}
-      <p class="mt-2 text-slate-800">{{ c.title }}</p>
-    {% endif %}
-
-    {% if c.is_multi_count %}
-      <div class="mt-3">
-        <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-100">
-          Multi-count
-        </span>
+        {% if c.progress_label %}
+          <span class="rounded-full px-3 py-1 text-xs font-medium {{ c.progress_badge_class }}">
+            {{ c.progress_label }}
+          </span>
+        {% elif c.eligible %}
+          <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+            Eligible
+          </span>
+        {% else %}
+          <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
+            Locked
+          </span>
+        {% endif %}
       </div>
-  {% endif %}
 
-    <div class="mt-3 flex flex-wrap gap-2">
-      {% if c.subject %}<span class="px-3 py-1 text-xs rounded-full bg-slate-100 text-slate-700">{{ c.subject|title }}</span>{% endif %}
-      {% if c.level %}<span class="px-3 py-1 text-xs rounded-full bg-slate-100 text-slate-700">{{ c.level|upper }}</span>{% endif %}
-      {% for t in c.tags.all %}
-        <span class="px-3 py-1 text-xs rounded-full bg-slate-100 text-slate-700">{{ t.name|upper }}</span>
-      {% endfor %}
-    </div>
-
-    <div class="mt-4 flex flex-wrap gap-2">
-      <a href="{% url 'course_detail' c.pk %}?partial=1"
-        data-course-url="{% url 'course_detail' c.pk %}?partial=1"
-        class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
-        Details
-      </a>
-
-      {% if c.can_remove %}
-      <form method="post" action="{% url 'remove_course_status' c.pk %}" class="inline">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <button type="submit"
-            class="inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700">
-        Remove
-        </button>
-      </form>
-      {% else %}
-      <details class="relative inline-block">
-        <summary class="list-none cursor-pointer inline-flex items-center rounded-lg bg-slate-800 px-4 py-2 text-white hover:bg-slate-900">
-        Add
-        </summary>
-
-        <div class="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white shadow-lg p-2 z-20">
-        <form method="post" action="{% url 'mark_course_completed' c.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" class="w-full text-left rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
-          Add to Completed
-          </button>
-        </form>
-
-        <form method="post" action="{% url 'mark_course_in_progress' c.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" class="w-full text-left rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
-          Add to In Progress
-          </button>
-        </form>
-        </div>
-      </details>
+      {% if c.title %}
+        <p class="mt-2 text-slate-800">{{ c.title }}</p>
       {% endif %}
+
+      {% if c.applied_blocks %}
+        <p class="mt-2 text-xs text-slate-500">
+          Counts for: {{ c.applied_blocks|join:", " }}
+        </p>
+      {% elif c.eligible_blocks %}
+        <p class="mt-2 text-xs text-slate-500">
+          Eligible for: {{ c.eligible_blocks|join:", " }}
+        </p>
+      {% endif %}
+
+      {% if c.planned_term_label %}
+        <p class="mt-2 text-xs text-green-700">
+          Planned in: {{ c.planned_term_label }}
+        </p>
+      {% endif %}
+
+      {% if c.is_multi_count %}
+        <div class="mt-3">
+          <span class="inline-flex items-center rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+            Multi-count
+          </span>
+        </div>
+      {% endif %}
+
+      <div class="mt-3 flex flex-wrap gap-2">
+        {% if c.subject %}
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">{{ c.subject|title }}</span>
+        {% endif %}
+        {% if c.level %}
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">{{ c.level|upper }}</span>
+        {% endif %}
+        {% for t in c.tags.all %}
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">{{ t.name|upper }}</span>
+        {% endfor %}
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <a
+          href="{% url 'course_detail' c.pk %}"
+          class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+        >
+          Details
+        </a>
+
+        {% if c.can_remove %}
+          <form method="post" action="{% url 'remove_course_status' c.pk %}" class="inline">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700"
+            >
+              Remove
+            </button>
+          </form>
+        {% else %}
+          <details class="relative inline-block">
+            <summary class="list-none cursor-pointer inline-flex items-center rounded-lg bg-slate-800 px-4 py-2 text-white hover:bg-slate-900">
+              Add
+            </summary>
+
+            <div class="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+              <form method="post" action="{% url 'mark_course_completed' c.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100">
+                  Add to Completed
+                </button>
+              </form>
+
+              <form method="post" action="{% url 'mark_course_in_progress' c.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100">
+                  Add to In Progress
+                </button>
+              </form>
+
+              {% if semester_choices %}
+                <div class="my-2 h-px bg-slate-100"></div>
+
+                <form method="post" action="{% url 'add_planned_course_by_form' c.pk %}" class="space-y-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <select
+                    name="term_plan_id"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  >
+                    {% for sem in semester_choices %}
+                      <option value="{{ sem.id }}">{{ sem.label }}</option>
+                    {% endfor %}
+                  </select>
+
+                  <button
+                    type="submit"
+                    class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100"
+                  >
+                    Add to Degree Plan
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+          </details>
+        {% endif %}
+
+        {% if c.is_planned %}
+          <form method="post" action="{% url 'remove_course_from_plan' c.pk %}" class="inline">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-lg border border-red-200 bg-white px-4 py-2 text-red-700 hover:bg-red-50"
+            >
+              Remove from Plan
+            </button>
+          </form>
+        {% endif %}
+      </div>
     </div>
-  </div>
   {% empty %}
     <div class="col-span-full rounded-xl border border-slate-200 bg-white p-6 text-slate-700">
       No courses match your filters.

@@ -4,192 +4,117 @@
 
 {% block content %}
 <div class="px-4 sm:px-6 lg:px-8">
-  <h1 class="text-2xl font-semibold text-slate-900 mb-6">Courses</h1>
+  <h1 class="mb-6 text-2xl font-semibold text-slate-900">Courses</h1>
 
-  <!-- Filters row -->
-<form id="filters-form" method="get" action="{% url 'courses' %}"
-class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
+  <form
+    method="get"
+    action="{% url 'courses' %}"
+    class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5"
+  >
+    <input type="hidden" name="q" value="{{ q }}">
 
-<!-- Level -->
-<div>
-<label class="sr-only" for="level">Level</label>
-<select id="level"
-      name="level"
-      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
->
-{% for value, label in level_choices %}
-  <option value="{{ value }}"
-          {% if value == selected_level %}selected{% endif %}>
-    {{ label }}
-  </option>
-{% endfor %}
-</select>
-</div>
+    <div>
+      <label class="sr-only" for="level">Level</label>
+      <select
+        id="level"
+        name="level"
+        class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+      >
+        {% for value, label in level_choices %}
+          <option value="{{ value }}" {% if value == selected_level %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
 
-<!-- Credits -->
-<div>
-<label class="sr-only" for="credits">Credits</label>
-<select id="credits"
-      name="credits"
-      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
->
-{% for value, label in credit_choices %}
-  <option value="{{ value }}"
-          {% if value == selected_credits %}selected{% endif %}>
-    {{ label }}
-  </option>
-{% endfor %}
-</select>
-</div>
+    <div>
+      <label class="sr-only" for="credits">Credits</label>
+      <select
+        id="credits"
+        name="credits"
+        class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+      >
+        {% for value, label in credit_choices %}
+          <option value="{{ value }}" {% if value == selected_credits %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
 
-<!-- Fulfillment (tags) -->
-<div>
-<label class="sr-only" for="fulfillment">Fulfillment</label>
-<select id="fulfillment"
-      name="fulfillment"
-      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
->
-{% for value, label in fulfillment_choices %}
-  <option value="{{ value }}"
-          {% if value == selected_fulfillment %}selected{% endif %}>
-    {{ label }}
-  </option>
-{% endfor %}
-</select>
-</div>
+    <div>
+      <label class="sr-only" for="fulfillment">Fulfillment</label>
+      <select
+        id="fulfillment"
+        name="fulfillment"
+        class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+      >
+        {% for value, label in fulfillment_choices %}
+          <option value="{{ value }}" {% if value == selected_fulfillment %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
 
-<!-- Also Counts For (multi-count tags) -->
- <div>
-<label class="sr-only" for="also_counts_for">Also Counts For</label>
-<select id="also_counts_for"
-      name="also_counts_for"
-      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
->
-{% for value, label in also_counts_for_choices %}
-  <option value="{{ value }}"
-          {% if value == selected_also_counts_for %}selected{% endif %}>
-    {{ label }}
-  </option>
-{% endfor %}
-</select>
-</div>
+    <div>
+      <label class="sr-only" for="also_counts_for">Also Counts For</label>
+      <select
+        id="also_counts_for"
+        name="also_counts_for"
+        class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+      >
+        {% for value, label in also_counts_for_choices %}
+          <option value="{{ value }}" {% if value == selected_also_counts_for %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
 
-<!-- Count Type -->
-<div>
-  <label class="sr-only" for="count_type">Count Type</label>
-  <select id="count_type"
+    <div>
+      <label class="sr-only" for="count_type">Count Type</label>
+      <select
+        id="count_type"
         name="count_type"
         class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-  >
-  {% for value, label in count_type_choices %}
-    <option value="{{ value }}"
-            {% if value == selected_count_type %}selected{% endif %}>
-      {{ label }}
-    </option>
-  {% endfor %}
-  </select>
-</div>
-</form>
-
-
-<div class="mb-2 flex items-center justify-between">
-  <p class="text-xs text-slate-500">{{ courses|length }} results</p>
-
-  <a href="{% url 'courses' %}"
-   class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-  Reset Filters
-</a>
-</div>
-
-<!-- Courses grid -->
-<div id="courses-results">
-  {% include "courses_list.html" %}
-</div>
-
-<!-- Slide-over panel backdrop -->
-<div id="course-detail-backdrop"
-     class="hidden fixed inset-0 bg-black/30 z-40"></div>
-
-<!-- Slide-over panel -->
-<div id="course-detail-panel"
-     class="hidden fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-xl border-l border-slate-200 z-50">
-  <div class="flex flex-col h-full">
-    <!-- Header WITHOUT close button (close is inside modal partial instead) -->
-    <div class="flex items-center px-5 py-3 border-b border-slate-200">
-      <h2 class="text-sm font-semibold text-slate-900">
-        Course details
-      </h2>
+      >
+        {% for value, label in count_type_choices %}
+          <option value="{{ value }}" {% if value == selected_count_type %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
     </div>
 
-    <div id="course-detail-content" class="flex-1 overflow-y-auto px-5 py-4 text-sm text-slate-800">
-      <!-- modal body gets injected here -->
+    <div class="md:col-span-2 xl:col-span-5 flex gap-2">
+      <button
+        type="submit"
+        class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+      >
+        Apply Filters
+      </button>
+
+      <a
+        href="{% url 'courses' %}"
+        class="inline-flex items-center justify-center rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300"
+      >
+        Reset Filters
+      </a>
     </div>
+  </form>
+
+  <div class="mb-2 flex items-center justify-between">
+    <p class="text-xs text-slate-500">
+      {{ results_count }} results
+      {% if q and results_count > 24 %}
+        (showing first 24)
+      {% endif %}
+  </div>
+
+  <div id="courses-results">
+    {% include "courses_list.html" %}
   </div>
 </div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // --- Filters auto-submit on change ---
-    const filtersForm = document.getElementById("filters-form");
-    if (filtersForm) {
-      filtersForm.addEventListener("change", function () {
-        filtersForm.submit();
-      });
-    }
-
-    // --- Slide-over panel for course details ---
-    const backdrop = document.getElementById("course-detail-backdrop");
-    const panel = document.getElementById("course-detail-panel");
-    const panelContent = document.getElementById("course-detail-content");
-
-    function openPanelWithUrl(url) {
-      if (!panel || !panelContent || !backdrop) return;
-
-      fetch(url, { headers: { "X-Requested-With": "fetch" } })
-        .then(response => response.text())
-        .then(html => {
-          panelContent.innerHTML = html;
-          panel.classList.remove("hidden");
-          backdrop.classList.remove("hidden");
-        })
-        .catch(err => {
-          console.error("Error loading course detail:", err);
-        });
-    }
-
-    // Attach click handlers to all Details links
-    document.querySelectorAll("[data-course-url]").forEach(link => {
-      link.addEventListener("click", function (event) {
-        event.preventDefault();
-        const url = this.getAttribute("data-course-url");
-        if (url) {
-          openPanelWithUrl(url);
-        }
-      });
-    });
-
-    function closePanel() {
-      if (!panel || !backdrop) return;
-      panel.classList.add("hidden");
-      backdrop.classList.add("hidden");
-      panelContent.innerHTML = "";
-    }
-
-    // Close by clicking on backdrop
-    if (backdrop) {
-      backdrop.addEventListener("click", closePanel);
-    }
-
-    // Also let the inner modal close button (inside the partial) close it
-    document.addEventListener("click", function (e) {
-      if (e.target && e.target.id === "course-detail-close") {
-        e.preventDefault();
-        closePanel();
-      }
-    });
-  });
-</script>
 {% endblock %}

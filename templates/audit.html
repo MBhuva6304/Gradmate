@@ -2,116 +2,232 @@
 {% block page_title %}Audit — Gradmate{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{% url 'upload_dpr' %}"
-     class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700">
+  <a
+    href="{% url 'upload_dpr' %}"
+    class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+  >
     Upload DPR
   </a>
 {% endblock %}
 
 {% block content %}
-<style>
-  .audit-card{background:#fff;border:1px solid #e2e8f0;border-radius:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-  .audit-chip{min-width:110px;text-align:center;border:1px solid #e2e8f0;border-radius:.75rem;padding:.75rem .5rem;background:#f8fafc}
-  .audit-chip .n{font-weight:800;font-size:1.25rem}
-  .audit-chip .l{font-size:.75rem;color:#64748b}
-  .audit-bar{position:relative;height:18px;background:#eef2f7;border-radius:9999px;overflow:hidden}
-  .audit-seg{position:absolute;top:0;height:100%;border-radius:9999px}
-  .audit-seg.completed{left:0;background:#2563eb;z-index:2}
-  .audit-seg.ip{left:0;background:#f59e0b;z-index:1}
-  .audit-group{border:1px solid #e2e8f0;border-radius:1rem;overflow:hidden;background:#fff}
-  .audit-course{display:grid;grid-template-columns:1fr 90px 110px;gap:.75rem;align-items:center;padding:.625rem .75rem;border:1px solid #e2e8f0;border-radius:.75rem;background:#f8fafc}  
-  .audit-tag{font-size:.75rem;border-radius:9999px;padding:.3rem .6rem;font-weight:700;display:inline-flex;align-items:center;gap:.35rem}
-  .audit-tag.ok{background:#ecfdf5;color:#065f46}
-  .audit-tag.ip{background:#fff7ed;color:#92400e}
-  .audit-tag.bad{background:#fef2f2;color:#991b1b}
-  @media (max-width: 900px){
-    .audit-course{grid-template-columns:1fr}
-  }
-</style>
+  <style>
+    .audit-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
 
-<div class="space-y-6">
-  <div>
-    <h1 class="text-3xl font-bold text-slate-900">Audit</h1>
-    <p class="text-slate-600 mt-1">Your progress-to-degree audit based on imported DPR data and requirement groups.</p>
-    {% if latest_dpr %}
-      <p class="text-xs text-slate-500 mt-2">Latest DPR uploaded: {{ latest_dpr.uploaded_at|date:"M d, Y H:i" }}</p>
-    {% endif %}
-  </div>
+    .audit-chip {
+      min-width: 110px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      padding: 0.75rem 0.5rem;
+      background: #f8fafc;
+    }
 
-  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-    <section class="audit-card p-5">
-      <h2 class="text-xl font-semibold mb-4">Audit Summary</h2>
+    .audit-chip .n {
+      font-weight: 800;
+      font-size: 1.25rem;
+    }
 
-      <div class="audit-bar mb-5">
-        {% with done=audit_summary.completed ip=audit_summary.in_progress total=audit_summary.total %}
-          {% widthratio done total 100 as done_pct %}
-          {% widthratio ip total 100 as ip_only_pct %}
-          {% widthratio done|add:ip total 100 as ip_total_pct %}
+    .audit-chip .l {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
 
-          {% if ip > 0 %}
-            <div class="audit-seg ip" style="width: {{ ip_total_pct }}%;"></div>
-          {% endif %}
-          {% if done > 0 %}
-            <div class="audit-seg completed" style="width: {{ done_pct }}%;"></div>
-          {% endif %}
-        {% endwith %}
-      </div>
+    .audit-bar {
+      position: relative;
+      height: 18px;
+      background: #eef2f7;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
 
-      <div class="flex flex-wrap gap-3">
-        <div class="audit-chip">
-          <div class="n">{{ audit_summary.completed }}</div>
-          <div class="l">Completed</div>
-        </div>
-        <div class="audit-chip">
-          <div class="n">{{ audit_summary.in_progress }}</div>
-          <div class="l">In Progress</div>
-        </div>
-        <div class="audit-chip">
-          <div class="n">{{ audit_summary.remaining }}</div>
-          <div class="l">Remaining</div>
-        </div>
-        <div class="audit-chip">
-          <div class="n">{{ audit_summary.total }}</div>
-          <div class="l">Total Units</div>
-        </div>
-      </div>
-    </section>
+    .audit-seg {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      border-radius: 9999px;
+    }
 
-    <section class="audit-card p-5">
-      <h2 class="text-xl font-semibold mb-4">Quick Stats</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <div class="text-sm text-slate-500">Standing</div>
-          <div class="text-2xl font-bold">{{ quick_stats.standing }}</div>
-        </div>
-        <div>
-          <div class="text-sm text-slate-500">Major</div>
-          <div class="font-semibold">{{ quick_stats.major }}</div>
-        </div>
-        <div>
-          <div class="text-sm text-slate-500">Catalog Year</div>
-          <div class="font-semibold">{{ quick_stats.catalog_year }}</div>
-        </div>
-      </div>
-    </section>
-  </div>
+    .audit-seg.completed {
+      left: 0;
+      background: #2563eb;
+      z-index: 2;
+    }
 
-  <section class="space-y-5">
-    {% for group in audit_groups %}
-      <div class="audit-group">
-        <div class="p-4 border-b border-slate-200">
-          <div class="flex items-center justify-between gap-4 flex-wrap">
-                        <h3 class="text-xl font-semibold">{{ group.title }} ({{ group.required|floatformat:0 }} required)</h3>
+    .audit-seg.ip {
+      left: 0;
+      background: #f59e0b;
+      z-index: 1;
+    }
+
+    .audit-seg.planned {
+      left: 0;
+      background: #22c55e;
+      z-index: 0;
+    }
+
+    .audit-group {
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .audit-course {
+      display: grid;
+      grid-template-columns: 1fr 90px 110px;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      background: #f8fafc;
+    }
+
+    .audit-tag {
+      font-size: 0.75rem;
+      border-radius: 9999px;
+      padding: 0.3rem 0.6rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .audit-tag.ok {
+      background: #ecfdf5;
+      color: #065f46;
+    }
+
+    .audit-tag.ip {
+      background: #fff7ed;
+      color: #92400e;
+    }
+
+    .audit-tag.bad {
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .audit-tag.planned {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    @media (max-width: 900px) {
+      .audit-course {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <div class="space-y-6">
+    <div>
+      <h1 class="text-3xl font-bold text-slate-900">Audit</h1>
+      <p class="mt-1 text-slate-600">
+        Your progress-to-degree audit based on imported DPR data and requirement groups.
+      </p>
+      {% if latest_dpr %}
+        <p class="mt-2 text-xs text-slate-500">
+          Latest DPR uploaded: {{ latest_dpr.uploaded_at|date:"M d, Y H:i" }}
+        </p>
+      {% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <section class="audit-card p-5">
+        <h2 class="mb-4 text-xl font-semibold">Audit Summary</h2>
+
+        <div class="audit-bar mb-5">
+          {% with done=audit_summary.completed ip=audit_summary.in_progress planned=audit_summary.planned total=audit_summary.total %}
+            {% widthratio done total 100 as done_pct %}
+            {% widthratio done|add:ip total 100 as ip_total_pct %}
+            {% widthratio done|add:ip|add:planned total 100 as planned_total_pct %}
+
+            {% if planned > 0 %}
+              <div class="audit-seg planned" style="width: {{ planned_total_pct }}%;"></div>
+            {% endif %}
+            {% if ip > 0 %}
+              <div class="audit-seg ip" style="width: {{ ip_total_pct }}%;"></div>
+            {% endif %}
+            {% if done > 0 %}
+              <div class="audit-seg completed" style="width: {{ done_pct }}%;"></div>
+            {% endif %}
+          {% endwith %}
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <div class="audit-chip">
+            <div class="n">{{ audit_summary.completed }}</div>
+            <div class="l">Completed</div>
+          </div>
+          <div class="audit-chip">
+            <div class="n">{{ audit_summary.in_progress }}</div>
+            <div class="l">In Progress</div>
+          </div>
+          <div class="audit-chip">
+            <div class="n">{{ audit_summary.planned }}</div>
+            <div class="l">Planned</div>
+          </div>
+          <div class="audit-chip">
+            <div class="n">{{ audit_summary.remaining }}</div>
+            <div class="l">Remaining</div>
+          </div>
+          <div class="audit-chip">
+            <div class="n">{{ audit_summary.total }}</div>
+            <div class="l">Total Units</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="audit-card p-5">
+        <h2 class="mb-4 text-xl font-semibold">Quick Stats</h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <div class="text-sm text-slate-500">Standing</div>
+            <div class="text-2xl font-bold">{{ quick_stats.standing }}</div>
+          </div>
+          <div>
+            <div class="text-sm text-slate-500">Major</div>
+            <div class="font-semibold">{{ quick_stats.major }}</div>
+          </div>
+          <div>
+            <div class="text-sm text-slate-500">Catalog Year</div>
+            <div class="font-semibold">{{ quick_stats.catalog_year }}</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="space-y-5">
+      {% for group in audit_groups %}
+        <div class="audit-group">
+          <div class="border-b border-slate-200 p-4">
+            <div class="flex items-center justify-between gap-4 flex-wrap">
+              <h3 class="text-xl font-semibold">
+                {{ group.title }} ({{ group.required|floatformat:0 }} required)
+              </h3>
               <div class="text-sm text-slate-500">
                 {{ group.completed|floatformat:0 }} completed
                 {% if group.in_progress > 0 %}• {{ group.in_progress|floatformat:0 }} in progress{% endif %}
+                {% if group.planned > 0 %}• {{ group.planned|floatformat:0 }} planned{% endif %}
                 • {{ group.remaining|floatformat:0 }} remaining
               </div>
-          </div>
+            </div>
 
             <div class="mt-4 audit-bar">
               {% widthratio group.completed group.required 100 as group_done_pct %}
               {% widthratio group.completed|add:group.in_progress group.required 100 as group_ip_total_pct %}
+              {% widthratio group.completed|add:group.in_progress|add:group.planned group.required 100 as group_planned_total_pct %}
+
+              {% if group.planned > 0 %}
+                <div class="audit-seg planned" style="width: {{ group_planned_total_pct }}%;"></div>
+              {% endif %}
               {% if group.in_progress > 0 %}
                 <div class="audit-seg ip" style="width: {{ group_ip_total_pct }}%;"></div>
               {% endif %}
@@ -119,178 +235,225 @@
                 <div class="audit-seg completed" style="width: {{ group_done_pct }}%;"></div>
               {% endif %}
             </div>
-        </div>
+          </div>
 
-        <div class="p-4 space-y-5">
-          {% for sec in group.subsections %}
-            <div class="space-y-3">
-              <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-center">
+          <div class="p-4 space-y-5">
+            {% for sec in group.subsections %}
+              <div class="space-y-3">
+                <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-center">
                   <div class="font-medium text-slate-800">
-                    {{ sec.name }} ({{ sec.completed|floatformat:0 }}/{{ sec.required|floatformat:0 }})
+                    {{ sec.name }} ({{ sec.completed|add:sec.in_progress|add:sec.planned|floatformat:0 }}/{{ sec.required|floatformat:0 }})
                   </div>
-                <div class="audit-bar">
-                  {% widthratio sec.completed sec.required 100 as sec_done_pct %}
-                  {% widthratio sec.completed|add:sec.in_progress sec.required 100 as sec_ip_total_pct %}
-                  {% if sec.in_progress > 0 %}
-                    <div class="audit-seg ip" style="width: {{ sec_ip_total_pct }}%;"></div>
-                  {% endif %}
-                  {% if sec.completed > 0 %}
-                    <div class="audit-seg completed" style="width: {{ sec_done_pct }}%;"></div>
-                  {% endif %}
-                </div>
-              </div>
 
-                            {% if sec.name == "General Education Upper Division" and not sec.done and sec.helper_options %}
-                <div class="space-y-3 mb-4">
-                  {% for opt in sec.helper_options %}
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div class="flex items-center justify-between gap-4 flex-wrap">
-                        <div class="font-semibold text-slate-900">{{ opt.name }}: {{ opt.label }}</div>
-                        <div class="text-xs text-slate-500">
-                          {{ opt.done_count }} completed
-                          {% if opt.ip_count > 0 %}• {{ opt.ip_count }} in progress{% endif %}
+                  <div class="audit-bar">
+                    {% widthratio sec.completed sec.required 100 as sec_done_pct %}
+                    {% widthratio sec.completed|add:sec.in_progress sec.required 100 as sec_ip_total_pct %}
+                    {% widthratio sec.completed|add:sec.in_progress|add:sec.planned sec.required 100 as sec_planned_total_pct %}
+
+                    {% if sec.planned > 0 %}
+                      <div class="audit-seg planned" style="width: {{ sec_planned_total_pct }}%;"></div>
+                    {% endif %}
+                    {% if sec.in_progress > 0 %}
+                      <div class="audit-seg ip" style="width: {{ sec_ip_total_pct }}%;"></div>
+                    {% endif %}
+                    {% if sec.completed > 0 %}
+                      <div class="audit-seg completed" style="width: {{ sec_done_pct }}%;"></div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                {% if sec.name == "General Education Upper Division" and sec.helper_options and sec.remaining > 0 %}
+                  <div class="space-y-3 mb-4">
+                    {% for opt in sec.helper_options %}
+                      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="flex items-center justify-between gap-4 flex-wrap">
+                          <div class="font-semibold text-slate-900">{{ opt.name }}: {{ opt.label }}</div>
+                          <div class="text-xs text-slate-500">
+                            {{ opt.done_count }} completed
+                            {% if opt.ip_count > 0 %}• {{ opt.ip_count }} in progress{% endif %}
+                            {% if opt.planned_count > 0 %}• {{ opt.planned_count }} planned{% endif %}
+                          </div>
+                        </div>
+
+                        <div class="mt-3 flex flex-wrap gap-2">
+                          {% for part in opt.parts %}
+                            {% if part.done %}
+                              <a
+                                href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
+                                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border bg-emerald-100 text-emerald-700 border-emerald-200"
+                              >
+                                {{ part.label }} ✓
+                              </a>
+                            {% elif part.in_progress %}
+                              <a
+                                href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
+                                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border bg-amber-100 text-amber-700 border-amber-200"
+                              >
+                                {{ part.label }} ●
+                              </a>
+                            {% elif part.planned %}
+                              <a
+                                href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
+                                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border bg-green-100 text-green-700 border-green-200"
+                              >
+                                {{ part.label }} ○
+                              </a>
+                            {% else %}
+                              <a
+                                href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
+                                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                              >
+                                {{ part.label }}
+                              </a>
+                            {% endif %}
+                          {% endfor %}
                         </div>
                       </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
 
-                      <div class="mt-3 flex flex-wrap gap-2">
-                        {% for part in opt.parts %}
-                          <a
-                            href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
-                            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border
-                              {% if part.done %}
-                                bg-emerald-100 text-emerald-700 border-emerald-200
-                              {% elif part.in_progress %}
-                                bg-amber-100 text-amber-700 border-amber-200
-                              {% else %}
-                                bg-white text-slate-700 border-slate-200 hover:bg-slate-100
-                              {% endif %}">
-                            {{ part.label }}
-                            {% if part.done %}✓{% elif part.in_progress %}●{% endif %}
-                          </a>
-                        {% endfor %}
+                <div class="space-y-2">
+                  {% for c in sec.courses %}
+                    <div class="audit-course">
+                      <div><strong>{{ c.code }}</strong> — {{ c.title }}</div>
+                      <div class="text-sm text-slate-500">
+                        {% if sec.name == "General Education Upper Division" and c.status == "bad" %}
+                          &nbsp;
+                        {% elif c.status == "bad" %}
+                          {{ c.missing_count|default:1 }} course{{ c.missing_count|default:1|pluralize }}
+                        {% else %}
+                          {{ c.units|floatformat:0 }} units
+                        {% endif %}
                       </div>
+                      <div>
+                        <span class="audit-tag {{ c.status }}">
+                          <span>
+                            {% if c.status == "ok" %}
+                              ✔
+                            {% elif c.status == "ip" %}
+                              ●
+                            {% elif c.status == "planned" %}
+                              ○
+                            {% else %}
+                              ✖
+                            {% endif %}
+                          </span>
+                          <span>
+                            {% if c.status == "ok" %}
+                              Completed
+                            {% elif c.status == "ip" %}
+                              In Progress
+                            {% elif c.status == "planned" %}
+                              Planned
+                            {% else %}
+                              Missing
+                            {% endif %}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  {% empty %}
+                    <div class="text-sm text-slate-500">
+                      No course details available for this requirement yet.
                     </div>
                   {% endfor %}
                 </div>
-              {% endif %}
 
-              <div class="space-y-2">
-                {% for c in sec.courses %}
-                  <div class="audit-course">
-                    <div><strong>{{ c.code }}</strong> — {{ c.title }}</div>
-                    <div class="text-sm text-slate-500">
-                      {% if sec.name == "General Education Upper Division" and c.status == "bad" %}
-                        &nbsp;
-                      {% elif c.status == "bad" %}
-                        {{ c.missing_count|default:1 }} course{{ c.missing_count|default:1|pluralize }}
+                {% if sec.remaining > 0 and sec.total_options %}
+                  <div class="text-[11px]">
+                    <a
+                      href="{% url 'courses' %}?fulfillment={{ sec.name|urlencode }}"
+                      class="text-slate-400 hover:text-indigo-600 hover:underline"
+                    >
+                      {% if sec.name == "General Education Upper Division" %}
+                        Choose one of the options above.
                       {% else %}
-                        {{ c.units|floatformat:0 }} units
+                        View {{ sec.total_options|floatformat:0 }} course option{{ sec.total_options|pluralize }}
                       {% endif %}
-                    </div>
-                    <div>
-                      <span class="audit-tag {{ c.status }}">
-                        <span>
-                          {% if c.status == "ok" %}✔{% elif c.status == "ip" %}●{% else %}✖{% endif %}
-                        </span>
-                        <span>
-                          {% if c.status == "ok" %}Completed{% elif c.status == "ip" %}In Progress{% else %}Missing{% endif %}
-                        </span>
-                      </span>
-                    </div>
+                    </a>
                   </div>
-                {% empty %}
-                  <div class="text-sm text-slate-500">No course details available for this requirement yet.</div>
-                {% endfor %}
+                {% endif %}
               </div>
+            {% empty %}
+              <p class="text-slate-500 text-sm">No requirement data available yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+      {% empty %}
+        <div class="audit-card p-6">
+          <h3 class="text-lg font-semibold mb-2">No audit data yet</h3>
+          <p class="text-slate-600 mb-4">Upload a DPR PDF to generate your audit view.</p>
+          <a
+            href="{% url 'upload_dpr' %}"
+            class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+          >
+            Upload DPR
+          </a>
+        </div>
+      {% endfor %}
+    </section>
 
-              {% if sec.remaining > 0 and sec.total_options %}
-                <div class="text-[11px]">
-                  <a
-                    href="{% url 'courses' %}?fulfillment={{ sec.name|urlencode }}"
-                    class="text-slate-400 hover:text-indigo-600 hover:underline"
-                  >
-                    {% if sec.name == "General Education Upper Division" %}
-                      Choose one of the options above.
-                    {% else %}
-                      View {{ sec.total_options|floatformat:0 }} course option{{ sec.total_options|pluralize }}
-                    {% endif %}
-                  </a>
-                </div>
-              {% endif %}
+    {% if below_100_completed or below_100_in_progress %}
+      <section class="audit-card p-5">
+        <h2 class="text-xl font-semibold mb-2">Below 100 Level Courses</h2>
+        <p class="text-sm text-slate-500 mb-4">
+          These courses appear in your record but do not count toward total degree units.
+        </p>
+
+        <div class="space-y-2">
+          {% for r in below_100_completed %}
+            <div class="audit-course">
+              <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
+              <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
+              <div>
+                <span class="audit-tag ok">✔ Completed</span>
+              </div>
             </div>
-          {% empty %}
-            <p class="text-slate-500 text-sm">No requirement data available yet.</p>
+          {% endfor %}
+
+          {% for r in below_100_in_progress %}
+            <div class="audit-course">
+              <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
+              <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
+              <div>
+                <span class="audit-tag ip">● In Progress</span>
+              </div>
+            </div>
           {% endfor %}
         </div>
-      </div>
-    {% empty %}
-      <div class="audit-card p-6">
-        <h3 class="text-lg font-semibold mb-2">No audit data yet</h3>
-        <p class="text-slate-600 mb-4">Upload a DPR PDF to generate your audit view.</p>
-        <a href="{% url 'upload_dpr' %}"
-           class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700">
-          Upload DPR
-        </a>
-      </div>
-    {% endfor %}
-  </section>
-  {% if below_100_completed or below_100_in_progress %}
-  <section class="audit-card p-5">
-    <h2 class="text-xl font-semibold mb-2">Below 100 Level Courses</h2>
-    <p class="text-sm text-slate-500 mb-4">These courses appear in your record but do not count toward total degree units.</p>
+      </section>
+    {% endif %}
 
-    <div class="space-y-2">
-      {% for r in below_100_completed %}
-        <div class="audit-course">
-          <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
-          <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
-          <div>
-            <span class="audit-tag ok">✔ Completed</span>
-          </div>
-        </div>
-      {% endfor %}
+    {% if additional_completed or additional_in_progress %}
+      <section class="audit-card p-5">
+        <h2 class="text-xl font-semibold mb-2">Additional Courses That Count Toward Total Units</h2>
+        <p class="text-sm text-slate-500 mb-4">
+          These courses count toward total earned units, but are not currently shown inside the main requirement sections.
+        </p>
 
-      {% for r in below_100_in_progress %}
-        <div class="audit-course">
-          <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
-          <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
-          <div>
-            <span class="audit-tag ip">● In Progress</span>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  </section>
-{% endif %}
-{% if additional_completed or additional_in_progress %}
-  <section class="audit-card p-5">
-    <h2 class="text-xl font-semibold mb-2">Additional Courses That Count Toward Total Units</h2>
-    <p class="text-sm text-slate-500 mb-4">
-      These courses count toward total earned units, but are not currently shown inside the main requirement sections.
-    </p>
+        <div class="space-y-2">
+          {% for r in additional_completed %}
+            <div class="audit-course">
+              <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
+              <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
+              <div>
+                <span class="audit-tag ok">✔ Completed</span>
+              </div>
+            </div>
+          {% endfor %}
 
-    <div class="space-y-2">
-      {% for r in additional_completed %}
-        <div class="audit-course">
-          <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
-          <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
-          <div>
-            <span class="audit-tag ok">✔ Completed</span>
-          </div>
+          {% for r in additional_in_progress %}
+            <div class="audit-course">
+              <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
+              <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
+              <div>
+                <span class="audit-tag ip">● In Progress</span>
+              </div>
+            </div>
+          {% endfor %}
         </div>
-      {% endfor %}
-
-      {% for r in additional_in_progress %}
-        <div class="audit-course">
-          <div><strong>{{ r.course.code }}</strong> — {{ r.course.title }}</div>
-          <div class="text-sm text-slate-500">{{ r.course.credits|floatformat:0 }} units</div>
-          <div>
-            <span class="audit-tag ip">● In Progress</span>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  </section>
-{% endif %}
-</div>
+      </section>
+    {% endif %}
+  </div>
 {% endblock %}

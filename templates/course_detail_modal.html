@@ -1,7 +1,6 @@
 {# campus/templates/course_detail_modal.html #}
 
 <div class="flex flex-col h-full">
-  <!-- Header -->
   <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
     <div>
       <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">
@@ -17,45 +16,92 @@
       {% endif %}
 
       {% if progress_label %}
-      <div class="mt-3">
-        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ progress_badge_class }}">
-          {{ progress_label }}
-        </span>
-      </div>
-{% endif %}
-<div class="mt-4 flex flex-wrap gap-2">
-  {% if can_remove %}
-    <form method="post" action="{% url 'remove_course_status' c.id %}">
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{% url 'courses' %}">
-      <button type="submit"
-              class="inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700">
-        Remove
-      </button>
-    </form>
-  {% else %}
-    <form method="post" action="{% url 'mark_course_completed' c.id %}">
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{% url 'courses' %}">
-      <button type="submit"
-              class="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700">
-        Add to Completed
-      </button>
-    </form>
+        <div class="mt-3">
+          <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ progress_badge_class }}">
+            {{ progress_label }}
+          </span>
+        </div>
+      {% endif %}
 
-    <form method="post" action="{% url 'mark_course_in_progress' c.id %}">
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{% url 'courses' %}">
-      <button type="submit"
-              class="inline-flex items-center rounded-lg bg-amber-600 px-4 py-2 text-white hover:bg-amber-700">
-        Add to In Progress
-      </button>
-    </form>
-  {% endif %}
-</div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        {% if can_remove %}
+          <form method="post" action="{% url 'remove_course_status' c.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'courses' %}">
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700"
+            >
+              Remove
+            </button>
+          </form>
+        {% else %}
+          <form method="post" action="{% url 'mark_course_completed' c.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'courses' %}">
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700"
+            >
+              Add to Completed
+            </button>
+          </form>
+
+          <form method="post" action="{% url 'mark_course_in_progress' c.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'courses' %}">
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-lg bg-amber-600 px-4 py-2 text-white hover:bg-amber-700"
+            >
+              Add to In Progress
+            </button>
+          </form>
+        {% endif %}
+
+        {% if semester_choices %}
+          <form method="post" action="{% url 'add_planned_course_by_form' c.id %}" class="flex flex-wrap items-center gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'courses' %}">
+            <select
+              name="term_plan_id"
+              class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+            >
+              {% for sem in semester_choices %}
+                <option value="{{ sem.id }}">{{ sem.label }}</option>
+              {% endfor %}
+            </select>
+
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+            >
+              Add to Degree Plan
+            </button>
+          </form>
+        {% endif %}
+
+        {% if planned_term_label %}
+          <form method="post" action="{% url 'remove_course_from_plan' c.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'courses' %}">
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-lg border border-red-200 bg-white px-4 py-2 text-red-700 hover:bg-red-50"
+            >
+              Remove from Plan
+            </button>
+          </form>
+        {% endif %}
+      </div>
+
+      {% if planned_term_label %}
+        <p class="mt-3 text-xs text-green-700">
+          Planned in: {{ planned_term_label }}
+        </p>
+      {% endif %}
     </div>
 
-    <!-- Close button (handled by JS in courses.html) -->
     <button
       type="button"
       id="course-detail-close"
@@ -66,9 +112,7 @@
     </button>
   </div>
 
-  <!-- Body -->
   <div class="flex-1 overflow-y-auto px-6 py-6 space-y-8 text-sm text-slate-800">
-    <!-- Description -->
     <section>
       <h3 class="font-semibold text-slate-900 uppercase tracking-wide text-xs">
         Description
@@ -82,7 +126,6 @@
       </p>
     </section>
 
-    <!-- Catalog info -->
     <section class="grid grid-cols-2 gap-x-6 gap-y-3">
       <h3 class="col-span-2 font-semibold text-slate-900 uppercase tracking-wide text-xs">
         Catalog info
@@ -130,104 +173,99 @@
         </div>
       </div>
     </section>
-    
 
-{% if c.prerequisites.exists or c.corequisites.exists %}
-<section>
+    {% if c.prerequisites.exists or c.corequisites.exists %}
+      <section>
+        <h3 class="font-semibold text-slate-900 uppercase tracking-wide text-xs">
+          Requirements
+        </h3>
 
-    <!-- Requirements -->
-  <section>
-  <h3 class="font-semibold text-slate-900 uppercase tracking-wide text-xs">
-    Requirements
-  </h3>
+        {% with prereqs=c.prerequisites.all %}
+          {% if prereqs %}
+            <div class="mt-4">
+              <div class="text-xs font-medium text-slate-500 uppercase">
+                Prerequisites
+              </div>
 
-  {% with prereqs=c.prerequisites.all %}
-  {% if prereqs %}
-    <div class="mt-4">
-      <div class="text-xs font-medium text-slate-500 uppercase">
-        Prerequisites
-      </div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                {% for p in prereqs %}
+                  <span class="px-2 py-1 rounded-full bg-slate-100 text-xs text-slate-800">
+                    {{ p.code }}
+                  </span>
+                {% endfor %}
+              </div>
 
-      <div class="mt-2 flex flex-wrap gap-2">
-        {% for p in prereqs %}
-          <span class="px-2 py-1 rounded-full bg-slate-100 text-xs text-slate-800">
-            {{ p.code }}
-          </span>
-        {% endfor %}
-      </div>
+              <p class="mt-2 text-xs text-slate-500">
+                Mode: {{ c.prereq_mode }}
+              </p>
+            </div>
+          {% endif %}
+        {% endwith %}
 
-      <p class="mt-2 text-xs text-slate-500">
-        Mode: {{ c.prereq_mode }}
-      </p>
-    </div>
-  {% endif %}
-{% endwith %}
+        {% with coreqs=c.corequisites.all %}
+          {% if coreqs %}
+            <div class="mt-4">
+              <div class="text-xs font-medium text-slate-500 uppercase">
+                Corequisites
+              </div>
 
-
-      {% with coreqs=c.corequisites.all %}
-  {% if coreqs %}
-    <div class="mt-4">
-      <div class="text-xs font-medium text-slate-500 uppercase">
-        Corequisites
-      </div>
-
-      <div class="mt-2 flex flex-wrap gap-2">
-        {% for co in coreqs %}
-          <span class="px-2 py-1 rounded-full bg-slate-100 text-xs text-slate-800">
-            {{ co.code }}
-          </span>
-        {% endfor %}
-      </div>
-    </div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                {% for co in coreqs %}
+                  <span class="px-2 py-1 rounded-full bg-slate-100 text-xs text-slate-800">
+                    {{ co.code }}
+                  </span>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        {% endwith %}
+      </section>
     {% endif %}
-    {% endwith %}
-</section>
-{% endif %}
-<section>
-  <h3 class="font-semibold text-slate-900 uppercase tracking-wide text-xs">
-    Requirement counting
-  </h3>
 
-  {% if is_multi_count %}
-    <div class="mt-2">
-      <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-100">
-        Multi-count
-      </span>
-    </div>
-  {% endif %}
+    <section>
+      <h3 class="font-semibold text-slate-900 uppercase tracking-wide text-xs">
+        Requirement counting
+      </h3>
 
-  {% if eligible_blocks %}
-    <div class="mt-4">
-      <div class="text-xs font-medium text-slate-500 uppercase">
-        Can count toward these sections
-      </div>
-      <div class="mt-2 flex flex-wrap gap-2">
-        {% for block_name in eligible_blocks %}
-          <span class="px-2 py-1 rounded-full bg-slate-100 text-xs text-slate-800">
-            {{ block_name }}
+      {% if is_multi_count %}
+        <div class="mt-2">
+          <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-100">
+            Multi-count
           </span>
-        {% endfor %}
-      </div>
-    </div>
-  {% endif %}
+        </div>
+      {% endif %}
 
-  {% if applied_blocks %}
-    <div class="mt-4">
-      <div class="text-xs font-medium text-slate-500 uppercase">
-        Counts simultaneously toward
-      </div>
-      <div class="mt-2 flex flex-wrap gap-2">
-        {% for block_name in applied_blocks %}
-          <span class="px-2 py-1 rounded-full bg-indigo-50 text-xs text-indigo-700 border border-indigo-100">
-            {{ block_name }}
-          </span>
-        {% endfor %}
-      </div>
-    </div>
-  {% endif %}
-</section>
+      {% if eligible_blocks %}
+        <div class="mt-4">
+          <div class="text-xs font-medium text-slate-500 uppercase">
+            Can count toward these sections
+          </div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            {% for block_name in eligible_blocks %}
+              <span class="px-2 py-1 rounded-full bg-slate-100 text-xs text-slate-800">
+                {{ block_name }}
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
 
-    <!-- Tags -->
+      {% if applied_blocks %}
+        <div class="mt-4">
+          <div class="text-xs font-medium text-slate-500 uppercase">
+            Counts simultaneously toward
+          </div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            {% for block_name in applied_blocks %}
+              <span class="px-2 py-1 rounded-full bg-indigo-50 text-xs text-indigo-700 border border-indigo-100">
+                {{ block_name }}
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </section>
+
     <section>
       <h3 class="font-semibold text-slate-900 uppercase tracking-wide text-xs">
         Tags
