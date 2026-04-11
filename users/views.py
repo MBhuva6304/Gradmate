@@ -375,13 +375,41 @@ def dashboard(request):
     ).exists()
 
     remaining = profile.remaining_required_courses()
-    next_list, next_credits, next_term = profile.recommend_next_term()
+    next_list, next_credits, next_term, recommendation_details = profile.recommend_next_term()
     grad_term, remaining_credits, completed_credits, target_credits = profile.approximate_graduation_term()
-
+    effective_target_credits = int(profile.effective_target_credits(include_planned=False))
     group_progress_raw = profile.requirement_group_progress_with_planned()
     planned_credits = int(profile.total_planned_units())
     remaining_after_plan = int(profile.remaining_credits_after_plan())
 
+    in_progress_credits = sum(
+        float(c.course.credits or 0)
+        for c in InProgressClass.objects.filter(profile=profile).select_related("course")
+        if c.course
+    )
+
+    total_now = int(float(completed_credits) + float(in_progress_credits))
+    total_after_plan = int(float(completed_credits) + float(in_progress_credits) + float(planned_credits))
+
+    if remaining_after_plan <= 0:
+        effective_target_with_plan = total_after_plan
+    else:
+        effective_target_with_plan = total_after_plan + remaining_after_plan
+
+    ring_total = max(1, effective_target_with_plan)
+
+    current_done_pct = min(
+        100,
+        int((float(completed_credits) / ring_total) * 100)
+    )
+    current_ip_pct = min(
+        100,
+        int(((float(completed_credits) + float(in_progress_credits)) / ring_total) * 100)
+    )
+    current_plan_pct = min(
+        100,
+        int(((float(completed_credits) + float(in_progress_credits) + float(planned_credits)) / ring_total) * 100)
+    )
     ge_mapping = {
         "A1 Oral Communication": "A1",
         "A2 Written Communication": "A2",
@@ -419,6 +447,17 @@ def dashboard(request):
 
     for g in group_progress_raw:
         item = dict(g)
+
+        if item.get("display_mode") == "course_equivalent":
+            item["completed"] = item.get("display_completed", item.get("completed", 0))
+            item["in_progress"] = item.get("display_in_progress", item.get("in_progress", 0))
+            item["planned"] = item.get("display_planned", item.get("planned", 0))
+            item["min_required"] = item.get("display_required", item.get("min_required", 0))
+
+        for field in ["completed", "in_progress", "planned", "min_required"]:
+            val = float(item.get(field, 0) or 0)
+            item[field] = int(val) if val.is_integer() else round(val, 2)
+
         if g["name"] in ge_mapping:
             item["short"] = ge_mapping[g["name"]]
             ge_progress.append(item)
@@ -463,20 +502,27 @@ def dashboard(request):
 
     incomplete_block_count = sum(1 for g in (ge_progress + major_progress) if not g.get("done"))
 
-    in_progress_credits = sum(
-        float(c.course.credits or 0)
-        for c in InProgressClass.objects.filter(profile=profile).select_related("course")
-        if c.course
-    )
 
     remaining_for_chart = max(
         0,
-        int(target_credits - completed_credits - float(in_progress_credits))
+        int(
+            effective_target_with_plan
+            - completed_credits
+            - float(in_progress_credits)
+            - float(planned_credits)
+        )
     )
-    denom = target_credits or 1
+
+    denom = effective_target_with_plan or 1
     progress_percent = min(
         100,
-        int(((completed_credits + float(in_progress_credits)) / denom) * 100)
+        int(
+            (
+                completed_credits
+                + float(in_progress_credits)
+                + float(planned_credits)
+            ) / denom * 100
+        )
     ) 
 
     context = {
@@ -487,6 +533,8 @@ def dashboard(request):
         "in_progress_credits": int(float(in_progress_credits)),
         "remaining_credits": remaining_for_chart,
         "target_credits": int(target_credits),
+        "effective_target_credits": effective_target_credits,
+        "effective_target_with_plan": effective_target_with_plan,
         "progress_percent": progress_percent,
         "ge_progress": ge_progress,
         "major_progress": major_progress,
@@ -502,6 +550,9 @@ def dashboard(request):
         "incomplete_block_count": incomplete_block_count,
         "planned_credits": planned_credits,
         "remaining_after_plan": remaining_after_plan,
+        "current_done_pct": current_done_pct,
+        "current_ip_pct": current_ip_pct,
+        "current_plan_pct": current_plan_pct,
     }
 
     return render(request, "dashboard.html", context)
@@ -540,10 +591,12 @@ def degree_plan(request):
     ).exists()
 
     remaining = list(profile.remaining_required_courses())
-    next_list, _, next_term = profile.recommend_next_term()
-    next_list = list(next_list)
+    recommended_courses, recommended_units, next_term, recommendation_details = profile.recommend_next_term()
+    next_list = list(recommended_courses)
 
     grad_term, _, completed_credits, target_credits = profile.approximate_graduation_term()
+    effective_target_credits = int(profile.effective_target_credits(include_planned=False))
+    effective_target_with_plan = int(profile.effective_target_credits(include_planned=True))
     group_progress_raw = profile.requirement_group_progress_with_planned()
 
     ge_mapping = {
@@ -619,12 +672,18 @@ def degree_plan(request):
     )
 
     total_planned_units = int(profile.total_planned_units())
-    remaining_credits = max(
-        0,
-        int(target_credits - completed_credits - float(in_progress_credits))
-    )
+
+    total_now = int(float(completed_credits) + float(in_progress_credits))
+    total_after_plan = int(float(completed_credits) + float(in_progress_credits) + float(total_planned_units))
+
+    remaining_credits = max(0, effective_target_credits - total_now)
     remaining_after_plan = int(profile.remaining_credits_after_plan())
     planned_warning_count = profile.planned_warning_count()
+
+    if remaining_after_plan <= 0:
+        effective_target_with_plan = total_after_plan
+    else:
+        effective_target_with_plan = total_after_plan + remaining_after_plan
 
     term_plans = profile.get_or_create_future_term_plans(count=4)
     saved_terms = []
@@ -639,6 +698,7 @@ def degree_plan(request):
         planned_courses_flat.extend([pc.course for pc in planned_courses if pc.course])
 
         units = int(profile.term_plan_total_units(term_plan))
+        
         saved_terms.append({
             "id": term_plan.id,
             "term_plan": term_plan,
@@ -649,6 +709,13 @@ def degree_plan(request):
             "units": units,
             "is_over_limit": units > int(profile.max_credits_next_term or 15),
         })
+    
+    all_sections_done_with_plan = profile.all_sections_satisfied(include_planned=True)
+
+    if all_sections_done_with_plan:
+        non_empty_terms = [sem for sem in saved_terms if sem["courses"]]
+        empty_terms = [sem for sem in saved_terms if not sem["courses"]]
+        saved_terms = non_empty_terms + (empty_terms[:1] if empty_terms else [])
 
     semester_choices = [
         {
@@ -668,15 +735,19 @@ def degree_plan(request):
     else:
         count_map = {}
 
+    progress_by_name = profile._requirement_progress_map()
+    block_code_map = profile._requirement_block_code_map()
+
     for sem in saved_terms:
         for pc in sem["courses"]:
             if not pc.course:
                 continue
+
             info = count_map.get(pc.course.id, {})
             pc.applied_blocks = info.get("applied_names", [])
             pc.eligible_blocks = info.get("eligible_names", [])
-            pc.is_potentially_unnecessary = not profile.course_still_useful_for_requirements(pc.course)
 
+            pc.is_potentially_unnecessary = not bool(pc.applied_blocks)
     for c in next_list:
         info = count_map.get(c.id, {})
         c.applied_blocks = info.get("applied_names", [])
@@ -691,6 +762,12 @@ def degree_plan(request):
 
     backup_list = []
     locked_list = []
+    alternative_options = []
+    if profile.all_sections_satisfied(include_planned=True):
+        alternative_options = profile.alternative_courses_for_planned_sections(
+            planned_courses_flat,
+            limit=12,
+        )
 
     for c in remaining:
         code = (c.code or "").upper()
@@ -712,26 +789,40 @@ def degree_plan(request):
     semester_recommendations = []
     for sem in saved_terms:
         term_plan = sem["term_plan"]
-        eligible_for_sem = []
 
-        for c in remaining:
-            ok, _reason = profile.can_add_course_to_term_plan(c, term_plan)
-            if ok:
-                eligible_for_sem.append(c)
+        if all_sections_done_with_plan:
+            scored_courses = []
+        else:
+            scored_courses = profile.recommend_for_term_plan(
+                term_plan,
+                remaining_courses=remaining,
+                limit=5,
+            )
 
         semester_recommendations.append({
             "term_plan_id": sem["id"],
             "term_label": str(sem["term"]),
-            "courses": eligible_for_sem[:5],
+            "courses": [item["course"] for item in scored_courses],
+            "details": scored_courses,
         })
 
     sections_left = []
     for g in major_progress + ge_progress:
-        completed = int(g.get("completed", 0))
-        in_progress = int(g.get("in_progress", 0))
-        planned = int(g.get("planned", 0))
-        required = int(g.get("min_required", 0))
-        remaining_count = max(0, required - completed - in_progress - planned)
+        if g.get("display_mode") == "course_equivalent":
+            completed = float(g.get("display_completed", g.get("completed", 0)))
+            in_progress = float(g.get("display_in_progress", g.get("in_progress", 0)))
+            planned = float(g.get("display_planned", g.get("planned", 0)))
+            required = float(g.get("display_required", g.get("min_required", 0)))
+            remaining_count = max(
+                0.0,
+                float(g.get("display_remaining", required - completed - in_progress - planned))
+            )
+        else:
+            completed = float(g.get("completed", 0))
+            in_progress = float(g.get("in_progress", 0))
+            planned = float(g.get("planned", 0))
+            required = float(g.get("min_required", 0))
+            remaining_count = max(0.0, required - completed - in_progress - planned)
 
         if completed >= required and in_progress == 0 and planned == 0:
             continue
@@ -755,14 +846,15 @@ def degree_plan(request):
         sections_left.append({
             "name": g.get("name"),
             "short": g.get("short"),
-            "required": required,
-            "completed": completed,
-            "in_progress": in_progress,
-            "planned": planned,
-            "remaining": remaining_count,
+            "required": int(required) if float(required).is_integer() else round(required, 2),
+            "completed": int(completed) if float(completed).is_integer() else round(completed, 2),
+            "in_progress": int(in_progress) if float(in_progress).is_integer() else round(in_progress, 2),
+            "planned": int(planned) if float(planned).is_integer() else round(planned, 2),
+            "remaining": int(remaining_count) if float(remaining_count).is_integer() else round(remaining_count, 2),
             "state": state,
             "badge_class": badge_class,
             "total_options": g.get("total_options", 0),
+            "display_mode": g.get("display_mode", ""),
         })
 
     sections_left.sort(key=lambda x: (x["remaining"] == 0, x["name"] or ""))
@@ -779,9 +871,12 @@ def degree_plan(request):
         "in_progress_credits": int(float(in_progress_credits)),
         "remaining_credits": remaining_credits,
         "target_credits": int(target_credits),
+        "effective_target_credits": effective_target_credits,
+        "effective_target_with_plan": effective_target_with_plan,
         "next_list": next_list,
-        "next_credits": int(sum(float(c.credits or 0) for c in next_list)),
         "next_term": next_term,
+        "recommendation_details": recommendation_details,
+        "next_credits": int(sum(float(c.credits or 0) for c in next_list)),
         "req_missing": req_missing,
         "saved_terms": saved_terms,
         "semester_choices": semester_choices,
@@ -792,8 +887,12 @@ def degree_plan(request):
         "sections_left": sections_left,
         "total_planned_units": total_planned_units,
         "remaining_after_plan": remaining_after_plan,
+        "recommended_courses": recommended_courses,
+        "recommended_units": recommended_units,
         "semester_recommendations": semester_recommendations,
         "planned_warning_count": planned_warning_count,
+        "alternative_options": alternative_options,
+        "all_sections_done_with_plan": all_sections_done_with_plan,
     }
 
     return render(request, "degree_plan.html", context)
@@ -813,7 +912,7 @@ def auto_suggest_degree_plan(request):
 
     PlannedCourse.objects.filter(term_plan=first_term).delete()
 
-    next_list, _, _ = profile.recommend_next_term()
+    next_list, _, _, _ = profile.recommend_next_term()
 
     created = 0
     for idx, course in enumerate(next_list, start=1):
@@ -1536,6 +1635,42 @@ def _build_requirement_audit_data(profile, user):
     used_requirement_codes = set()
     used_display_codes = set()
 
+    def _pick_best_fallback_course(source_rows, block_course_codes):
+        """
+        Display-only fallback chooser.
+
+        Prefer a course that belongs to fewer requirement blocks, so
+        single-section courses like TH-110 are used before shared courses
+        like HUM-101 when both could satisfy the current section.
+
+        This does NOT change rules or counting. It only improves which
+        course is shown inside a section when assigned_*_codes are missing.
+        """
+        candidates = []
+        req_local = profile.get_requirement()
+
+        for row in source_rows:
+            if not getattr(row, "course", None) or not row.course.code:
+                continue
+
+            code = (row.course.code or "").upper()
+            if code not in block_course_codes:
+                continue
+            if code in used_display_codes:
+                continue
+
+            overlap_count = 9999
+            if req_local:
+                overlap_count = req_local.blocks.filter(courses__code__iexact=code).distinct().count()
+
+            candidates.append((overlap_count, row))
+
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda x: x[0])
+        return candidates[0][1]
+
     for bucket_name in bucket_order:
         items = grouped.get(bucket_name, [])
         if not items:
@@ -1706,35 +1841,41 @@ def _build_requirement_audit_data(profile, user):
             display_name = display_name_map.get(raw_name, raw_name)
             short_name = _short_group_name(display_name or raw_name)
 
-            required = _safe_float(
-                item.get("min_required")
-                or item.get("required")
-                or item.get("credits_required")
-                or item.get("units_required")
-                or item.get("total_required")
-                or 0
-            )
+            if item.get("display_mode") == "course_equivalent":
+                required = _safe_float(item.get("display_required", 0))
+                completed = _safe_float(item.get("display_completed", 0))
+                in_progress_from_group = _safe_float(item.get("display_in_progress", 0))
+                planned_from_group = _safe_float(item.get("display_planned", 0))
+            else:
+                required = _safe_float(
+                    item.get("min_required")
+                    or item.get("required")
+                    or item.get("credits_required")
+                    or item.get("units_required")
+                    or item.get("total_required")
+                    or 0
+                )
 
-            completed = _safe_float(
-                item.get("completed")
-                or item.get("credits_completed")
-                or item.get("units_completed")
-                or 0
-            )
+                completed = _safe_float(
+                    item.get("completed")
+                    or item.get("credits_completed")
+                    or item.get("units_completed")
+                    or 0
+                )
 
-            in_progress_from_group = _safe_float(
-                item.get("in_progress")
-                or item.get("credits_in_progress")
-                or item.get("units_in_progress")
-                or 0
-            )
+                in_progress_from_group = _safe_float(
+                    item.get("in_progress")
+                    or item.get("credits_in_progress")
+                    or item.get("units_in_progress")
+                    or 0
+                )
 
-            planned_from_group = _safe_float(
-                item.get("planned")
-                or item.get("credits_planned")
-                or item.get("units_planned")
-                or 0
-            )
+                planned_from_group = _safe_float(
+                    item.get("planned")
+                    or item.get("credits_planned")
+                    or item.get("units_planned")
+                    or 0
+                )
 
             done = bool(item.get("done", False))
 
@@ -1788,37 +1929,19 @@ def _build_requirement_audit_data(profile, user):
                     matched_planned.append(pc)
 
             if not matched_completed and completed > 0 and block_course_codes:
-                for cc in completed_courses:
-                    code = (cc.course.code or "").upper() if cc.course else ""
-                    if (
-                        cc.course
-                        and code in block_course_codes
-                        and code not in used_display_codes
-                    ):
-                        matched_completed.append(cc)
-                        break
+                best_cc = _pick_best_fallback_course(completed_courses, block_course_codes)
+                if best_cc:
+                    matched_completed.append(best_cc)
 
             if not matched_ip and in_progress_from_group > 0 and block_course_codes:
-                for ic in in_progress_courses:
-                    code = (ic.course.code or "").upper() if ic.course else ""
-                    if (
-                        ic.course
-                        and code in block_course_codes
-                        and code not in used_display_codes
-                    ):
-                        matched_ip.append(ic)
-                        break
+                best_ic = _pick_best_fallback_course(in_progress_courses, block_course_codes)
+                if best_ic:
+                    matched_ip.append(best_ic)
 
             if not matched_planned and planned_from_group > 0 and block_course_codes:
-                for pc in planned_courses:
-                    code = (pc.course.code or "").upper() if pc.course else ""
-                    if (
-                        pc.course
-                        and code in block_course_codes
-                        and code not in used_display_codes
-                    ):
-                        matched_planned.append(pc)
-                        break
+                best_pc = _pick_best_fallback_course(planned_courses, block_course_codes)
+                if best_pc:
+                    matched_planned.append(best_pc)
 
             seen_codes = set()
             course_rows = []
@@ -2056,20 +2179,11 @@ def _build_requirement_audit_data(profile, user):
         
         subsections.sort(key=_subsection_sort_key)
 
-        group_required = sum(s["required"] for s in subsections)
-        group_completed = sum(s["completed"] for s in subsections)
-        group_remaining = sum(s["remaining"] for s in subsections)
+        group_required = sum(_safe_float(s["required"]) for s in subsections)
+        group_completed = sum(_safe_float(s["completed"]) for s in subsections)
+        group_in_progress = sum(_safe_float(s.get("in_progress", 0)) for s in subsections)
         group_planned = sum(_safe_float(s.get("planned", 0)) for s in subsections)
-
-        group_in_progress_codes = set()
-        for s in subsections:
-            group_in_progress_codes.update(
-                (code or "").upper()
-                for code in s.get("assigned_in_progress_codes", [])
-                if code
-            )
-
-        group_in_progress = len(group_in_progress_codes)
+        group_remaining = sum(_safe_float(s["remaining"]) for s in subsections)
 
         audit_groups.append({
             "title": bucket_name,

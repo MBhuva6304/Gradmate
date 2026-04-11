@@ -259,7 +259,7 @@
         <div class="mb-4 flex items-center justify-between">
           <div>
             <h2 class="text-sm font-semibold">Credits Progress</h2>
-            <p class="text-xs text-slate-500">Goal: {{ target_credits }} units</p>
+            <p class="text-xs text-slate-500">Goal: {{ effective_target_credits }} units</p>
           </div>
           <span class="text-xs text-slate-500">{{ current_term }}</span>
         </div>
@@ -271,14 +271,18 @@
               style="
                 background:
                   radial-gradient(circle closest-side, white 70%, transparent 0 99.9%, white 0),
-                  conic-gradient(#4f46e5 {{ progress_percent }}%, #e5e7eb 0);
-              "
+                  conic-gradient(
+                    #4f46e5 0 {{ current_done_pct }}%,
+                      #f59e0b {{ current_done_pct }}% {{ current_ip_pct }}%,
+                      #22c55e {{ current_ip_pct }}% {{ current_plan_pct }}%,
+                      #e5e7eb {{ current_plan_pct }}% 100%
+                    );"
             ></div>
             <div class="absolute inset-0 grid place-items-center">
               <div class="text-center">
                 <div class="text-xl font-semibold">{{ progress_percent }}%</div>
                 <div class="text-[11px] text-slate-500">
-                  toward {{ target_credits }} units
+                   {{ effective_target_credits }} units
                 </div>
               </div>
             </div>

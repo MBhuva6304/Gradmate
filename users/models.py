@@ -1,3 +1,5 @@
+from pyexpat.errors import codes
+
 from django.db import models
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -166,90 +168,114 @@ class StudentProfile(models.Model):
 
     def remaining_required_courses(self):
         """
-        DPR-aware remaining course list.
+        Return courses still useful for unfinished requirements.
 
-        Excludes BOTH:
-        - completed courses
-        - in-progress courses
-
-        IMPORTANT:
-        Exclusion is by COURSE CODE, not by COURSE ID.
-        This avoids duplicate-row problems like:
-        COMP-122 completed row id != COMP-122 block row id
+        Rules:
+        - completed and in-progress courses are excluded
+        - count_group exclusivity is respected when allow_double_count=False
+        - Senior Electives are tracked by units, not row count
         """
         req = self.get_requirement()
         if not req:
             return Course.objects.none()
 
         taken_codes = {code.upper() for code in self.taken_course_codes()}
-
-        # New DPR engine blocks
         blocks = list(req.blocks.prefetch_related("courses").all())
-        if blocks:
-            used_codes = set()
-            needed_codes = set()
+        if not blocks:
+            return Course.objects.none()
 
-            blocks.sort(key=lambda b: (int(b.min_required), b.courses.count(), b.name))
+        blocks.sort(key=lambda b: ((b.count_group or "group4"), int(b.min_required), b.courses.count(), b.name))
+        used_by_count_group = {}
+        needed_codes = set()
 
-            for b in blocks:
-                block_courses = list(b.courses.all())
-                block_codes = [c.code.upper() for c in block_courses]
+        for b in blocks:
+            block_group = (b.count_group or "group4").strip() or "group4"
+            block_courses = list(b.courses.all())
+            code_to_course = {
+                (c.code or "").upper(): c
+                for c in block_courses
+                if c.code
+            }
+            block_codes = self._prioritized_block_codes(b, blocks)
 
-                available_completed = []
+            def code_allowed(code: str) -> bool:
+                if b.allow_double_count:
+                    return True
+                used_codes = used_by_count_group.setdefault(block_group, set())
+                return code not in used_codes
+
+            chosen_codes = []
+
+            if b.name == "Senior Electives":
+                earned_units = 0.0
+
                 for code in block_codes:
-                    if code in taken_codes and (b.allow_double_count or code not in used_codes):
-                        available_completed.append(code)
+                    course = code_to_course.get(code)
+                    if not course:
+                        continue
+                    if code in taken_codes and code_allowed(code):
+                        chosen_codes.append(code)
+                        earned_units += float(course.credits or 0)
+                        if earned_units >= float(b.min_required):
+                            break
 
-                assigned = available_completed[: int(b.min_required)]
+                remaining_units = max(0.0, float(b.min_required) - earned_units)
 
-                if not b.allow_double_count:
-                    used_codes.update(assigned)
+                if remaining_units > 0:
+                    future_units = 0.0
+                    for code in block_codes:
+                        course = code_to_course.get(code)
+                        if not course:
+                            continue
+                        if code in taken_codes:
+                            continue
+                        if not code_allowed(code):
+                            continue
+                        if code in chosen_codes:
+                            continue
+
+                        needed_codes.add(code)
+                        chosen_codes.append(code)
+                        future_units += float(course.credits or 0)
+                        if future_units >= remaining_units:
+                            break
+
+            else:
+                assigned = []
+                for code in block_codes:
+                    if code in taken_codes and code_allowed(code):
+                        if code not in assigned:
+                            assigned.append(code)
+                        if len(assigned) >= int(b.min_required):
+                            break
 
                 still_needed = max(0, int(b.min_required) - len(assigned))
+
+                future = []
                 if still_needed > 0:
-                    remaining_options = [code for code in block_codes if code not in taken_codes]
-                    needed_codes.update(remaining_options[:still_needed])
+                    for code in block_codes:
+                        if code in taken_codes:
+                            continue
+                        if not code_allowed(code):
+                            continue
+                        if code in future:
+                            continue
+                        future.append(code)
+                        needed_codes.add(code)
+                        if len(future) >= still_needed:
+                            break
 
-            return Course.objects.filter(
-                program=self.program,
-                catalog_year=self.catalog_year,
-                code__in=needed_codes,
-            ).order_by("code").distinct()
+                chosen_codes = assigned + future
 
-        # Fallback old group logic
-        groups = req.groups.prefetch_related("courses").all()
+            if not b.allow_double_count:
+                used_codes = used_by_count_group.setdefault(block_group, set())
+                used_codes.update(chosen_codes)
 
-        required_codes = set()
-        elective_pool_codes = set()
-
-        for g in groups:
-            group_codes = {c.code.upper() for c in g.courses.all()}
-            completed_in_group = len(group_codes & taken_codes)
-
-            if completed_in_group >= int(g.min_required):
-                continue
-
-            if len(group_codes) <= int(g.min_required):
-                required_codes.update(group_codes)
-            else:
-                elective_pool_codes.update(group_codes)
-
-        required_codes = required_codes - taken_codes
-        elective_pool_codes = elective_pool_codes - taken_codes
-
-        required_qs = Course.objects.filter(
+        return Course.objects.filter(
             program=self.program,
             catalog_year=self.catalog_year,
-            code__in=required_codes,
-        ).order_by("code")
-
-        elective_qs = Course.objects.filter(
-            program=self.program,
-            catalog_year=self.catalog_year,
-            code__in=elective_pool_codes,
-        ).order_by("code")[:30]
-
-        return (required_qs | elective_qs).distinct()
+            code__in=needed_codes,
+        ).order_by("code").distinct()
 
     def prerequisites_satisfied(self, course):
         prereq_codes = {
@@ -279,28 +305,564 @@ class StudentProfile(models.Model):
 
     def recommend_next_term(self, next_term=None):
         next_term = next_term or Term.from_date().next()
-        remaining = list(self.remaining_required_courses())
 
         taken_codes = self.taken_course_codes()
+        planned_codes = self.planned_course_codes()
+        progress_by_name = self._requirement_progress_map()
+        block_code_map = self._requirement_block_code_map()
+        completed_units = self._completed_units_for_planning()
 
-        # double safety: never recommend already completed / in-progress classes
-        remaining = [c for c in remaining if c.code.upper() not in taken_codes]
+        candidates = self.recommendation_candidates(
+            progress_by_name=progress_by_name,
+            block_code_map=block_code_map,
+        )
 
-        eligible = [c for c in remaining if self.prerequisites_satisfied(c)]
-        offered = [
-            c for c in eligible
-            if (c.offered_in.count() == 0 or next_term in c.offered_in.all())
-        ]
+        eligible = [c for c in candidates if self.prerequisites_satisfied(c)]
+
+        offered = []
+        for c in eligible:
+            offered_terms = list(c.offered_in.all())
+            if not offered_terms or next_term in offered_terms:
+                offered.append(c)
+
+        scored = []
+        for c in offered:
+            scored.append(
+                self._score_course_for_recommendation(
+                    c,
+                    taken_codes=taken_codes,
+                    planned_codes=planned_codes,
+                    progress_by_name=progress_by_name,
+                    completed_units=completed_units,
+                )
+            )
+
+        scored.sort(key=lambda item: (-item["score"], item["course"].code))
+
+        total_units = 0.0
+        selected = []
+        recommendation_details = []
+
+        for item in scored:
+            c = item["course"]
+            units = float(c.credits or 0)
+
+            if total_units + units <= float(self.max_credits_next_term or 15):
+                selected.append(c)
+                recommendation_details.append(item)
+                total_units += units
+
+        return selected, total_units, next_term, recommendation_details
+    
+    def recommend_for_term_plan(self, term_plan, remaining_courses=None, limit=5):
+        progress_by_name = self._requirement_progress_map()
+        taken_codes = self.taken_course_codes()
+        planned_codes = self.planned_course_codes()
+        completed_units = self._completed_units_for_planning()
+
+        remaining_courses = remaining_courses or list(self.remaining_required_courses())
+
+        scored = []
+        for course in remaining_courses:
+            ok, _reason = self.can_add_course_to_term_plan(course, term_plan)
+            if not ok:
+                continue
+
+            item = self._score_course_for_recommendation(
+                course,
+                taken_codes=taken_codes,
+                planned_codes=planned_codes,
+                progress_by_name=progress_by_name,
+                completed_units=completed_units,
+            )
+
+            scored.append(item)
+
+        scored.sort(key=lambda item: (-item["score"], item["course"].code))
+        return scored[:limit]
+    
+    def _completed_units_for_planning(self):
+        completed = self.completed_classes.select_related("course").all()
+        in_progress = self.in_progress_classes.select_related("course").all()
+
+        completed_units = sum(float(row.course.credits or 0) for row in completed if row.course)
+        in_progress_units = sum(float(row.course.credits or 0) for row in in_progress if row.course)
+
+        return completed_units + in_progress_units
+    
+    def _course_number_value(self, course):
+        if not course:
+            return 0
+
+        raw = str(getattr(course, "code", "") or "").strip().upper()
+        digits = "".join(ch for ch in raw if ch.isdigit())
+        return int(digits) if digits else 0
+    
+    def _is_upper_division_course(self, course):
+        return self._course_number_value(course) >= 300
+
+    def _term_timing_score(self, course, completed_units=None):
+        completed_units = completed_units if completed_units is not None else self._completed_units_for_planning()
+        code = (course.code or "").upper()
+
+        score = 0
+
+        if self.program == "BS_CS":
+            if code in {"COMP-490", "COMP-490L", "COMP-491L"}:
+                if completed_units < 75:
+                    score -= 40
+                elif completed_units < 90:
+                    score -= 18
+                else:
+                    score += 4
+
+            elif code in {"COMP-380", "COMP-380L", "COMP-322", "COMP-322L", "COMP-333", "COMP-324", "COMP-310"}:
+                if completed_units < 45:
+                    score -= 8
+                else:
+                    score += 4
+
+            elif self._is_upper_division_course(course):
+                if completed_units < 60:
+                    score -= 6
+                else:
+                    score += 2
+
+        return score
+    
+    def _recommendation_labels(self, reasons):
+        labels = []
+
+        if reasons.get("unlock", 0) > 0:
+            labels.append("Unlocks future courses")
+
+        if reasons.get("scarcity", 0) >= 8:
+            labels.append("Fills narrow requirement")
+        elif reasons.get("scarcity", 0) > 0:
+            labels.append("Helps requirement progress")
+
+        if reasons.get("critical_path", 0) >= 10:
+            labels.append("Critical path")
+        elif reasons.get("critical_path", 0) > 0:
+            labels.append("Major path")
+
+        if reasons.get("timing", 0) > 0:
+            labels.append("Good for this stage")
+        elif reasons.get("timing", 0) < 0:
+            labels.append("Better later")
+
+        return labels
+    
+    def _score_course_for_recommendation(
+        self,
+        course,
+        taken_codes,
+        planned_codes,
+        progress_by_name,
+        completed_units=None,
+    ):
+        usable_codes = taken_codes | planned_codes
+
+        unlock_score = self._unlock_score(course, usable_codes)
+        scarcity_score = self._requirement_scarcity_score(
+            course,
+            progress_by_name=progress_by_name,
+            taken_codes=taken_codes,
+            planned_codes=planned_codes,
+        )
+
+        critical_path_score = 0
+        if self.program == "BS_CS":
+            critical_path_score = self._cs_critical_path_score(course)
+
+        timing_score = self._term_timing_score(course, completed_units=completed_units)
+
+        total_score = unlock_score + scarcity_score + critical_path_score + timing_score
+
+        code = (course.code or "").upper()
+        if self.program == "BS_CS" and self.catalog_year == 2023:
+            if code.startswith("COMP-4") or code.startswith("COMP-5"):
+                total_score += 3
+
+        reasons = {
+            "unlock": unlock_score,
+            "scarcity": scarcity_score,
+            "critical_path": critical_path_score,
+            "timing": timing_score,
+        }
+
+        return {
+            "course": course,
+            "score": total_score,
+            "reasons": reasons,
+            "labels": self._recommendation_labels(reasons),
+        }
+
+    def _required_course_pool(self):
+        req = self.get_requirement()
+        if not req:
+            return Course.objects.none()
+
+        return (
+            Course.objects.filter(
+                program=self.program,
+                catalog_year=self.catalog_year,
+            )
+            .prefetch_related(
+                "prerequisites",
+                "corequisites",
+                "offered_in",
+                "requirement_blocks",
+                "as_prerequisite_for",
+                "prereq_groups__options",
+            )
+            .distinct()
+        )
+    
+    def effective_target_credits(self, include_planned=False):
+        """
+        Graduation needs BOTH:
+        1. at least the catalog minimum units
+        2. all required sections satisfied
+
+        So effective target is the larger of:
+        - catalog minimum credits
+        - current earned/planned credits + remaining requirement units
+        """
+        req = self.get_requirement()
+        base_target = int(req.required_credits) if req else 120
+
+        completed_credits = sum(
+            float(c.credits or 0)
+            for c in self.completed_courses_qs()
+            if c.counts_for_total_units()
+        )
+
+        in_progress_credits = sum(
+            float(c.course.credits or 0)
+            for c in InProgressClass.objects.filter(profile=self).select_related("course")
+            if c.course
+        )
+
+        planned_credits = 0.0
+        if include_planned:
+            planned_credits = float(self.total_planned_units())
+
+        current_total = completed_credits + in_progress_credits + planned_credits
+        remaining_requirement_units = self._remaining_requirement_units(include_planned=include_planned)
+
+        logical_target = current_total + remaining_requirement_units
+        return max(float(base_target), float(logical_target))
+    
+    def _normalized_requirement_rows(self, include_planned=False):
+        rows = (
+            self.requirement_group_progress_with_planned()
+            if include_planned else
+            self.requirement_group_progress()
+        )
+
+        names = { (row.get("name") or "").strip() for row in rows }
+
+        ud_helper_names = {
+            "C Upper Division Arts and Humanities",
+            "D Upper Division Social Sciences",
+            "F Upper Division Comparative Cultural Studies",
+            "F Upper Division Comparative Cultural Studies 2",
+        }
+
+        if "General Education Upper Division" in names:
+            rows = [
+                row for row in rows
+                if (row.get("name") or "").strip() not in ud_helper_names
+            ]
+
+        return rows
+    
+    def all_sections_satisfied(self, include_planned=False):
+        rows = self._normalized_requirement_rows(include_planned=include_planned)
+
+        for row in rows:
+            required = float(row.get("min_required") or 0)
+            completed = float(row.get("completed") or 0)
+            in_progress = float(row.get("in_progress") or 0)
+            planned = float(row.get("planned") or 0)
+
+            progress_value = completed + in_progress
+            if include_planned:
+                progress_value += planned
+
+            if progress_value < required:
+                return False
+
+        return True
+    
+    def _remaining_requirement_units(self, include_planned=False):
+        """
+        Credit estimate rule:
+
+        - Normal missing section = 3 units per missing course-count
+        - Senior Electives = real remaining units
+        - If synthetic UDGE row exists, do not count the helper UD rows again
+        """
+        rows = self._normalized_requirement_rows(include_planned=include_planned)
 
         total = 0.0
-        take = []
-        for c in sorted(offered, key=lambda x: x.code):
-            if total + float(c.credits) <= self.max_credits_next_term:
-                take.append(c)
-                total += float(c.credits)
+        for row in rows:
+            name = (row.get("name") or "").strip()
 
-        return take, total, next_term
+            required = float(row.get("min_required") or 0)
+            completed = float(row.get("completed") or 0)
+            in_progress = float(row.get("in_progress") or 0)
+            planned = float(row.get("planned") or 0)
+
+            progress_value = completed + in_progress
+            if include_planned:
+                progress_value += planned
+
+            remaining = max(0.0, required - progress_value)
+            if remaining <= 0:
+                continue
+
+            if name == "Senior Electives":
+                total += remaining
+            else:
+                total += remaining * 3.0
+
+        return total
+
+    def _requirement_block_code_map(self):
+        req = self.get_requirement()
+        if not req:
+            return {}
+
+        return {
+            block.name: {
+                (c.code or "").upper()
+                for c in block.courses.all()
+                if c.code
+            }
+            for block in req.blocks.prefetch_related("courses").all()
+        }
     
+    def course_still_useful_for_requirements(
+        self,
+        course,
+        progress_by_name=None,
+        block_code_map=None,
+    ):  
+        code = (course.code or "").upper()
+        req = self.get_requirement()
+
+        if not req or not code:
+            return False
+
+        progress_by_name = progress_by_name or self._requirement_progress_map()
+        block_code_map = block_code_map or self._requirement_block_code_map()
+
+        for block_name, block_codes in block_code_map.items():
+            if code not in block_codes:
+                continue
+
+            row = progress_by_name.get(block_name)
+            if row and not row.get("done", False):
+                return True
+
+        return False
+
+    def recommendation_candidates(self, progress_by_name=None, block_code_map=None):
+        taken = self.taken_course_codes()
+        planned = self.planned_course_codes()
+        progress_by_name = progress_by_name or self._requirement_progress_map()
+        block_code_map = block_code_map or self._requirement_block_code_map()
+
+        candidates = []
+        for c in self._required_course_pool():
+            code = (c.code or "").upper()
+            if code in taken or code in planned:
+                continue
+            if self.course_still_useful_for_requirements(
+                c,
+                progress_by_name=progress_by_name,
+                block_code_map=block_code_map,
+            ):
+                candidates.append(c)
+
+        return candidates
+    
+    def _unlock_score(self, course, taken_codes=None):
+        taken_codes = taken_codes or (self.taken_course_codes() | self.planned_course_codes())
+        score = 0
+        this_code = (course.code or "").upper()
+
+        for unlocked in course.as_prerequisite_for.all():
+            if unlocked.program != self.program or unlocked.catalog_year != self.catalog_year:
+                continue
+
+            unlocked_code = (unlocked.code or "").upper()
+            if unlocked_code in taken_codes:
+                continue
+
+            prereqs = {
+                (p.code or "").upper()
+                for p in unlocked.prerequisites.all()
+                if p.program == self.program and p.catalog_year == self.catalog_year
+                }
+
+            if this_code not in prereqs:
+                continue
+
+            remaining = prereqs - taken_codes
+            if len(remaining) == 1:
+                score += 10
+            elif len(remaining) == 2:
+                    score += 6
+            else:
+                score += 2
+
+        return score
+    
+    def _requirement_scarcity_score(
+        self,
+        course,
+        progress_by_name=None,
+        taken_codes=None,
+        planned_codes=None,
+    ):
+        req = self.get_requirement()
+        if not req:
+            return 0
+
+        progress_by_name = progress_by_name or self._requirement_progress_map()
+        taken_codes = taken_codes or self.taken_course_codes()
+        planned_codes = planned_codes or self.planned_course_codes()
+
+        code = (course.code or "").upper()
+        score = 0
+
+        for block in req.blocks.prefetch_related("courses").all():
+            block_codes = {
+                (c.code or "").upper()
+                for c in block.courses.all()
+                if c.code
+            }
+
+            if code not in block_codes:
+                continue
+
+            row = progress_by_name.get(block.name)
+            if not row or row.get("done"):
+                continue
+
+            options_left = len([
+                bc for bc in block_codes
+                if bc not in taken_codes and bc not in planned_codes
+            ])
+
+            if options_left <= 1:
+                score += 12
+            elif options_left <= 2:
+                score += 8
+            elif options_left <= 4:
+                score += 5
+            else:
+                score += 2
+
+        return score
+    
+    def _cs_critical_path_score(self, course):
+        code = (course.code or "").upper()
+
+        weights = {
+            "COMP-182": 16,
+            "COMP-182L": 8,
+            "COMP-256": 14,
+            "COMP-256L": 8,
+            "COMP-282": 15,
+            "COMP-310": 13,
+            "COMP-322": 14,
+            "COMP-322L": 8,
+            "COMP-333": 12,
+            "COMP-380": 16,
+            "COMP-380L": 8,
+            "COMP-324": 10,
+            "MATH-150A": 12,
+            "MATH-150B": 10,
+            "MATH-262": 10,
+            "MATH-340": 9,
+            "PHIL-230": 8,
+            "COMP-490": -50,
+            "COMP-490L": -50,
+            "COMP-491L": -60,
+        }
+
+        return weights.get(code, 0)
+    
+    def alternative_courses_for_planned_sections(self, planned_courses, limit=12):
+        """
+        When all sections are already satisfied by the current plan,
+        show alternatives from the same requirement blocks as the planned courses,
+        excluding already taken/in-progress/planned courses.
+        """
+        req = self.get_requirement()
+        if not req:
+            return []
+
+        taken_codes = self.taken_course_codes()
+        planned_codes = self.planned_course_codes()
+        used_codes = taken_codes | planned_codes
+
+        target_block_names = set()
+        for course in planned_courses:
+            if not course:
+                continue
+            for block in course.requirement_blocks.all():
+                target_block_names.add(block.name)
+
+        alt_courses = []
+        seen_ids = set()
+
+        for block in req.blocks.prefetch_related("courses").all():
+            if block.name not in target_block_names:
+                continue
+
+            for course in block.courses.all():
+                code = (course.code or "").upper()
+                if not code or code in used_codes:
+                    continue
+                if course.id in seen_ids:
+                    continue
+                alt_courses.append(course)
+                seen_ids.add(course.id)
+
+        alt_courses.sort(key=lambda c: (c.code or ""))
+        return alt_courses[:limit]
+
+    def _requirement_progress_map(self):
+        rows = self.requirement_group_progress_with_planned()
+        return {row["name"]: row for row in rows}
+    
+    def _prioritized_block_codes(self, block, all_blocks):
+        current_group = (block.count_group or "group4").strip() or "group4"
+
+        group_blocks = [
+            b for b in all_blocks
+            if ((b.count_group or "group4").strip() or "group4") == current_group
+        ]
+
+        block_code_sets = {
+            b.id: {(c.code or "").upper() for c in b.courses.all() if c.code}
+            for b in group_blocks
+        }
+
+        codes = list(block_code_sets.get(block.id, set()))
+
+        overlap_counts = {
+            code: sum(1 for s in block_code_sets.values() if code in s)
+            for code in codes
+        }
+
+        codes.sort(key=lambda code: (overlap_counts.get(code, 9999), code))
+        return codes
     def requirement_group_progress_with_planned(self):
         base = self.requirement_group_progress() or []
         req = self.get_requirement()
@@ -308,7 +870,7 @@ class StudentProfile(models.Model):
             return base
 
         planned_codes = self.planned_course_codes()
-        used_by_group1 = set()
+        used_by_count_group = {}
 
         out = []
         blocks = list(req.blocks.prefetch_related("courses").all())
@@ -326,8 +888,18 @@ class StudentProfile(models.Model):
         completed_codes = self.completed_course_codes()
         in_progress_codes = self.in_progress_course_codes()
 
+        completed_courses = list(
+            CompletedClass.objects.filter(profile=self).select_related("course")
+        )
+        in_progress_courses = list(
+            InProgressClass.objects.filter(profile=self).select_related("course")
+        )
+        planned_courses = list(
+            PlannedCourse.objects.filter(term_plan__profile=self).select_related("course", "term_plan")
+        )
+
         for b in blocks:
-            block_codes = [c.code.upper() for c in b.courses.all()]
+            block_codes = self._prioritized_block_codes(b, blocks)
             block_group = (b.count_group or "group4").strip() or "group4"
 
             assigned_completed = []
@@ -337,57 +909,131 @@ class StudentProfile(models.Model):
             def code_allowed(code: str) -> bool:
                 if b.allow_double_count:
                     return True
-                if block_group == "group1":
-                    return code not in used_by_group1
-                return True
 
-            for code in block_codes:
-                if code in completed_codes and code_allowed(code):
-                    if code not in assigned_completed:
-                        assigned_completed.append(code)
-                    if len(assigned_completed) >= int(b.min_required):
-                        break
+                used_codes = used_by_count_group.setdefault(block_group, set())
+                return code not in used_codes
 
-            remaining_slots = max(0, int(b.min_required) - len(assigned_completed))
+            code_to_course = {
+                (c.code or "").upper(): c
+                for c in b.courses.all()
+                if c.code
+            }
 
-            if remaining_slots > 0:
+            if b.name == "Senior Electives":
+                earned_units = 0.0
+
                 for code in block_codes:
-                    if remaining_slots <= 0:
-                        break
-                    if code in in_progress_codes and code not in assigned_completed and code_allowed(code):
-                        if code not in assigned_ip:
-                            assigned_ip.append(code)
-                            remaining_slots -= 1
+                    course = code_to_course.get(code)
+                    if not course:
+                        continue
+                    if code in completed_codes and code_allowed(code):
+                        if code not in assigned_completed:
+                            assigned_completed.append(code)
+                            earned_units += float(course.credits or 0)
+                        if earned_units >= float(b.min_required):
+                            break
 
-            if remaining_slots > 0:
+                remaining_units = max(0.0, float(b.min_required) - earned_units)
+
+                if remaining_units > 0:
+                    for code in block_codes:
+                        course = code_to_course.get(code)
+                        if not course:
+                            continue
+                        if code in in_progress_codes and code not in assigned_completed and code_allowed(code):
+                            if code not in assigned_ip:
+                                assigned_ip.append(code)
+                                remaining_units -= float(course.credits or 0)
+                            if remaining_units <= 0:
+                                break
+
+                if remaining_units > 0:
+                    for code in block_codes:
+                        course = code_to_course.get(code)
+                        if not course:
+                            continue
+                        if code in planned_codes and code not in assigned_completed and code not in assigned_ip and code_allowed(code):
+                            if code not in assigned_planned:
+                                assigned_planned.append(code)
+                                remaining_units -= float(course.credits or 0)
+                            if remaining_units <= 0:
+                                break
+            else:
                 for code in block_codes:
-                    if remaining_slots <= 0:
-                        break
-                    if code in planned_codes and code not in assigned_completed and code not in assigned_ip and code_allowed(code):
-                        if code not in assigned_planned:
-                            assigned_planned.append(code)
-                            remaining_slots -= 1
+                    if code in completed_codes and code_allowed(code):
+                        if code not in assigned_completed:
+                            assigned_completed.append(code)
+                        if len(assigned_completed) >= int(b.min_required):
+                            break
 
-            if not b.allow_double_count and block_group == "group1":
-                used_by_group1.update(assigned_completed)
-                used_by_group1.update(assigned_ip)
-                used_by_group1.update(assigned_planned)
+                remaining_slots = max(0, int(b.min_required) - len(assigned_completed))
 
-            out.append({
+                if remaining_slots > 0:
+                    for code in block_codes:
+                        if remaining_slots <= 0:
+                            break
+                        if code in in_progress_codes and code not in assigned_completed and code_allowed(code):
+                            if code not in assigned_ip:
+                                assigned_ip.append(code)
+                                remaining_slots -= 1
+
+                if remaining_slots > 0:
+                    for code in block_codes:
+                        if remaining_slots <= 0:
+                            break
+                        if code in planned_codes and code not in assigned_completed and code not in assigned_ip and code_allowed(code):
+                            if code not in assigned_planned:
+                                assigned_planned.append(code)
+                                remaining_slots -= 1
+
+            if not b.allow_double_count:
+                used_codes = used_by_count_group.setdefault(block_group, set())
+                used_codes.update(assigned_completed)
+                used_codes.update(assigned_ip)
+                used_codes.update(assigned_planned)
+
+            completed_rows = [cc for cc in completed_courses if cc.course and (cc.course.code or "").upper() in assigned_completed]
+            ip_rows = [ic for ic in in_progress_courses if ic.course and (ic.course.code or "").upper() in assigned_ip]
+            planned_rows = [pc for pc in planned_courses if pc.course and (pc.course.code or "").upper() in assigned_planned]
+
+            completed_value = self._block_progress_value(b.name, completed_rows)
+            in_progress_value = self._block_progress_value(b.name, ip_rows)
+            planned_value = self._block_progress_value(b.name, planned_rows)
+            required_value = float(b.min_required)
+
+            row = {
                 "name": b.name,
-                "min_required": int(b.min_required),
-                "completed": int(len(assigned_completed)),
-                "in_progress": int(len(assigned_ip)),
-                "planned": int(len(assigned_planned)),
+                "min_required": required_value,
+                "completed": completed_value,
+                "in_progress": in_progress_value,
+                "planned": planned_value,
                 "total_options": int(len(block_codes)),
-                "done": len(assigned_completed) >= int(b.min_required),
+                "done": (completed_value + in_progress_value + planned_value) >= required_value,
                 "type": "block",
                 "allow_double_count": bool(b.allow_double_count),
                 "count_group": block_group,
                 "assigned_completed_codes": assigned_completed,
                 "assigned_in_progress_codes": assigned_ip,
                 "assigned_planned_codes": assigned_planned,
-            })
+            }
+
+            if b.name == "Senior Electives":
+                display = self._senior_elective_display_values(
+                    units_completed=completed_value,
+                    units_in_progress=in_progress_value,
+                    units_planned=planned_value,
+                    completed_rows=len(completed_rows),
+                    in_progress_rows=len(ip_rows),
+                    planned_rows=len(planned_rows),
+                )
+                row["display_required"] = display["display_required"]
+                row["display_completed"] = display["display_completed"]
+                row["display_in_progress"] = display["display_in_progress"]
+                row["display_planned"] = display["display_planned"]
+                row["display_remaining"] = display["display_remaining"]
+                row["display_mode"] = "course_equivalent"
+
+            out.append(row)
 
         return out
     
@@ -481,32 +1127,6 @@ class StudentProfile(models.Model):
                 missing.append(coreq)
 
         return missing
-
-    def course_still_useful_for_requirements(self, course) -> bool:
-        req = self.get_requirement()
-        if not req or not course:
-            return True
-
-        code = (course.code or "").upper()
-        taken_codes = self.taken_course_codes()
-
-        if code in taken_codes:
-            return False
-
-        group_progress = self.requirement_group_progress() or []
-        incomplete_names = {
-            g.get("name")
-            for g in group_progress
-            if not g.get("done")
-        }
-
-        for block in req.blocks.prefetch_related("courses").all():
-            if block.name in incomplete_names:
-                block_codes = {(c.code or "").upper() for c in block.courses.all()}
-                if code in block_codes:
-                    return True
-
-        return False
 
     def can_add_course_to_term_plan(self, course, term_plan) -> tuple[bool, str]:
         PlannedCourseModel = apps.get_model("users", "PlannedCourse")
@@ -655,25 +1275,81 @@ class StudentProfile(models.Model):
         while term.id in existing_term_ids:
             term = term.next()
         return term
+    
+    def _block_progress_value(self, block_name, assigned_courses):
+        """
+        Most blocks count by number of assigned courses.
+        Senior Electives count by units.
+        """
+        if block_name == "Senior Electives":
+            return sum(float(row.course.credits or 0) for row in assigned_courses if getattr(row, "course", None))
+        return float(len(assigned_courses))
+    
+    def _senior_elective_display_values(
+        self,
+        units_completed,
+        units_in_progress=0.0,
+        units_planned=0.0,
+        completed_rows=0,
+        in_progress_rows=0,
+        planned_rows=0,
+    ):
+        """
+        Keep real logic as 15 required units, but send a dynamic row-count display.
+
+        Examples:
+        - 5 three-unit rows -> 5 / 5
+        - one 2+1 split can push display to 6 / 6
+        - 2+2+2+1 means 4 rows used, 8 units left -> 3 more best-case rows -> 4 / 7
+        """
+        required_units = 15.0
+
+        earned_units = float(units_completed) + float(units_in_progress) + float(units_planned)
+        used_rows = int(completed_rows) + int(in_progress_rows) + int(planned_rows)
+
+        remaining_units = max(0.0, required_units - earned_units)
+        future_rows_needed = ceil(remaining_units / 3.0) if remaining_units > 0 else 0
+
+        display_required = used_rows + future_rows_needed
+
+        return {
+            "display_required": float(display_required),
+            "display_completed": float(completed_rows),
+            "display_in_progress": float(in_progress_rows),
+            "display_planned": float(planned_rows),
+            "display_remaining": float(future_rows_needed),
+            "required_units": required_units,
+            "earned_units": earned_units,
+            "remaining_units": remaining_units,
+        }
 
     def approximate_graduation_term(self):
         req = self.get_requirement()
+        base_target = int(req.required_credits) if req else 120
+
         completed_credits = sum(
             float(c.credits)
             for c in self.completed_courses_qs()
             if c.counts_for_total_units()
         )
 
-        base_target = 120
-        if req:
-            base_target = int(req.required_credits)
+        in_progress_credits = sum(
+            float(c.course.credits or 0)
+            for c in InProgressClass.objects.filter(profile=self).select_related("course")
+            if c.course
+        )
 
-        remaining_credits = max(0.0, base_target - completed_credits)
+        effective_target = self.effective_target_credits(include_planned=False)
+        current_total = completed_credits + in_progress_credits
+        remaining_credits = max(0.0, effective_target - current_total)
+
         terms_needed = ceil(remaining_credits / max(1, self.avg_credits_per_term))
         term = Term.from_date()
         for _ in range(terms_needed):
             term = term.next()
-        return term, remaining_credits, completed_credits, base_target
+
+        return term, remaining_credits, completed_credits, max(base_target, int(effective_target))
+    
 
     def requirement_group_progress(self):
         """
@@ -695,6 +1371,13 @@ class StudentProfile(models.Model):
         completed_codes = self.completed_course_codes()
         in_progress_codes = self.in_progress_course_codes()
 
+        completed_rows_all = list(
+            CompletedClass.objects.filter(profile=self).select_related("course")
+        )
+        in_progress_rows_all = list(
+            InProgressClass.objects.filter(profile=self).select_related("course")
+        )
+
         out = []
 
         blocks = list(req.blocks.prefetch_related("courses").all())
@@ -702,10 +1385,10 @@ class StudentProfile(models.Model):
         if blocks:
             blocks.sort(key=lambda b: (b.count_group or "group4", int(b.min_required), b.courses.count(), b.name))
 
-            used_by_group1 = set()
+            used_by_count_group = {}
 
             for b in blocks:
-                block_codes = [c.code.upper() for c in b.courses.all()]
+                block_codes = self._prioritized_block_codes(b, blocks)
                 block_group = (b.count_group or "group4").strip() or "group4"
 
                 assigned_completed = []
@@ -714,45 +1397,111 @@ class StudentProfile(models.Model):
                 def code_allowed(code: str) -> bool:
                     if b.allow_double_count:
                         return True
-                    if block_group == "group1":
-                        return code not in used_by_group1
-                    return True
 
-                for code in block_codes:
-                    if code in completed_codes:
-                        if code_allowed(code) and code not in assigned_completed:
-                            assigned_completed.append(code)
-                        if len(assigned_completed) >= int(b.min_required):
-                            break
+                    used_codes = used_by_count_group.setdefault(block_group, set())
+                    return code not in used_codes
 
-                remaining_slots = max(0, int(b.min_required) - len(assigned_completed))
+                code_to_course = {
+                    (c.code or "").upper(): c
+                    for c in b.courses.all()
+                    if c.code
+                }
 
-                if remaining_slots > 0:
+                if b.name == "Senior Electives":
+                    earned_units = 0.0
+
                     for code in block_codes:
-                        if remaining_slots <= 0:
-                            break
-                        if code in in_progress_codes and code not in assigned_completed:
-                            if code_allowed(code) and code not in assigned_ip:
-                                assigned_ip.append(code)
-                                remaining_slots -= 1
+                        course = code_to_course.get(code)
+                        if not course:
+                            continue
+                        if code in completed_codes:
+                            if code_allowed(code) and code not in assigned_completed:
+                                assigned_completed.append(code)
+                                earned_units += float(course.credits or 0)
+                            if earned_units >= float(b.min_required):
+                                break
 
-                if not b.allow_double_count and block_group == "group1":
-                    used_by_group1.update(assigned_completed)
-                    used_by_group1.update(assigned_ip)
+                    remaining_units = max(0.0, float(b.min_required) - earned_units)
 
-                out.append({
+                    if remaining_units > 0:
+                        for code in block_codes:
+                            course = code_to_course.get(code)
+                            if not course:
+                                continue
+                            if code in in_progress_codes and code not in assigned_completed:
+                                if code_allowed(code) and code not in assigned_ip:
+                                    assigned_ip.append(code)
+                                    remaining_units -= float(course.credits or 0)
+                                if remaining_units <= 0:
+                                    break
+                else:
+                    for code in block_codes:
+                        if code in completed_codes:
+                            if code_allowed(code) and code not in assigned_completed:
+                                assigned_completed.append(code)
+                            if len(assigned_completed) >= int(b.min_required):
+                                break
+
+                    remaining_slots = max(0, int(b.min_required) - len(assigned_completed))
+
+                    if remaining_slots > 0:
+                        for code in block_codes:
+                            if remaining_slots <= 0:
+                                break
+                            if code in in_progress_codes and code not in assigned_completed:
+                                if code_allowed(code) and code not in assigned_ip:
+                                    assigned_ip.append(code)
+                                    remaining_slots -= 1
+
+                if not b.allow_double_count:
+                    used_codes = used_by_count_group.setdefault(block_group, set())
+                    used_codes.update(assigned_completed)
+                    used_codes.update(assigned_ip)
+
+                completed_rows = [
+                    cc for cc in completed_rows_all
+                    if cc.course and (cc.course.code or "").upper() in assigned_completed
+                ]
+                ip_rows = [
+                    ic for ic in in_progress_rows_all
+                    if ic.course and (ic.course.code or "").upper() in assigned_ip
+                ]
+
+                completed_value = self._block_progress_value(b.name, completed_rows)
+                in_progress_value = self._block_progress_value(b.name, ip_rows)
+                required_value = float(b.min_required)
+
+                row = {
                     "name": b.name,
-                    "min_required": int(b.min_required),
-                    "completed": int(len(assigned_completed)),
-                    "in_progress": int(len(assigned_ip)),
+                    "min_required": required_value,
+                    "completed": completed_value,
+                    "in_progress": in_progress_value,
                     "total_options": int(len(block_codes)),
-                    "done": len(assigned_completed) >= int(b.min_required),
+                    "done": (completed_value + in_progress_value) >= required_value,
                     "type": "block",
                     "allow_double_count": bool(b.allow_double_count),
                     "count_group": block_group,
                     "assigned_completed_codes": assigned_completed,
                     "assigned_in_progress_codes": assigned_ip,
-                })
+                }
+
+                if b.name == "Senior Electives":
+                    display = self._senior_elective_display_values(
+                        units_completed=completed_value,
+                        units_in_progress=in_progress_value,
+                        units_planned=0.0,
+                        completed_rows=len(completed_rows),
+                        in_progress_rows=len(ip_rows),
+                        planned_rows=0,
+                    )
+                    row["display_required"] = display["display_required"]
+                    row["display_completed"] = display["display_completed"]
+                    row["display_in_progress"] = display["display_in_progress"]
+                    row["display_planned"] = 0.0
+                    row["display_remaining"] = display["display_remaining"]
+                    row["display_mode"] = "course_equivalent"
+
+                out.append(row)
         udge_names = {
             "B5 Upper Division Scientific Inquiry",
             "C Upper Division Arts and Humanities",

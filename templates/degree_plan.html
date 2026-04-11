@@ -103,6 +103,11 @@
       color: #166534;
     }
 
+    .plan-badge.good {
+      background: #ecfeff;
+      color: #155e75;
+    }
+
     .plan-bar {
       position: relative;
       height: 10px;
@@ -139,6 +144,31 @@
       margin-top: 0.9rem;
       padding-top: 0.9rem;
     }
+
+    .plan-reason-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.55rem;
+    }
+
+    .plan-reason-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+    }
+
+    .plan-score-line {
+      margin-top: 0.55rem;
+      font-size: 0.72rem;
+      color: #64748b;
+    }
   </style>
 
   <div class="space-y-6">
@@ -165,7 +195,7 @@
             </div>
 
             <div class="text-xs text-slate-500">
-              Goal: {{ target_credits }} total units
+              Goal: {{ effective_target_credits }} total units
             </div>
           </div>
 
@@ -173,12 +203,12 @@
             <div>
               <div class="mb-1 flex items-center justify-between text-xs text-slate-500">
                 <span>Current Progress</span>
-                <span>{{ completed_credits|add:in_progress_credits }} / {{ target_credits }}</span>
+                <span>{{ completed_credits|add:in_progress_credits }} / {{ effective_target_credits }}</span>
               </div>
 
               <div class="plan-bar">
-                {% widthratio completed_credits target_credits 100 as current_done_pct %}
-                {% widthratio completed_credits|add:in_progress_credits target_credits 100 as current_ip_pct %}
+                {% widthratio completed_credits effective_target_credits 100 as current_done_pct %}
+                {% widthratio completed_credits|add:in_progress_credits effective_target_credits 100 as current_ip_pct %}
 
                 {% if in_progress_credits > 0 %}
                   <div class="plan-bar-fill bg-amber-500" style="width: {{ current_ip_pct }}%;"></div>
@@ -208,13 +238,13 @@
             <div>
               <div class="mb-1 flex items-center justify-between text-xs text-slate-500">
                 <span>After Current Plan</span>
-                <span>{{ completed_credits|add:in_progress_credits|add:total_planned_units }} / {{ target_credits }}</span>
+                <span>{{ completed_credits|add:in_progress_credits|add:total_planned_units }} / {{ effective_target_with_plan }}</span>
               </div>
 
               <div class="plan-bar">
-                {% widthratio completed_credits target_credits 100 as plan_done_pct %}
-                {% widthratio completed_credits|add:in_progress_credits target_credits 100 as plan_ip_pct %}
-                {% widthratio completed_credits|add:in_progress_credits|add:total_planned_units target_credits 100 as plan_total_pct %}
+                {% widthratio completed_credits effective_target_credits 100 as plan_done_pct %}
+                {% widthratio completed_credits|add:in_progress_credits effective_target_credits 100 as plan_ip_pct %}
+                {% widthratio completed_credits|add:in_progress_credits|add:total_planned_units effective_target_with_plan 100 as plan_total_pct %}
 
                 {% if total_planned_units > 0 %}
                   <div class="plan-bar-fill bg-green-500" style="width: {{ plan_total_pct }}%;"></div>
@@ -294,6 +324,17 @@
               <p class="mt-1 text-xs text-red-800">These still need prerequisites.</p>
             </div>
           {% endif %}
+
+          {% if recommendation_details %}
+            <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+              <p class="text-sm font-semibold text-indigo-900">
+                {{ recommendation_details|length }} ranked recommendation{{ recommendation_details|length|pluralize }} ready
+              </p>
+              <p class="mt-1 text-xs text-indigo-800">
+                Suggestions now include explanation labels and timing-aware ranking.
+              </p>
+            </div>
+          {% endif %}
         </div>
       </div>
     </section>
@@ -369,6 +410,52 @@
             {% else %}
               <div class="plan-empty text-sm text-slate-500">
                 No unfinished sections left.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="plan-card p-5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Top Recommendations</h2>
+            <span class="plan-badge info">{{ recommendation_details|length }}</span>
+          </div>
+          <p class="mt-1 text-sm text-slate-500">
+            Phase 2 explanation labels are shown here.
+          </p>
+
+          <div class="mt-4 space-y-3">
+            {% if recommendation_details %}
+              {% for item in recommendation_details|slice:":5" %}
+                <div class="plan-course">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <p class="font-medium text-slate-900">{{ item.course.code }}</p>
+                      <p class="mt-1 text-sm text-slate-600">{{ item.course.title }}</p>
+                    </div>
+                    <div class="text-xs text-slate-500">{{ item.course.credits }} units</div>
+                  </div>
+
+                  {% if item.labels %}
+                    <div class="plan-reason-list">
+                      {% for label in item.labels %}
+                        <span class="plan-reason-pill">{{ label }}</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+
+                  <div class="plan-score-line">
+                    Score {{ item.score }}
+                    • Unlock {{ item.reasons.unlock }}
+                    • Requirement {{ item.reasons.scarcity }}
+                    • Path {{ item.reasons.critical_path }}
+                    • Timing {{ item.reasons.timing }}
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="plan-empty text-sm text-slate-500">
+                No ranked recommendations available right now.
               </div>
             {% endif %}
           </div>
@@ -641,26 +728,42 @@
                     </div>
                   {% endfor %}
                 </div>
-              {% elif forloop.first and next_list %}
+              {% elif forloop.first and recommendation_details %}
                 <div class="space-y-3">
-                  {% for c in next_list %}
+                  {% for item in recommendation_details %}
                     <div class="plan-course">
                       <div class="flex items-start justify-between gap-3">
                         <div>
-                          <p class="font-medium text-slate-900">{{ c.code }}</p>
-                          <p class="mt-1 text-sm text-slate-600">{{ c.title }}</p>
+                          <p class="font-medium text-slate-900">{{ item.course.code }}</p>
+                          <p class="mt-1 text-sm text-slate-600">{{ item.course.title }}</p>
 
-                          {% if c.applied_blocks %}
+                          {% if item.course.applied_blocks %}
                             <p class="mt-2 text-xs text-green-700">
-                              Counts for: {{ c.applied_blocks|join:", " }}
+                              Counts for: {{ item.course.applied_blocks|join:", " }}
                             </p>
-                          {% elif c.eligible_blocks %}
+                          {% elif item.course.eligible_blocks %}
                             <p class="mt-2 text-xs text-slate-500">
-                              Eligible for: {{ c.eligible_blocks|join:", " }}
+                              Eligible for: {{ item.course.eligible_blocks|join:", " }}
                             </p>
                           {% endif %}
+
+                          {% if item.labels %}
+                            <div class="plan-reason-list">
+                              {% for label in item.labels %}
+                                <span class="plan-reason-pill">{{ label }}</span>
+                              {% endfor %}
+                            </div>
+                          {% endif %}
+
+                          <div class="plan-score-line">
+                            Score {{ item.score }}
+                            • Unlock {{ item.reasons.unlock }}
+                            • Requirement {{ item.reasons.scarcity }}
+                            • Path {{ item.reasons.critical_path }}
+                            • Timing {{ item.reasons.timing }}
+                          </div>
                         </div>
-                        <div class="text-xs text-slate-500">{{ c.credits }} units</div>
+                        <div class="text-xs text-slate-500">{{ item.course.credits }} units</div>
                       </div>
 
                       <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -668,8 +771,8 @@
 
                         <div class="flex items-center gap-3">
                           <a
-                            href="{% url 'course_detail' c.id %}?partial=1"
-                            data-course-url="{% url 'course_detail' c.id %}?partial=1"
+                            href="{% url 'course_detail' item.course.id %}?partial=1"
+                            data-course-url="{% url 'course_detail' item.course.id %}?partial=1"
                             class="text-xs font-medium text-slate-700 hover:underline"
                           >
                             Details
@@ -677,7 +780,7 @@
 
                           <form
                             method="post"
-                            action="{% url 'add_suggested_course_to_term' sem.id c.id %}"
+                            action="{% url 'add_suggested_course_to_term' sem.id item.course.id %}"
                             class="flex flex-wrap items-center gap-2"
                           >
                             {% csrf_token %}
@@ -700,50 +803,68 @@
               {% endif %}
 
               {% for rec in semester_recommendations %}
-                {% if rec.term_plan_id == sem.id and rec.courses %}
+                {% if rec.term_plan_id == sem.id and rec.details %}
                   <div class="plan-mini-list">
                     <p class="mb-2 text-xs font-semibold text-slate-700">
                       Recommended for {{ rec.term_label }}
                     </p>
 
                     <div class="space-y-2">
-                      {% for rc in rec.courses|slice:":3" %}
-                        <div class="flex items-center justify-between gap-3 text-xs">
-                          <div class="min-w-0">
-                            <div>
-                              <span class="font-medium text-slate-900">{{ rc.code }}</span>
-                              <span class="text-slate-600">— {{ rc.title }}</span>
+                      {% for item in rec.details|slice:":3" %}
+                        <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                          <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                              <div>
+                                <span class="font-medium text-slate-900">{{ item.course.code }}</span>
+                                <span class="text-slate-600">— {{ item.course.title }}</span>
+                              </div>
+
+                              {% if item.course.applied_blocks %}
+                                <p class="text-[11px] text-green-700">
+                                  Counts for: {{ item.course.applied_blocks|join:", " }}
+                                </p>
+                              {% elif item.course.eligible_blocks %}
+                                <p class="text-[11px] text-slate-500">
+                                  Eligible for: {{ item.course.eligible_blocks|join:", " }}
+                                </p>
+                              {% endif %}
+
+                              {% if item.labels %}
+                                <div class="plan-reason-list">
+                                  {% for label in item.labels %}
+                                    <span class="plan-reason-pill">{{ label }}</span>
+                                  {% endfor %}
+                                </div>
+                              {% endif %}
+
+                              <div class="plan-score-line">
+                                Score {{ item.score }}
+                                • Unlock {{ item.reasons.unlock }}
+                                • Requirement {{ item.reasons.scarcity }}
+                                • Path {{ item.reasons.critical_path }}
+                                • Timing {{ item.reasons.timing }}
+                              </div>
                             </div>
 
-                            {% if rc.applied_blocks %}
-                              <p class="text-[11px] text-green-700">
-                                Counts for: {{ rc.applied_blocks|join:", " }}
-                              </p>
-                            {% elif rc.eligible_blocks %}
-                              <p class="text-[11px] text-slate-500">
-                                Eligible for: {{ rc.eligible_blocks|join:", " }}
-                              </p>
-                            {% endif %}
-                          </div>
-
-                          <div class="flex items-center gap-2">
-                            <a
-                              href="{% url 'course_detail' rc.id %}?partial=1"
-                              data-course-url="{% url 'course_detail' rc.id %}?partial=1"
-                              class="text-slate-600 hover:underline"
-                            >
-                              Details
-                            </a>
-
-                            <form method="post" action="{% url 'add_suggested_course_to_term' sem.id rc.id %}">
-                              {% csrf_token %}
-                              <button
-                                type="submit"
-                                class="font-medium text-indigo-700 hover:underline"
+                            <div class="flex items-center gap-2">
+                              <a
+                                href="{% url 'course_detail' item.course.id %}?partial=1"
+                                data-course-url="{% url 'course_detail' item.course.id %}?partial=1"
+                                class="text-slate-600 hover:underline"
                               >
-                                Add
-                              </button>
-                            </form>
+                                Details
+                              </a>
+
+                              <form method="post" action="{% url 'add_suggested_course_to_term' sem.id item.course.id %}">
+                                {% csrf_token %}
+                                <button
+                                  type="submit"
+                                  class="font-medium text-indigo-700 hover:underline"
+                                >
+                                  Add
+                                </button>
+                              </form>
+                            </div>
                           </div>
                         </div>
                       {% endfor %}
