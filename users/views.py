@@ -15,7 +15,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -596,7 +596,6 @@ def degree_plan(request):
 
     grad_term, _, completed_credits, target_credits = profile.approximate_graduation_term()
     effective_target_credits = int(profile.effective_target_credits(include_planned=False))
-    effective_target_with_plan = int(profile.effective_target_credits(include_planned=True))
     group_progress_raw = profile.requirement_group_progress_with_planned()
 
     ge_mapping = {
@@ -735,9 +734,6 @@ def degree_plan(request):
     else:
         count_map = {}
 
-    progress_by_name = profile._requirement_progress_map()
-    block_code_map = profile._requirement_block_code_map()
-
     for sem in saved_terms:
         for pc in sem["courses"]:
             if not pc.course:
@@ -759,33 +755,46 @@ def degree_plan(request):
         c.eligible_blocks = info.get("eligible_names", [])
 
     next_codes = {(c.code or "").upper() for c in next_list if c.code}
+    planned_codes = profile.planned_course_codes()
 
     backup_list = []
     locked_list = []
     alternative_options = []
-    if profile.all_sections_satisfied(include_planned=True):
+    if all_sections_done_with_plan:
         alternative_options = profile.alternative_courses_for_planned_sections(
             planned_courses_flat,
             limit=12,
         )
 
+
     for c in remaining:
         code = (c.code or "").upper()
+
         if code in next_codes:
             continue
 
+        if code in planned_codes:
+            continue
+
         can_fit_somewhere = False
+        last_reason = "Not ready for planning yet."
+
         for sem in saved_terms:
-            ok, _reason = profile.can_add_course_to_term_plan(c, sem["term_plan"])
+            ok, reason = profile.can_add_course_to_term_plan(c, sem["term_plan"])
             if ok:
                 can_fit_somewhere = True
+                last_reason = ""
                 break
+
+            if reason:
+                last_reason = reason
+
+        c.lock_reason = last_reason
 
         if can_fit_somewhere:
             backup_list.append(c)
         else:
             locked_list.append(c)
-
     semester_recommendations = []
     for sem in saved_terms:
         term_plan = sem["term_plan"]

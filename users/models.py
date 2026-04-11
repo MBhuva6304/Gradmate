@@ -1,4 +1,3 @@
-from pyexpat.errors import codes
 
 from django.db import models
 from django.apps import apps
@@ -10,7 +9,6 @@ from datetime import timedelta
 from math import ceil
 from django.utils.text import slugify
 import re
-
 User = get_user_model()
 
 # =========================
@@ -333,6 +331,7 @@ class StudentProfile(models.Model):
                     taken_codes=taken_codes,
                     planned_codes=planned_codes,
                     progress_by_name=progress_by_name,
+                    block_code_map=block_code_map,
                     completed_units=completed_units,
                 )
             )
@@ -356,6 +355,7 @@ class StudentProfile(models.Model):
     
     def recommend_for_term_plan(self, term_plan, remaining_courses=None, limit=5):
         progress_by_name = self._requirement_progress_map()
+        block_code_map = self._requirement_block_code_map()
         taken_codes = self.taken_course_codes()
         planned_codes = self.planned_course_codes()
         completed_units = self._completed_units_for_planning()
@@ -373,6 +373,7 @@ class StudentProfile(models.Model):
                 taken_codes=taken_codes,
                 planned_codes=planned_codes,
                 progress_by_name=progress_by_name,
+                block_code_map=block_code_map,
                 completed_units=completed_units,
             )
 
@@ -459,6 +460,7 @@ class StudentProfile(models.Model):
         taken_codes,
         planned_codes,
         progress_by_name,
+        block_code_map=None,
         completed_units=None,
     ):
         usable_codes = taken_codes | planned_codes
@@ -469,6 +471,7 @@ class StudentProfile(models.Model):
             progress_by_name=progress_by_name,
             taken_codes=taken_codes,
             planned_codes=planned_codes,
+            block_code_map=block_code_map,
         )
 
         critical_path_score = 0
@@ -727,6 +730,7 @@ class StudentProfile(models.Model):
         progress_by_name=None,
         taken_codes=None,
         planned_codes=None,
+        block_code_map=None,
     ):
         req = self.get_requirement()
         if not req:
@@ -735,21 +739,16 @@ class StudentProfile(models.Model):
         progress_by_name = progress_by_name or self._requirement_progress_map()
         taken_codes = taken_codes or self.taken_course_codes()
         planned_codes = planned_codes or self.planned_course_codes()
+        block_code_map = block_code_map or self._requirement_block_code_map()
 
         code = (course.code or "").upper()
         score = 0
 
-        for block in req.blocks.prefetch_related("courses").all():
-            block_codes = {
-                (c.code or "").upper()
-                for c in block.courses.all()
-                if c.code
-            }
-
+        for block_name, block_codes in block_code_map.items():
             if code not in block_codes:
                 continue
 
-            row = progress_by_name.get(block.name)
+            row = progress_by_name.get(block_name)
             if not row or row.get("done"):
                 continue
 

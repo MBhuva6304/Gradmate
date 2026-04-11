@@ -901,7 +901,7 @@
                       <div>
                         <p class="font-medium text-slate-900">{{ c.code }}</p>
                         <p class="mt-1 text-sm text-slate-600">{{ c.title }}</p>
-                        <p class="mt-2 text-xs text-red-600">Prerequisites not yet satisfied.</p>
+                        <p class="mt-2 text-xs text-red-600">{{ c.lock_reason|default:"Not ready for planning yet." }}</p>
                       </div>
                       <div class="text-xs text-slate-500">{{ c.credits }} units</div>
                     </div>
