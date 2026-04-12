@@ -15,12 +15,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
 
 from .models import (
     Course,
@@ -374,8 +375,33 @@ def dashboard(request):
         catalog_year=profile.catalog_year,
     ).exists()
 
-    remaining = profile.remaining_required_courses()
-    next_list, next_credits, next_term, recommendation_details = profile.recommend_next_term()
+    next_term = Term.from_date().next()
+
+    next_term_plan = (
+        profile.term_plans
+        .filter(term=next_term)
+        .prefetch_related("planned_courses__course")
+        .first()
+    )
+
+    if next_term_plan and next_term_plan.planned_courses.exists():
+        next_list = [
+            pc.course
+            for pc in next_term_plan.planned_courses.select_related("course").all()
+            if pc.course
+        ]
+        next_credits = sum(float(c.credits or 0) for c in next_list)
+        recommendation_details = []
+    else:
+        next_list, next_credits, next_term, recommendation_details = profile.recommend_next_term()
+
+    planned_codes = profile.planned_course_codes()
+
+    remaining = [
+        c for c in profile.remaining_required_courses()
+        if (c.code or "").upper() not in planned_codes
+    ]
+
     grad_term, remaining_credits, completed_credits, target_credits = profile.approximate_graduation_term()
     effective_target_credits = int(profile.effective_target_credits(include_planned=False))
     group_progress_raw = profile.requirement_group_progress_with_planned()
@@ -410,6 +436,7 @@ def dashboard(request):
         100,
         int(((float(completed_credits) + float(in_progress_credits) + float(planned_credits)) / ring_total) * 100)
     )
+
     ge_mapping = {
         "A1 Oral Communication": "A1",
         "A2 Written Communication": "A2",
@@ -502,7 +529,6 @@ def dashboard(request):
 
     incomplete_block_count = sum(1 for g in (ge_progress + major_progress) if not g.get("done"))
 
-
     remaining_for_chart = max(
         0,
         int(
@@ -523,7 +549,101 @@ def dashboard(request):
                 + float(planned_credits)
             ) / denom * 100
         )
-    ) 
+    )
+
+    show_upper_alert = any(
+        not g.get("done") for g in major_progress
+        if g.get("short") in {"UDC", "SE"}
+    )
+
+    dashboard_first_term_plan = (
+        profile.term_plans
+        .select_related("term")
+        .prefetch_related("planned_courses__course")
+        .order_by("position")
+        .first()
+    )
+
+    dashboard_plan_courses = []
+    dashboard_plan_units = 0
+
+    if dashboard_first_term_plan:
+        dashboard_plan_courses = [
+            pc for pc in dashboard_first_term_plan.planned_courses.select_related("course").all()
+            if pc.course
+        ]
+        dashboard_plan_units = int(sum(float(pc.course.credits or 0) for pc in dashboard_plan_courses))
+
+    req = profile.get_requirement()
+
+    all_for_counting = list(remaining) + list(next_list)
+    all_for_counting += [pc.course for pc in dashboard_plan_courses if pc.course]
+
+    if req and all_for_counting:
+        count_map = build_course_counting_map(all_for_counting, req)
+    else:
+        count_map = {}
+
+    for c in next_list:
+        info = count_map.get(c.id, {})
+        c.applied_blocks = info.get("applied_names", [])
+        c.eligible_blocks = info.get("eligible_names", [])
+
+    for c in remaining:
+        info = count_map.get(c.id, {})
+        c.applied_blocks = info.get("applied_names", [])
+        c.eligible_blocks = info.get("eligible_names", [])
+
+    for pc in dashboard_plan_courses:
+        if not pc.course:
+            continue
+        info = count_map.get(pc.course.id, {})
+        pc.course.applied_blocks = info.get("applied_names", [])
+        pc.course.eligible_blocks = info.get("eligible_names", [])
+
+    dashboard_remaining = []
+    if remaining:
+        dashboard_remaining = list(remaining[:8])
+
+    dashboard_alerts = []
+
+    if show_upper_alert:
+        dashboard_alerts.append({
+            "icon": "⚠️",
+            "title": "Upper-division planning check",
+            "message": "Make sure your remaining plan includes enough upper-division units.",
+            "level": "warning",
+        })
+
+    if remaining_after_plan > 0:
+        dashboard_alerts.append({
+            "icon": "🗓",
+            "title": "More planning needed",
+            "message": f"You still have {remaining_after_plan} unit(s) left after your saved plan.",
+            "level": "info",
+        })
+    else:
+        dashboard_alerts.append({
+            "icon": "✅",
+            "title": "Plan looks complete",
+            "message": "Your saved degree plan currently covers all remaining required units.",
+            "level": "success",
+        })
+
+    if dashboard_plan_courses:
+        dashboard_alerts.append({
+            "icon": "📚",
+            "title": f"{dashboard_first_term_plan.term} plan loaded",
+            "message": f"You have {len(dashboard_plan_courses)} planned course(s) totaling {dashboard_plan_units} unit(s).",
+            "level": "info",
+        })
+    else:
+        dashboard_alerts.append({
+            "icon": "📝",
+            "title": "No saved courses in next term",
+            "message": f"You do not have any saved planned courses in {next_term}.",
+            "level": "info",
+        })
 
     context = {
         "profile": profile,
@@ -553,6 +673,13 @@ def dashboard(request):
         "current_done_pct": current_done_pct,
         "current_ip_pct": current_ip_pct,
         "current_plan_pct": current_plan_pct,
+        "show_upper_alert": show_upper_alert,
+        "dashboard_alerts": dashboard_alerts,
+        "dashboard_remaining": dashboard_remaining,
+        "dashboard_plan_courses": dashboard_plan_courses,
+        "dashboard_plan_units": dashboard_plan_units,
+        "dashboard_plan_term": dashboard_first_term_plan.term if dashboard_first_term_plan else next_term,
+        "dashboard_plan_is_saved": bool(dashboard_plan_courses),
     }
 
     return render(request, "dashboard.html", context)
@@ -1122,7 +1249,9 @@ def remove_planned_course(request, planned_course_id):
     planned_course.delete()
 
     messages.success(request, f"{course_code} removed from {term_label}.")
-    return redirect("degree_plan")
+
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or reverse("degree_plan")
+    return redirect(next_url)
 
 @profile_required
 @require_POST
@@ -2222,6 +2351,15 @@ def _build_requirement_audit_data(profile, user):
         and ic.course.numeric_level() >= 100
     ]
 
+    additional_planned = [
+        pc for pc in planned_courses
+        if pc.course
+        and pc.course.code
+        and (pc.course.code or "").upper() not in used_requirement_codes
+        and pc.course.numeric_level() is not None
+        and pc.course.numeric_level() >= 100
+    ]
+
     return {
         "audit_groups": audit_groups,
         "audit_summary": {
@@ -2240,13 +2378,14 @@ def _build_requirement_audit_data(profile, user):
         "quick_stats": {
             "major": getattr(profile, "get_program_display", lambda: profile.program)(),
             "catalog_year": getattr(profile, "catalog_year", ""),
-            "standing": "Junior" if completed_credits >= 60 else "Sophomore" if completed_credits >= 30 else "Freshman",
+            "standing":"Senior" if completed_credits >= 90 else "Junior" if completed_credits >= 60 else "Sophomore" if completed_credits >= 30 else "Freshman",
         },
         "latest_dpr": DPRUpload.objects.filter(user=user).order_by("-uploaded_at").first(),
         "below_100_completed": below_100_completed,
         "below_100_in_progress": below_100_in_progress,
         "additional_completed": additional_completed,
         "additional_in_progress": additional_in_progress,
+        "additional_planned": additional_planned,
     }
 
 @profile_required
@@ -2552,6 +2691,19 @@ def courses_page(request):
         for tp in term_plans
     ]
 
+    q = request.GET.get("q", "").strip()
+    level_param = request.GET.get("level", "").strip()
+    credits_param = request.GET.get("credits", "").strip()
+    tag_param = request.GET.get("tag", "").strip()
+    fulfillment_param = request.GET.get("fulfillment", "").strip()
+    also_counts_for = request.GET.get("also_counts_for", "").strip()
+    count_type = request.GET.get("count_type", "").strip()
+
+    req = ProgramRequirement.objects.filter(
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    ).first()
+
     base_qs = (
         Course.objects
         .filter(program=profile.program, catalog_year=profile.catalog_year)
@@ -2559,61 +2711,128 @@ def courses_page(request):
         .order_by("subject", "code")
     )
 
-    q = request.GET.get("q", "").strip()
-    courses = list(base_qs)
-
     if q:
-        raw_q = q
-        normalized_q = re.sub(r"[\s\-]+", "", raw_q.upper())
-        filtered_courses = []
+        normalized_q = re.sub(r"[\s\-]+", "", q.upper())
 
-        for c in courses:
-            code = c.code or ""
-            title = c.title or ""
-            subject = c.subject or ""
-            description = c.description or ""
-            section = c.section or ""
-            tag_names = " ".join(t.name for t in c.tags.all())
+        search_qs = base_qs.filter(
+            Q(code__icontains=q) |
+            Q(title__icontains=q) |
+            Q(subject__icontains=q) |
+            Q(description__icontains=q) |
+            Q(section__icontains=q) |
+            Q(tags__name__icontains=q)
+        ).distinct()
 
-            normalized_code = re.sub(r"[\s\-]+", "", code.upper())
-            normalized_title = re.sub(r"[\s\-]+", "", title.upper())
-            normalized_subject = re.sub(r"[\s\-]+", "", subject.upper())
-            normalized_description = re.sub(r"[\s\-]+", "", description.upper())
-            normalized_section = re.sub(r"[\s\-]+", "", section.upper())
-            normalized_tags = re.sub(r"[\s\-]+", "", tag_names.upper())
+        courses = list(search_qs)
 
+        if not courses:
+            all_courses = list(base_qs)
+
+            normalized_matches = []
+            for c in all_courses:
+                normalized_code = re.sub(r"[\s\-]+", "", (c.code or "").upper())
+                normalized_title = re.sub(r"[\s\-]+", "", (c.title or "").upper())
+                normalized_subject = re.sub(r"[\s\-]+", "", (c.subject or "").upper())
+                normalized_description = re.sub(r"[\s\-]+", "", (c.description or "").upper())
+                normalized_section = re.sub(r"[\s\-]+", "", (c.section or "").upper())
+                normalized_tags = re.sub(
+                    r"[\s\-]+", "",
+                    " ".join(t.name for t in c.tags.all()).upper()
+                )
+
+                if (
+                    normalized_q in normalized_code
+                    or normalized_q in normalized_title
+                    or normalized_q in normalized_subject
+                    or normalized_q in normalized_description
+                    or normalized_q in normalized_section
+                    or normalized_q in normalized_tags
+                ):
+                    normalized_matches.append(c)
+
+            courses = normalized_matches
+    else:
+        courses = list(base_qs)
+
+    LEVEL_RANGES = {
+        "000-099": (0, 99),
+        "100-199": (100, 199),
+        "200-299": (200, 299),
+        "300-399": (300, 399),
+        "400-499": (400, 499),
+        "500+": (500, 9999),
+    }
+
+    def parse_number_from_code(code: str):
+        digits = "".join(ch for ch in (code or "") if ch.isdigit())
+        return int(digits) if digits else None
+
+    if level_param in LEVEL_RANGES:
+        lo, hi = LEVEL_RANGES[level_param]
+        courses = [
+            c for c in courses
             if (
-                raw_q.lower() in code.lower()
-                or raw_q.lower() in title.lower()
-                or raw_q.lower() in subject.lower()
-                or raw_q.lower() in description.lower()
-                or raw_q.lower() in section.lower()
-                or raw_q.lower() in tag_names.lower()
-                or normalized_q in normalized_code
-                or normalized_q in normalized_title
-                or normalized_q in normalized_subject
-                or normalized_q in normalized_description
-                or normalized_q in normalized_section
-                or normalized_q in normalized_tags
-            ):
-                filtered_courses.append(c)
+                parse_number_from_code(getattr(c, "code", "")) is not None
+                and lo <= parse_number_from_code(getattr(c, "code", "")) <= hi
+            )
+        ]
 
-        courses = filtered_courses
+    if credits_param:
+        try:
+            wanted_credits = float(credits_param)
+            courses = [
+                c for c in courses
+                if getattr(c, "credits", None) is not None and float(c.credits) == wanted_credits
+            ]
+        except ValueError:
+            pass
 
-    req = ProgramRequirement.objects.filter(
-        program=profile.program,
-        catalog_year=profile.catalog_year,
-    ).first()
+    if tag_param:
+        courses = [c for c in courses if any(t.name == tag_param for t in c.tags.all())]
 
-    count_map = build_course_counting_map(courses, req) if req else {}
+    if fulfillment_param and req:
+        block = req.blocks.filter(name=fulfillment_param).first()
+        if block:
+            block_course_ids = set(block.courses.values_list("id", flat=True))
+            courses = [c for c in courses if c.id in block_course_ids]
+
+    if req and courses:
+        count_map_all = build_course_counting_map(courses, req)
+    else:
+        count_map_all = {}
 
     for c in courses:
-        info = count_map.get(c.id, {})
+        info = count_map_all.get(c.id, {})
         c.eligible_blocks = info.get("eligible_names", [])
         c.applied_blocks = info.get("applied_names", [])
         c.eligible_count = info.get("eligible_count", 0)
         c.applied_count = info.get("applied_count", 0)
         c.is_multi_count = info.get("is_multi_count", False)
+
+    if fulfillment_param and also_counts_for and req:
+        filtered = []
+
+        for c in courses:
+            applied = set(getattr(c, "applied_blocks", []) or [])
+            eligible = set(getattr(c, "eligible_blocks", []) or [])
+
+            if fulfillment_param in applied and also_counts_for in applied:
+                filtered.append(c)
+                continue
+
+            if (
+                getattr(c, "is_multi_count", False)
+                and fulfillment_param in eligible
+                and also_counts_for in eligible
+            ):
+                filtered.append(c)
+
+        courses = filtered
+
+    if count_type == "single":
+        courses = [c for c in courses if getattr(c, "applied_count", 0) == 1]
+    elif count_type == "multi":
+        courses = [c for c in courses if getattr(c, "applied_count", 0) > 1]
 
     completed_ids = set(
         CompletedClass.objects.filter(profile=profile).values_list("course_id", flat=True)
@@ -2630,11 +2849,63 @@ def courses_page(request):
         PlannedCourse.objects
         .filter(term_plan__profile=profile)
         .select_related("course", "term_plan", "term_plan__term")
+        .order_by("term_plan__position")
     ):
         if pc.course_id not in planned_map:
             planned_map[pc.course_id] = str(pc.term_plan.term)
 
-    for c in courses:
+    def _course_sort_key(course):
+        code = (getattr(course, "code", "") or "").upper()
+        title = (getattr(course, "title", "") or "").upper()
+
+        if q:
+            normalized_query = re.sub(r"[\s\-]+", "", q.upper())
+            normalized_code = re.sub(r"[\s\-]+", "", code)
+            normalized_title = re.sub(r"[\s\-]+", "", title)
+
+            if normalized_code == normalized_query:
+                search_rank = 0
+            elif normalized_code.startswith(normalized_query):
+                search_rank = 1
+            elif normalized_query in normalized_code:
+                search_rank = 2
+            elif normalized_title.startswith(normalized_query):
+                search_rank = 3
+            elif normalized_query in normalized_title:
+                search_rank = 4
+            else:
+                search_rank = 5
+
+            is_completed = course.id in completed_ids
+            is_in_progress = course.id in in_progress_ids
+
+            return (
+                1 if is_in_progress else 0,
+                1 if is_completed else 0,
+                search_rank,
+                code,
+                title,
+            )
+
+        is_in_progress = course.id in in_progress_ids
+        is_planned = course.id in planned_course_ids
+
+        return (
+            0 if is_in_progress else 1,
+            0 if is_planned else 1,
+            code,
+            title,
+        )
+
+    courses.sort(key=_course_sort_key)
+    results_count = len(courses)
+
+    paginator = Paginator(courses, 30)
+    page_number = request.GET.get("page") or 1
+    page_obj = paginator.get_page(page_number)
+    courses_page_items = list(page_obj.object_list)
+
+    for c in courses_page_items:
         if c.id in completed_ids:
             state = {
                 "progress_status": "completed",
@@ -2666,126 +2937,24 @@ def courses_page(request):
         _apply_course_ui_state(c, state)
         c.planned_term_label = planned_map.get(c.id, "")
         c.is_planned = c.id in planned_course_ids
+        c.is_locked_for_planning = False
+        c.lock_reason = ""
 
-    level_param = request.GET.get("level", "").strip()
-    LEVEL_RANGES = {
-        "000-099": (0, 99),
-        "100-199": (100, 199),
-        "200-299": (200, 299),
-        "300-399": (300, 399),
-        "400-499": (400, 499),
-        "500+": (500, 9999),
-    }
+        if not c.is_planned:
+            ok_for_some_term = False
+            last_reason = "Not ready for planning yet."
 
-    def parse_number_from_code(code: str):
-        digits = "".join(ch for ch in (code or "") if ch.isdigit())
-        return int(digits) if digits else None
+            for tp in term_plans:
+                ok, reason = profile.can_add_course_to_term_plan(c, tp)
+                if ok:
+                    ok_for_some_term = True
+                    last_reason = ""
+                    break
+                if reason:
+                    last_reason = reason
 
-    if level_param in LEVEL_RANGES:
-        lo, hi = LEVEL_RANGES[level_param]
-        courses = [
-            c for c in courses
-            if (
-                parse_number_from_code(getattr(c, "code", "")) is not None
-                and lo <= parse_number_from_code(getattr(c, "code", "")) <= hi
-            )
-        ]
-
-    credits_param = request.GET.get("credits", "").strip()
-    if credits_param:
-        try:
-            wanted_credits = float(credits_param)
-            courses = [
-                c for c in courses
-                if getattr(c, "credits", None) is not None and float(c.credits) == wanted_credits
-            ]
-        except ValueError:
-            pass
-
-    tag_param = request.GET.get("tag", "").strip()
-    if tag_param:
-        courses = [c for c in courses if any(t.name == tag_param for t in c.tags.all())]
-
-    fulfillment_param = request.GET.get("fulfillment", "").strip()
-    also_counts_for = request.GET.get("also_counts_for", "").strip()
-
-    if fulfillment_param and req:
-        block = req.blocks.filter(name=fulfillment_param).first()
-        if block:
-            block_course_ids = set(block.courses.values_list("id", flat=True))
-            courses = [c for c in courses if c.id in block_course_ids]
-
-    if fulfillment_param and also_counts_for and req:
-        filtered = []
-
-        for c in courses:
-            applied = set(getattr(c, "applied_blocks", []) or [])
-            eligible = set(getattr(c, "eligible_blocks", []) or [])
-
-            if fulfillment_param in applied and also_counts_for in applied:
-                filtered.append(c)
-                continue
-
-            if (
-                getattr(c, "is_multi_count", False)
-                and fulfillment_param in eligible
-                and also_counts_for in eligible
-            ):
-                filtered.append(c)
-
-        courses = filtered
-
-    count_type = request.GET.get("count_type", "").strip()
-    if count_type == "single":
-        courses = [c for c in courses if getattr(c, "applied_count", 0) == 1]
-    elif count_type == "multi":
-        courses = [c for c in courses if getattr(c, "applied_count", 0) > 1]
-
-    def _course_sort_key(course):
-        code = (getattr(course, "code", "") or "").upper()
-        title = (getattr(course, "title", "") or "").upper()
-
-        if q:
-            normalized_query = re.sub(r"[\s\-]+", "", q.upper())
-            normalized_code = re.sub(r"[\s\-]+", "", code)
-            normalized_title = re.sub(r"[\s\-]+", "", title)
-
-            if normalized_code == normalized_query:
-                search_rank = 0
-            elif normalized_code.startswith(normalized_query):
-                search_rank = 1
-            elif normalized_query in normalized_code:
-                search_rank = 2
-            elif normalized_title.startswith(normalized_query):
-                search_rank = 3
-            elif normalized_query in normalized_title:
-                search_rank = 4
-            else:
-                search_rank = 5
-
-            is_completed = getattr(course, "progress_status", "") == "completed"
-            is_in_progress = getattr(course, "progress_status", "") == "in_progress"
-
-
-            return (
-                1 if is_in_progress else 0,
-                1 if is_completed else 0,
-                search_rank,
-                code,
-                title,
-            )
-
-        is_in_progress = getattr(course, "progress_status", "") == "in_progress"
-        is_planned = bool(getattr(course, "is_planned", False))
-
-        return (
-            0 if is_in_progress else 1,
-            0 if is_planned else 1,
-            code,
-            title,
-        )
-
-    courses.sort(key=_course_sort_key)
+            c.is_locked_for_planning = not ok_for_some_term
+            c.lock_reason = last_reason if not ok_for_some_term else ""
 
     level_choices = [
         ("", "All levels"),
@@ -2800,10 +2969,10 @@ def courses_page(request):
     credit_choices = [
         ("", "Any credits"),
         ("1", "1 credit"),
-        ("2", "2 credits"),
-        ("3", "3 credits"),
-        ("4", "4 credits"),
-        ("5", "5 credits"),
+        ("2", "2 credit"),
+        ("3", "3 credit"),
+        ("4", "4 credit"),
+        ("5", "5 credit"),
     ]
 
     fulfillment_labels = []
@@ -2838,10 +3007,10 @@ def courses_page(request):
         ("single", "Single Count"),
         ("multi", "Multi Count"),
     ]
-    if q:
-        courses = courses[:24]
+
     ctx = {
-        "courses": courses,
+        "courses": courses_page_items,
+        "page_obj": page_obj,
         "profile": profile,
         "q": q,
         "selected_level": level_param,
@@ -2851,7 +3020,7 @@ def courses_page(request):
         "level_choices": level_choices,
         "credit_choices": credit_choices,
         "fulfillment_choices": fulfillment_choices,
-        "results_count": len(courses),
+        "results_count": results_count,
         "count_type_choices": count_type_choices,
         "selected_count_type": count_type,
         "also_counts_for_choices": also_counts_for_choices,

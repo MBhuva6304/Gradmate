@@ -11,13 +11,17 @@
           <span class="rounded-full px-3 py-1 text-xs font-medium {{ c.progress_badge_class }}">
             {{ c.progress_label }}
           </span>
-        {% elif c.eligible %}
-          <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-            Eligible
+        {% elif c.is_planned %}
+          <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+            Planned
           </span>
-        {% else %}
+        {% elif c.is_locked_for_planning %}
           <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
             Locked
+          </span>
+        {% else %}
+          <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+            Eligible
           </span>
         {% endif %}
       </div>
@@ -39,6 +43,12 @@
       {% if c.planned_term_label %}
         <p class="mt-2 text-xs text-green-700">
           Planned in: {{ c.planned_term_label }}
+        </p>
+      {% endif %}
+
+      {% if c.is_locked_for_planning and c.lock_reason %}
+        <p class="mt-2 text-xs text-red-600">
+          {{ c.lock_reason }}
         </p>
       {% endif %}
 
@@ -64,7 +74,8 @@
 
       <div class="mt-4 flex flex-wrap gap-2">
         <a
-          href="{% url 'course_detail' c.pk %}"
+          href="{% url 'course_detail' c.pk %}?partial=1"
+          data-course-url="{% url 'course_detail' c.pk %}?partial=1"
           class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
         >
           Details

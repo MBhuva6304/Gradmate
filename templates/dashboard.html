@@ -450,40 +450,42 @@
       <div class="flex-none space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 class="text-sm font-semibold">Alerts &amp; Messages</h2>
 
-        {% if show_upper_alert %}
-          <div class="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-900">
-            <span>⚠️</span>
-            <div>
-              <p class="font-semibold">You might be short on upper-division electives.</p>
-              <p>Make sure your remaining plan includes enough upper-division units.</p>
+        {% if dashboard_alerts %}
+          {% for alert in dashboard_alerts %}
+            <div
+              class="flex gap-2 rounded-xl px-3 py-3 text-xs
+              {% if alert.level == 'warning' %}
+                border border-amber-200 bg-amber-50 text-amber-900
+              {% elif alert.level == 'success' %}
+                border border-emerald-200 bg-emerald-50 text-emerald-900
+              {% else %}
+                border border-indigo-200 bg-indigo-50 text-indigo-900
+              {% endif %}"
+            >
+              <span>{{ alert.icon }}</span>
+              <div>
+                <p class="font-semibold">{{ alert.title }}</p>
+                <p>{{ alert.message }}</p>
+              </div>
             </div>
-          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-xs text-slate-500">No alerts right now.</p>
         {% endif %}
-
-        <div class="flex gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3 text-xs text-indigo-900">
-          <span>🗓</span>
-          <div>
-            <p class="font-semibold">Registration reminder</p>
-            <p>
-              Next registration window is before {{ next_term }}.
-              Aim for at least {{ next_credits|default:12 }} units.
-            </p>
-          </div>
-        </div>
       </div>
 
       <div class="flex-none rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div class="mb-2 flex items-center justify-between">
           <h2 class="text-sm font-semibold">Remaining Courses</h2>
           <span class="text-xs text-slate-500">
-            {{ remaining|length }} course{{ remaining|length|pluralize }}
+           {{ dashboard_remaining|length }} course{{ dashboard_remaining|length|pluralize }}
           </span>
         </div>
 
         <div class="border-t border-slate-100 pt-2 text-sm">
-          {% if remaining %}
+          {% if dashboard_remaining %}
             <ul class="divide-y divide-slate-100">
-              {% for c in remaining %}
+              {% for c in dashboard_remaining %}
                 <li class="flex justify-between py-2">
                   <span>{{ c.code }} — {{ c.title }}</span>
                   <span class="text-xs text-slate-500">{{ c.credits }} u</span>
@@ -504,12 +506,42 @@
       <div class="flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div class="mb-2 flex items-center justify-between">
           <div>
-            <h2 class="text-sm font-semibold">{{ next_term }} Plan</h2>
-            <p class="text-xs text-slate-500">Draft — {{ next_credits }} units</p>
+        <h2 class="text-sm font-semibold">{{ dashboard_plan_term }} Plan</h2>
+            <p class="text-xs text-slate-500">
+              {% if dashboard_plan_is_saved %}
+                Saved plan — {{ dashboard_plan_units }} units
+              {% else %}
+                Draft — {{ next_credits }} units
+              {% endif %}
+            </p>
           </div>
         </div>
 
-        {% if next_list %}
+         {% if dashboard_plan_courses %}
+          <div class="mt-2 grid gap-3">
+            {% for pc in dashboard_plan_courses %}
+              <article class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm transition hover:bg-white">
+                <div class="mb-1 flex justify-between">
+                  <h3 class="font-medium">{{ pc.course.code }} — {{ pc.course.title }}</h3>
+                  <span class="text-xs text-slate-500">{{ pc.course.credits }} units</span>
+                </div>
+                <p class="mb-2 text-[11px] text-slate-500">
+                  Saved in your degree plan for {{ dashboard_plan_term }}.
+                </p>
+
+                {% if pc.course.applied_blocks %}
+                  <div class="flex flex-wrap gap-1">
+                    {% for block in pc.course.applied_blocks %}
+                      <span class="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2 py-[2px] text-[10px] font-medium text-indigo-700">
+                        Fulfills: {{ block }}
+                      </span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        {% elif next_list %}
           <div class="mt-2 grid gap-3">
             {% for c in next_list %}
               <article class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm transition hover:bg-white">
@@ -520,9 +552,16 @@
                 <p class="mb-2 text-[11px] text-slate-500">
                   Suggested from your remaining requirements.
                 </p>
-                <span class="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2 py-[2px] text-[10px] font-medium text-indigo-700">
-                  Fulfills: Major Requirement
-                </span>
+
+                {% if c.applied_blocks %}
+                  <div class="flex flex-wrap gap-1">
+                    {% for block in c.applied_blocks %}
+                      <span class="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2 py-[2px] text-[10px] font-medium text-indigo-700">
+                        Fulfills: {{ block }}
+                      </span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
               </article>
             {% endfor %}
           </div>

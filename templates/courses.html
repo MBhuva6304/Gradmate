@@ -105,16 +105,209 @@
     </div>
   </form>
 
-  <div class="mb-2 flex items-center justify-between">
+  <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <p class="text-xs text-slate-500">
       {{ results_count }} results
-      {% if q and results_count > 24 %}
-        (showing first 24)
+      {% if page_obj %}
+        • Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
       {% endif %}
+    </p>
+
+    {% if page_obj and page_obj.paginator.num_pages > 1 %}
+      <div class="flex flex-wrap items-center gap-2 text-sm">
+        {% if page_obj.has_previous %}
+          <a
+            href="?q={{ q|urlencode }}&level={{ selected_level|urlencode }}&credits={{ selected_credits|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&also_counts_for={{ selected_also_counts_for|urlencode }}&count_type={{ selected_count_type|urlencode }}&page=1"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+          >
+            First
+          </a>
+          <a
+            href="?q={{ q|urlencode }}&level={{ selected_level|urlencode }}&credits={{ selected_credits|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&also_counts_for={{ selected_also_counts_for|urlencode }}&count_type={{ selected_count_type|urlencode }}&page={{ page_obj.previous_page_number }}"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+          >
+            Previous
+          </a>
+        {% endif %}
+
+        <span class="rounded-lg bg-slate-100 px-3 py-1.5 text-slate-700">
+          {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+          <a
+            href="?q={{ q|urlencode }}&level={{ selected_level|urlencode }}&credits={{ selected_credits|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&also_counts_for={{ selected_also_counts_for|urlencode }}&count_type={{ selected_count_type|urlencode }}&page={{ page_obj.next_page_number }}"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+          >
+            Next
+          </a>
+          <a
+            href="?q={{ q|urlencode }}&level={{ selected_level|urlencode }}&credits={{ selected_credits|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&also_counts_for={{ selected_also_counts_for|urlencode }}&count_type={{ selected_count_type|urlencode }}&page={{ page_obj.paginator.num_pages }}"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+          >
+            Last
+          </a>
+        {% endif %}
+
+        <form method="get" action="{% url 'courses' %}" class="flex items-center gap-2">
+          <input type="hidden" name="q" value="{{ q }}">
+          <input type="hidden" name="level" value="{{ selected_level }}">
+          <input type="hidden" name="credits" value="{{ selected_credits }}">
+          <input type="hidden" name="fulfillment" value="{{ selected_fulfillment }}">
+          <input type="hidden" name="also_counts_for" value="{{ selected_also_counts_for }}">
+          <input type="hidden" name="count_type" value="{{ selected_count_type }}">
+
+          <label for="page-jump-top" class="text-sm text-slate-600">Go to</label>
+          <input
+            id="page-jump-top"
+            type="number"
+            name="page"
+            min="1"
+            max="{{ page_obj.paginator.num_pages }}"
+            value="{{ page_obj.number }}"
+            class="w-20 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+          >
+          <button
+            type="submit"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
+          >
+            Go
+          </button>
+        </form>
+      </div>
+    {% endif %}
   </div>
 
   <div id="courses-results">
     {% include "courses_list.html" %}
+  </div>
+
+  {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <div class="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm">
+      {% if page_obj.has_previous %}
+        <a
+          href="?q={{ q|urlencode }}&level={{ selected_level|urlencode }}&credits={{ selected_credits|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&also_counts_for={{ selected_also_counts_for|urlencode }}&count_type={{ selected_count_type|urlencode }}&page=1"
+          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+        >
+          First
+        </a>
+        <a
+          href="?q={{ q|urlencode }}&level={{ selected_level|urlencode }}&credits={{ selected_credits|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&also_counts_for={{ selected_also_counts_for|urlencode }}&count_type={{ selected_count_type|urlencode }}&page={{ page_obj.previous_page_number }}"
+          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+        >
+          Previous
+        </a>
+      {% endif %}
+
+      <span class="rounded-lg bg-slate-100 px-3 py-1.5 text-slate-700">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      </span>
+
+      {% if page_obj.has_next %}
+        <a
+          href="?q={{ q|urlencode }}&level={{ selected_level|urlencode }}&credits={{ selected_credits|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&also_counts_for={{ selected_also_counts_for|urlencode }}&count_type={{ selected_count_type|urlencode }}&page={{ page_obj.next_page_number }}"
+          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+        >
+          Next
+        </a>
+        <a
+          href="?q={{ q|urlencode }}&level={{ selected_level|urlencode }}&credits={{ selected_credits|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&also_counts_for={{ selected_also_counts_for|urlencode }}&count_type={{ selected_count_type|urlencode }}&page={{ page_obj.paginator.num_pages }}"
+          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+        >
+          Last
+        </a>
+      {% endif %}
+
+      <form method="get" action="{% url 'courses' %}" class="flex items-center gap-2">
+        <input type="hidden" name="q" value="{{ q }}">
+        <input type="hidden" name="level" value="{{ selected_level }}">
+        <input type="hidden" name="credits" value="{{ selected_credits }}">
+        <input type="hidden" name="fulfillment" value="{{ selected_fulfillment }}">
+        <input type="hidden" name="also_counts_for" value="{{ selected_also_counts_for }}">
+        <input type="hidden" name="count_type" value="{{ selected_count_type }}">
+
+        <label for="page-jump-bottom" class="text-sm text-slate-600">Go to</label>
+        <input
+          id="page-jump-bottom"
+          type="number"
+          name="page"
+          min="1"
+          max="{{ page_obj.paginator.num_pages }}"
+          value="{{ page_obj.number }}"
+          class="w-20 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+        >
+        <button
+          type="submit"
+          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
+        >
+          Go
+        </button>
+      </form>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const backdrop = document.getElementById("course-detail-backdrop");
+    const panel = document.getElementById("course-detail-panel");
+    const panelContent = document.getElementById("course-detail-content");
+
+    function bindCourseDetailLinks(scope) {
+      scope.querySelectorAll("[data-course-url]").forEach(link => {
+        if (link.dataset.boundDetail === "1") return;
+
+        link.dataset.boundDetail = "1";
+        link.addEventListener("click", function (event) {
+          event.preventDefault();
+          const url = this.getAttribute("data-course-url");
+          if (!url) return;
+
+          fetch(url, { headers: { "X-Requested-With": "fetch" } })
+            .then(response => response.text())
+            .then(html => {
+              panelContent.innerHTML = html;
+              panel.classList.remove("hidden");
+              backdrop.classList.remove("hidden");
+            })
+            .catch(err => {
+              console.error("Error loading course detail:", err);
+            });
+        });
+      });
+    }
+
+    function closePanel() {
+      panel.classList.add("hidden");
+      backdrop.classList.add("hidden");
+      panelContent.innerHTML = "";
+    }
+
+    bindCourseDetailLinks(document);
+
+    backdrop?.addEventListener("click", closePanel);
+
+    document.addEventListener("click", function (e) {
+      if (e.target && e.target.id === "course-detail-close") {
+        e.preventDefault();
+        closePanel();
+      }
+    });
+  });
+</script>
+
+<div id="course-detail-backdrop" class="hidden fixed inset-0 bg-black/30 z-40"></div>
+
+<div
+  id="course-detail-panel"
+  class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-md border-l border-slate-200 bg-white shadow-xl"
+>
+  <div class="flex h-full flex-col">
+    <div class="flex items-center px-5 py-3 border-b border-slate-200">
+      <h2 class="text-sm font-semibold text-slate-900">Course details</h2>
+    </div>
+
+    <div id="course-detail-content" class="flex-1 overflow-y-auto px-5 py-4 text-sm text-slate-800"></div>
   </div>
 </div>
 {% endblock %}

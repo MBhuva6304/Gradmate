@@ -114,9 +114,16 @@
       color: #991b1b;
     }
 
-    .audit-tag.planned {
+      .audit-tag.planned {
       background: #dcfce7;
       color: #166534;
+    }
+
+    .audit-warning-card {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 1rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
 
     @media (max-width: 900px) {
@@ -204,6 +211,58 @@
       </section>
     </div>
 
+    {% if additional_planned %}
+      <section class="audit-warning-card p-5">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 class="text-xl font-semibold text-amber-900">Additional Planned Courses</h2>
+            <p class="mt-1 text-sm text-amber-800">
+              These planned courses do not currently satisfy any remaining requirement section.
+            </p>
+          </div>
+          <span class="audit-tag planned">○ Warning</span>
+        </div>
+
+        <div class="mt-4 space-y-2">
+          {% for r in additional_planned %}
+            <div class="rounded-xl border border-amber-200 bg-white px-5 py-4">
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div class="min-w-0">
+                  <div class="font-semibold text-slate-900">
+                    <strong>{{ r.course.code }}</strong> — {{ r.course.title }}
+                  </div>
+                  <div class="mt-1 text-xs text-slate-500">
+                    Planned in {{ r.term_plan.term }}
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+                  <div class="text-sm text-slate-500 whitespace-nowrap">
+                    {{ r.course.credits|floatformat:0 }} units
+                  </div>
+
+                  <span class="audit-tag planned whitespace-nowrap">
+                    ○ Planned
+                  </span>
+
+                  <form method="post" action="{% url 'remove_planned_course' r.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button
+                      type="submit"
+                      class="inline-flex items-center rounded-lg bg-rose-600 px-3 py-2 text-xs font-medium text-white hover:bg-rose-700 whitespace-nowrap"
+                    >
+                      Remove
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
     <section class="space-y-5">
       {% for group in audit_groups %}
         <div class="audit-group">
@@ -263,7 +322,7 @@
                 </div>
 
                 {% if sec.name == "General Education Upper Division" and sec.helper_options and sec.remaining > 0 %}
-                  <div class="space-y-3 mb-4">
+                  <div class="mb-4 space-y-3">
                     {% for opt in sec.helper_options %}
                       <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                         <div class="flex items-center justify-between gap-4 flex-wrap">
@@ -280,28 +339,28 @@
                             {% if part.done %}
                               <a
                                 href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
-                                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border bg-emerald-100 text-emerald-700 border-emerald-200"
+                                class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700"
                               >
                                 {{ part.label }} ✓
                               </a>
                             {% elif part.in_progress %}
                               <a
                                 href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
-                                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border bg-amber-100 text-amber-700 border-amber-200"
+                                class="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700"
                               >
                                 {{ part.label }} ●
                               </a>
                             {% elif part.planned %}
                               <a
                                 href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
-                                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border bg-green-100 text-green-700 border-green-200"
+                                class="inline-flex items-center rounded-full border border-green-200 bg-green-100 px-3 py-1 text-xs font-medium text-green-700"
                               >
                                 {{ part.label }} ○
                               </a>
                             {% else %}
                               <a
                                 href="{% url 'courses' %}?fulfillment={{ part.link_name|urlencode }}"
-                                class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                                class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                               >
                                 {{ part.label }}
                               </a>
@@ -376,14 +435,14 @@
                 {% endif %}
               </div>
             {% empty %}
-              <p class="text-slate-500 text-sm">No requirement data available yet.</p>
+              <p class="text-sm text-slate-500">No requirement data available yet.</p>
             {% endfor %}
           </div>
         </div>
       {% empty %}
         <div class="audit-card p-6">
-          <h3 class="text-lg font-semibold mb-2">No audit data yet</h3>
-          <p class="text-slate-600 mb-4">Upload a DPR PDF to generate your audit view.</p>
+          <h3 class="mb-2 text-lg font-semibold">No audit data yet</h3>
+          <p class="mb-4 text-slate-600">Upload a DPR PDF to generate your audit view.</p>
           <a
             href="{% url 'upload_dpr' %}"
             class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
@@ -396,8 +455,8 @@
 
     {% if below_100_completed or below_100_in_progress %}
       <section class="audit-card p-5">
-        <h2 class="text-xl font-semibold mb-2">Below 100 Level Courses</h2>
-        <p class="text-sm text-slate-500 mb-4">
+        <h2 class="mb-2 text-xl font-semibold">Below 100 Level Courses</h2>
+        <p class="mb-4 text-sm text-slate-500">
           These courses appear in your record but do not count toward total degree units.
         </p>
 
@@ -427,8 +486,8 @@
 
     {% if additional_completed or additional_in_progress %}
       <section class="audit-card p-5">
-        <h2 class="text-xl font-semibold mb-2">Additional Courses That Count Toward Total Units</h2>
-        <p class="text-sm text-slate-500 mb-4">
+        <h2 class="mb-2 text-xl font-semibold">Additional Courses That Count Toward Total Units</h2>
+        <p class="mb-4 text-sm text-slate-500">
           These courses count toward total earned units, but are not currently shown inside the main requirement sections.
         </p>
 
