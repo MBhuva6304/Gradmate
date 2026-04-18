@@ -817,7 +817,7 @@ def degree_plan(request):
     else:
         effective_target_with_plan = total_after_plan + remaining_after_plan
 
-    term_plans = profile.get_or_create_future_term_plans(count=4)
+    term_plans = list(profile.term_plans.order_by("position", "term__year", "term__season"))
     saved_terms = []
 
     req = profile.get_requirement()
@@ -877,6 +877,12 @@ def degree_plan(request):
             pc.eligible_blocks = info.get("eligible_names", [])
 
             pc.is_potentially_unnecessary = not bool(pc.applied_blocks)
+
+        sem["has_warning"] = any(
+            getattr(pc, "is_potentially_unnecessary", False)
+            for pc in sem["courses"]
+            if pc.course
+        )
     for c in next_list:
         info = count_map.get(c.id, {})
         c.applied_blocks = info.get("applied_names", [])

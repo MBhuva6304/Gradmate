@@ -166,8 +166,8 @@
 
     .plan-score-line {
       margin-top: 0.55rem;
-      font-size: 0.72rem;
-      color: #64748b;
+      font-size: 0.75rem;
+      color: #475569;
     }
   </style>
 
@@ -317,11 +317,11 @@
           {% endif %}
 
           {% if locked_list %}
-            <div class="rounded-xl border border-red-200 bg-red-50 p-3">
-              <p class="text-sm font-semibold text-red-900">
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p class="text-sm font-semibold text-amber-900">
                 {{ locked_list|length }} locked course{{ locked_list|length|pluralize }}
               </p>
-              <p class="mt-1 text-xs text-red-800">These still need prerequisites.</p>
+              <p class="mt-1 text-xs text-amber-800">These still need prerequisites.</p>
             </div>
           {% endif %}
 
@@ -333,6 +333,12 @@
               <p class="mt-1 text-xs text-indigo-800">
                 Suggestions now include explanation labels and timing-aware ranking.
               </p>
+            </div>
+          {% endif %}
+
+          {% if not req_missing and not show_upper_alert and planned_warning_count == 0 and not locked_list and not recommendation_details %}
+            <div class="rounded-xl border border-green-200 bg-green-50 p-3">
+              <p class="text-sm font-semibold text-green-900">All clear — no alerts right now.</p>
             </div>
           {% endif %}
         </div>
@@ -451,11 +457,7 @@
                 {% endif %}
 
                 <div class="plan-score-line">
-                  Score {{ item.score }}
-                  • Unlock {{ item.reasons.unlock }}
-                  • Requirement {{ item.reasons.scarcity }}
-                  • Path {{ item.reasons.critical_path }}
-                  • Timing {{ item.reasons.timing }}
+                  Score: {{ item.score }} · Unlocks: {{ item.reasons.unlock }} · Req: {{ item.reasons.scarcity }} · Path: {{ item.reasons.critical_path }} · Timing: {{ item.reasons.timing }}
                 </div>
 
                 <div class="mt-3 flex flex-col gap-2">
@@ -505,10 +507,11 @@
         </div>
 
         <div class="plan-card p-5">
-          <div class="flex items-center justify-between">
+          <details open>
+          <summary class="flex cursor-pointer list-none items-center justify-between">
             <h2 class="text-xl font-semibold">Backup Options</h2>
             <span class="plan-badge neutral">{{ backup_list|length }}</span>
-          </div>
+          </summary>
 
           <div class="mt-4 space-y-3">
             {% if backup_list %}
@@ -576,6 +579,7 @@
               </div>
             {% endif %}
           </div>
+          </details>
         </div>
       </aside>
 
@@ -587,6 +591,9 @@
               <p class="mt-1 text-sm text-slate-500">
                 Build from the next suggested semester forward.
               </p>
+              <a href="{% url 'courses' %}" class="mt-2 inline-block text-xs font-medium text-indigo-700 hover:underline">
+                Browse catalog and add more courses
+              </a>
             </div>
 
             <div class="flex flex-wrap gap-2">
@@ -594,6 +601,7 @@
                 {% csrf_token %}
                 <button
                   type="submit"
+                  onclick="return confirm('This will remove all planned semesters. Continue?')"
                   class="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
                 >
                   Clear Plan
@@ -743,6 +751,7 @@
                           </div>
                         </div>
 
+                        {% if semester_choices|length > 1 %}
                         <form
                           method="post"
                           action="{% url 'move_planned_course' pc.id %}"
@@ -767,6 +776,7 @@
                             Move
                           </button>
                         </form>
+                        {% endif %}
                       </div>
                     </div>
                   {% endfor %}
@@ -799,11 +809,7 @@
                           {% endif %}
 
                           <div class="plan-score-line">
-                            Score {{ item.score }}
-                            • Unlock {{ item.reasons.unlock }}
-                            • Requirement {{ item.reasons.scarcity }}
-                            • Path {{ item.reasons.critical_path }}
-                            • Timing {{ item.reasons.timing }}
+                            Score: {{ item.score }} · Unlocks: {{ item.reasons.unlock }} · Req: {{ item.reasons.scarcity }} · Path: {{ item.reasons.critical_path }} · Timing: {{ item.reasons.timing }}
                           </div>
                         </div>
                         <div class="text-xs text-slate-500">{{ item.course.credits }} units</div>
@@ -881,11 +887,7 @@
                               {% endif %}
 
                               <div class="plan-score-line">
-                                Score {{ item.score }}
-                                • Unlock {{ item.reasons.unlock }}
-                                • Requirement {{ item.reasons.scarcity }}
-                                • Path {{ item.reasons.critical_path }}
-                                • Timing {{ item.reasons.timing }}
+                                Score: {{ item.score }} · Unlocks: {{ item.reasons.unlock }} · Req: {{ item.reasons.scarcity }} · Path: {{ item.reasons.critical_path }} · Timing: {{ item.reasons.timing }}
                               </div>
                             </div>
 
@@ -916,14 +918,6 @@
                 {% endif %}
               {% endfor %}
 
-              <div class="mt-4">
-                <a
-                  href="{% url 'courses' %}"
-                  class="text-xs font-medium text-indigo-700 hover:underline"
-                >
-                  Browse catalog and add more courses
-                </a>
-              </div>
             </section>
           {% endfor %}
 
@@ -978,8 +972,9 @@
     class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-md border-l border-slate-200 bg-white shadow-xl"
   >
     <div class="flex h-full flex-col">
-      <div class="flex items-center px-5 py-3 border-b border-slate-200">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-slate-200">
         <h2 class="text-sm font-semibold text-slate-900">Course details</h2>
+        <button type="button" id="course-detail-close" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 text-lg leading-none">&times;</button>
       </div>
 
       <div id="course-detail-content" class="flex-1 overflow-y-auto px-5 py-4 text-sm text-slate-800"></div>
