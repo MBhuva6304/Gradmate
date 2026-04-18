@@ -1056,25 +1056,16 @@ def auto_suggest_degree_plan(request):
         messages.error(request, "Could not create future semesters.")
         return redirect("degree_plan")
 
-    first_term = term_plans[0]
+    total_placed, terms_used = profile.build_full_plan(term_plans)
 
-    PlannedCourse.objects.filter(term_plan=first_term).delete()
-
-    next_list, _, _, _ = profile.recommend_next_term()
-
-    created = 0
-    for idx, course in enumerate(next_list, start=1):
-        PlannedCourse.objects.get_or_create(
-            term_plan=first_term,
-            course=course,
-            defaults={
-                "position": idx,
-                "status": "planned",
-            },
+    if total_placed == 0:
+        messages.info(request, "All your requirements are already covered — nothing left to plan!")
+    else:
+        messages.success(
+            request,
+            f"Planned {total_placed} course(s) across {terms_used} of {len(term_plans)} term(s).",
         )
-        created += 1
 
-    messages.success(request, f"Auto-suggested {created} course(s) into {first_term.term}.")
     return redirect("degree_plan")
 
 @profile_required

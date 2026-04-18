@@ -301,6 +301,31 @@ class StudentProfile(models.Model):
 
         return True
 
+    def _prereqs_satisfied_with(self, course, simulated_taken: set) -> bool:
+        """Like prerequisites_satisfied but checks against an arbitrary 'taken' set.
+        Used by build_full_plan to treat courses planned in earlier terms as completed."""
+        prereq_codes = {
+            c.code.upper() for c in course.prerequisites.all()
+            if c.program == self.program and c.catalog_year == self.catalog_year
+        }
+
+        if prereq_codes:
+            if course.prereq_mode == "ANY":
+                if not (prereq_codes & simulated_taken):
+                    return False
+            else:
+                if not prereq_codes.issubset(simulated_taken):
+                    return False
+
+        for grp in course.prereq_groups.all():
+            option_codes = {c.code.upper() for c in grp.options.all()}
+            if not option_codes:
+                continue
+            if len(option_codes & simulated_taken) < grp.min_required:
+                return False
+
+        return True
+
     def recommend_next_term(self, next_term=None):
         next_term = next_term or Term.from_date().next()
 
@@ -351,6 +376,26 @@ class StudentProfile(models.Model):
                 recommendation_details.append(item)
                 total_units += units
 
+        # Force-pair corequisites: if a selected course has a coreq not yet taken or selected,
+        # add it to the same term regardless of unit budget.
+        selected_codes = {(c.code or "").upper() for c in selected}
+        for c in list(selected):
+            for coreq in c.corequisites.all():
+                if coreq.program != self.program or coreq.catalog_year != self.catalog_year:
+                    continue
+                coreq_code = (coreq.code or "").upper()
+                if coreq_code in taken_codes or coreq_code in selected_codes:
+                    continue
+                selected.append(coreq)
+                selected_codes.add(coreq_code)
+                total_units += float(coreq.credits or 0)
+                recommendation_details.append({
+                    "course": coreq,
+                    "score": 0,
+                    "reasons": {},
+                    "labels": ["Required corequisite"],
+                })
+
         return selected, total_units, next_term, recommendation_details
     
     def recommend_for_term_plan(self, term_plan, remaining_courses=None, limit=5):
@@ -362,10 +407,17 @@ class StudentProfile(models.Model):
 
         remaining_courses = remaining_courses or list(self.remaining_required_courses())
 
+        target_term = term_plan.term
+
         scored = []
         for course in remaining_courses:
             ok, _reason = self.can_add_course_to_term_plan(course, term_plan)
             if not ok:
+                continue
+
+            # Skip courses not offered this specific term
+            offered_terms = list(course.offered_in.all())
+            if offered_terms and target_term not in offered_terms:
                 continue
 
             item = self._score_course_for_recommendation(
@@ -402,11 +454,25 @@ class StudentProfile(models.Model):
     def _is_upper_division_course(self, course):
         return self._course_number_value(course) >= 300
 
-    def _term_timing_score(self, course, completed_units=None):
+    def _is_udge_course(self, course, block_code_map=None):
+        """Return True if course belongs to any Upper Division GE requirement block."""
+        if block_code_map is None:
+            block_code_map = self._requirement_block_code_map()
+        code = (course.code or "").upper()
+        return any(
+            "upper division" in block_name.lower() and code in block_codes
+            for block_name, block_codes in block_code_map.items()
+        )
+
+    def _term_timing_score(self, course, completed_units=None, block_code_map=None):
         completed_units = completed_units if completed_units is not None else self._completed_units_for_planning()
         code = (course.code or "").upper()
 
         score = 0
+
+        # Hard timing rule: UDGE courses require 60+ units completed
+        if completed_units < 60 and self._is_udge_course(course, block_code_map=block_code_map):
+            return -50
 
         if self.program == "BS_CS":
             if code in {"COMP-490", "COMP-490L", "COMP-491L"}:
@@ -434,8 +500,14 @@ class StudentProfile(models.Model):
     def _recommendation_labels(self, reasons):
         labels = []
 
+        if reasons.get("block_completer"):
+            labels.append("Completes a section")
+
         if reasons.get("unlock", 0) > 0:
             labels.append("Unlocks future courses")
+
+        if reasons.get("multi_block", 0) > 0:
+            labels.append("Fills multiple requirements")
 
         if reasons.get("scarcity", 0) >= 8:
             labels.append("Fills narrow requirement")
@@ -453,7 +525,7 @@ class StudentProfile(models.Model):
             labels.append("Better later")
 
         return labels
-    
+
     def _score_course_for_recommendation(
         self,
         course,
@@ -464,6 +536,7 @@ class StudentProfile(models.Model):
         completed_units=None,
     ):
         usable_codes = taken_codes | planned_codes
+        code = (course.code or "").upper()
 
         unlock_score = self._unlock_score(course, usable_codes)
         scarcity_score = self._requirement_scarcity_score(
@@ -478,11 +551,41 @@ class StudentProfile(models.Model):
         if self.program == "BS_CS":
             critical_path_score = self._cs_critical_path_score(course)
 
-        timing_score = self._term_timing_score(course, completed_units=completed_units)
+        timing_score = self._term_timing_score(course, completed_units=completed_units, block_code_map=block_code_map)
 
-        total_score = unlock_score + scarcity_score + critical_path_score + timing_score
+        # Bonus for courses that count toward multiple unfulfilled blocks
+        multi_block_count = sum(
+            1 for block_name, block_codes in (block_code_map or {}).items()
+            if code in block_codes and not progress_by_name.get(block_name, {}).get("done")
+        )
+        multi_block_score = max(0, (multi_block_count - 1) * 4)
 
-        code = (course.code or "").upper()
+        # Detect if taking this course would complete any requirement block
+        block_completer = False
+        for block_name, block_codes in (block_code_map or {}).items():
+            if code not in block_codes:
+                continue
+            row = progress_by_name.get(block_name)
+            if not row or row.get("done"):
+                continue
+            completed = float(row.get("completed") or 0)
+            in_progress = float(row.get("in_progress") or 0)
+            min_req = float(row.get("min_required") or 0)
+            if min_req - completed - in_progress <= 1:
+                block_completer = True
+                break
+
+        # Flag unsatisfied corequisites (informational — no score penalty)
+        coreq_warning = any(
+            coreq.program == self.program
+            and coreq.catalog_year == self.catalog_year
+            and (coreq.code or "").upper() not in taken_codes
+            and (coreq.code or "").upper() not in planned_codes
+            for coreq in course.corequisites.all()
+        )
+
+        total_score = unlock_score + scarcity_score + critical_path_score + timing_score + multi_block_score
+
         if self.program == "BS_CS" and self.catalog_year == 2023:
             if code.startswith("COMP-4") or code.startswith("COMP-5"):
                 total_score += 3
@@ -492,6 +595,9 @@ class StudentProfile(models.Model):
             "scarcity": scarcity_score,
             "critical_path": critical_path_score,
             "timing": timing_score,
+            "multi_block": multi_block_score,
+            "block_completer": block_completer,
+            "coreq_warning": coreq_warning,
         }
 
         return {
@@ -517,6 +623,9 @@ class StudentProfile(models.Model):
                 "offered_in",
                 "requirement_blocks",
                 "as_prerequisite_for",
+                "as_prerequisite_for__prerequisites",
+                "as_prerequisite_for__as_prerequisite_for",
+                "as_prerequisite_for__as_prerequisite_for__prerequisites",
                 "prereq_groups__options",
             )
             .distinct()
@@ -694,33 +803,53 @@ class StudentProfile(models.Model):
     
     def _unlock_score(self, course, taken_codes=None):
         taken_codes = taken_codes or (self.taken_course_codes() | self.planned_course_codes())
-        score = 0
         this_code = (course.code or "").upper()
+        score = 0
+        directly_unlocked = set()
 
+        # Depth 1: courses this directly enables
         for unlocked in course.as_prerequisite_for.all():
             if unlocked.program != self.program or unlocked.catalog_year != self.catalog_year:
                 continue
-
             unlocked_code = (unlocked.code or "").upper()
             if unlocked_code in taken_codes:
                 continue
-
             prereqs = {
                 (p.code or "").upper()
                 for p in unlocked.prerequisites.all()
                 if p.program == self.program and p.catalog_year == self.catalog_year
-                }
-
+            }
             if this_code not in prereqs:
                 continue
-
             remaining = prereqs - taken_codes
             if len(remaining) == 1:
                 score += 10
+                directly_unlocked.add(unlocked)
             elif len(remaining) == 2:
-                    score += 6
+                score += 6
             else:
                 score += 2
+
+        # Depth 2: what do directly-unlocked courses further enable?
+        simulated = taken_codes | {this_code}
+        for d1 in directly_unlocked:
+            d1_code = (d1.code or "").upper()
+            sim_d2 = simulated | {d1_code}
+            for unlocked2 in d1.as_prerequisite_for.all():
+                if unlocked2.program != self.program or unlocked2.catalog_year != self.catalog_year:
+                    continue
+                if (unlocked2.code or "").upper() in taken_codes:
+                    continue
+                prereqs2 = {
+                    (p.code or "").upper()
+                    for p in unlocked2.prerequisites.all()
+                    if p.program == self.program and p.catalog_year == self.catalog_year
+                }
+                remaining2 = prereqs2 - sim_d2
+                if len(remaining2) == 0:
+                    score += 5
+                elif len(remaining2) == 1:
+                    score += 3
 
         return score
     
@@ -765,6 +894,13 @@ class StudentProfile(models.Model):
                 score += 5
             else:
                 score += 2
+
+            # Extra bonus when taking this course would complete the block
+            completed = float(row.get("completed") or 0)
+            in_progress = float(row.get("in_progress") or 0)
+            min_req = float(row.get("min_required") or 0)
+            if min_req - completed - in_progress <= 1:
+                score += 8
 
         return score
     
@@ -1058,6 +1194,183 @@ class StudentProfile(models.Model):
             term = term.next()
 
         return created_or_found
+
+    def build_full_plan(self, term_plans=None):
+        """Fill term_plans sequentially using smart scoring.
+        Prereqs from earlier terms are treated as satisfied for later terms.
+        Returns (total_courses_placed, terms_actually_used)."""
+        PlannedCourseModel = apps.get_model("users", "PlannedCourse")
+
+        if term_plans is None:
+            term_plans = self.get_or_create_future_term_plans(count=4)
+
+        # Clear all existing planned courses for these terms
+        PlannedCourseModel.objects.filter(term_plan__in=term_plans).delete()
+
+        # Cache expensive queries that don't change across terms
+        actual_taken = self.taken_course_codes()
+        completed_units = self._completed_units_for_planning()
+        all_pool = list(self._required_course_pool())
+        block_code_map = self._requirement_block_code_map()
+
+        # simulated_taken grows as we place courses — used for prereq checks
+        simulated_taken = set(actual_taken)
+        total_placed = 0
+        terms_used = 0
+
+        for term_plan in term_plans:
+            # Stop early if all requirement sections are already satisfied
+            if self.all_sections_satisfied(include_planned=True):
+                break
+
+            # Recalculate per-term state from DB (includes courses placed in prior iterations)
+            planned_codes = self.planned_course_codes()
+            progress_by_name = self._requirement_progress_map()
+
+            already_used = actual_taken | planned_codes
+
+            candidates = [
+                c for c in all_pool
+                if (c.code or "").upper() not in already_used
+                and self.course_still_useful_for_requirements(
+                    c, progress_by_name=progress_by_name, block_code_map=block_code_map
+                )
+            ]
+
+            if not candidates:
+                break
+
+            term = term_plan.term
+            offered = [
+                c for c in candidates
+                if not c.offered_in.all() or term in c.offered_in.all()
+            ]
+
+            eligible = [
+                c for c in offered
+                if self._prereqs_satisfied_with(c, simulated_taken)
+                and not (
+                    completed_units < 60
+                    and self._is_udge_course(c, block_code_map=block_code_map)
+                )
+            ]
+
+            if not eligible:
+                continue
+
+            scored = [
+                self._score_course_for_recommendation(
+                    c,
+                    taken_codes=actual_taken,
+                    planned_codes=planned_codes,
+                    progress_by_name=progress_by_name,
+                    block_code_map=block_code_map,
+                    completed_units=completed_units,
+                )
+                for c in eligible
+            ]
+            scored.sort(key=lambda x: (-x["score"], x["course"].code))
+
+            # Local tracker: how many more slots each block still needs within this term.
+            # Only track real blocks (those in block_code_map) so synthetic rows
+            # like "General Education Upper Division" don't prevent early exit.
+            block_remaining = {}
+            for bname in block_code_map:
+                row = progress_by_name.get(bname)
+                if not row or row.get("done"):
+                    block_remaining[bname] = 0.0
+                else:
+                    min_req = float(row.get("min_required") or 0)
+                    done_so_far = (
+                        float(row.get("completed") or 0)
+                        + float(row.get("in_progress") or 0)
+                        + float(row.get("planned") or 0)
+                    )
+                    block_remaining[bname] = max(0.0, min_req - done_so_far)
+
+            def _block_still_needs(course):
+                code = (course.code or "").upper()
+                return any(
+                    code in block_code_map.get(bname, set())
+                    and block_remaining.get(bname, 0) > 0
+                    for bname in block_remaining
+                )
+
+            def _consume_block(course):
+                """Decrement ALL blocks this course satisfies (not just the first)."""
+                code = (course.code or "").upper()
+                credits = float(course.credits or 0)
+                for bname, bcodes in block_code_map.items():
+                    if code in bcodes and block_remaining.get(bname, 0) > 0:
+                        if bname == "Senior Electives":
+                            block_remaining[bname] = max(0.0, block_remaining[bname] - credits)
+                        else:
+                            block_remaining[bname] = max(0.0, block_remaining[bname] - 1)
+
+            unit_limit = float(self.avg_credits_per_term or 15)
+            term_units = 0.0
+            position = 1
+
+            all_done = False
+            for item in scored:
+                if all_done:
+                    break
+                # Fast local check: stop if every real block is locally satisfied
+                if all(v <= 0 for v in block_remaining.values()):
+                    # Confirm with DB (local tracker can be optimistic due to count_group rules)
+                    if self.all_sections_satisfied(include_planned=True):
+                        all_done = True
+                        break
+
+                c = item["course"]
+                code = (c.code or "").upper()
+                if code in simulated_taken:
+                    continue
+                if not _block_still_needs(c):
+                    continue
+                units = float(c.credits or 0)
+                if term_units + units > unit_limit:
+                    continue
+                PlannedCourseModel.objects.create(
+                    term_plan=term_plan,
+                    course=c,
+                    position=position,
+                    status="planned",
+                )
+                simulated_taken.add(code)
+                _consume_block(c)
+                term_units += units
+                total_placed += 1
+                position += 1
+
+                # DB-accurate check after each placement
+                if self.all_sections_satisfied(include_planned=True):
+                    all_done = True
+
+                if not all_done:
+                    # Force-pair corequisites into the same term
+                    for coreq in c.corequisites.all():
+                        if coreq.program != self.program or coreq.catalog_year != self.catalog_year:
+                            continue
+                        coreq_code = (coreq.code or "").upper()
+                        if coreq_code in simulated_taken:
+                            continue
+                        PlannedCourseModel.objects.get_or_create(
+                            term_plan=term_plan,
+                            course=coreq,
+                            defaults={"position": position, "status": "planned"},
+                        )
+                        simulated_taken.add(coreq_code)
+                        _consume_block(coreq)
+                        term_units += float(coreq.credits or 0)
+                        total_placed += 1
+                        position += 1
+
+            if position > 1:
+                terms_used += 1
+                completed_units += term_units
+
+        return total_placed, terms_used
 
     def planned_course_codes(self) -> set[str]:
         PlannedCourseModel = apps.get_model("users", "PlannedCourse")
