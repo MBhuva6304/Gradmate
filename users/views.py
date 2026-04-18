@@ -340,8 +340,14 @@ def settings_page(request):
         .order_by("-uploaded_at")
     )
 
+    valid_dpr_history = []
     for dpr in dpr_history:
-        dpr.display_name = os.path.basename(dpr.file.name or "")
+        if dpr.file and dpr.file.storage.exists(dpr.file.name):
+            dpr.display_name = os.path.basename(dpr.file.name)
+            valid_dpr_history.append(dpr)
+        else:
+            dpr.delete()
+    dpr_history = valid_dpr_history
 
     return render(request, "settings.html", {
         "profile_form": profile_form,
