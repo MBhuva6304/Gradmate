@@ -408,11 +408,20 @@ def dashboard(request):
         if (c.code or "").upper() not in planned_codes
     ]
 
+    has_course_data = (
+        CompletedClass.objects.filter(profile=profile).exists()
+        or InProgressClass.objects.filter(profile=profile).exists()
+        or PlannedCourse.objects.filter(term_plan__profile=profile).exists()
+    )
+
     grad_term, remaining_credits, completed_credits, target_credits = profile.approximate_graduation_term()
-    effective_target_credits = int(profile.effective_target_credits(include_planned=False))
+    if has_course_data:
+        effective_target_credits = int(profile.effective_target_credits(include_planned=False))
+    else:
+        effective_target_credits = 120
+        target_credits = 120
     group_progress_raw = profile.requirement_group_progress_with_planned()
     planned_credits = int(profile.total_planned_units())
-    remaining_after_plan = int(profile.remaining_credits_after_plan())
 
     in_progress_credits = sum(
         float(c.course.credits or 0)
@@ -422,6 +431,11 @@ def dashboard(request):
 
     total_now = int(float(completed_credits) + float(in_progress_credits))
     total_after_plan = int(float(completed_credits) + float(in_progress_credits) + float(planned_credits))
+
+    if has_course_data:
+        remaining_after_plan = int(profile.remaining_credits_after_plan())
+    else:
+        remaining_after_plan = max(0, 120 - total_after_plan)
 
     if remaining_after_plan <= 0:
         effective_target_with_plan = total_after_plan
@@ -727,8 +741,18 @@ def degree_plan(request):
     recommended_courses, recommended_units, next_term, recommendation_details = profile.recommend_next_term()
     next_list = list(recommended_courses)
 
+    has_course_data = (
+        CompletedClass.objects.filter(profile=profile).exists()
+        or InProgressClass.objects.filter(profile=profile).exists()
+        or PlannedCourse.objects.filter(term_plan__profile=profile).exists()
+    )
+
     grad_term, _, completed_credits, target_credits = profile.approximate_graduation_term()
-    effective_target_credits = int(profile.effective_target_credits(include_planned=False))
+    if has_course_data:
+        effective_target_credits = int(profile.effective_target_credits(include_planned=False))
+    else:
+        effective_target_credits = 120
+        target_credits = 120
     group_progress_raw = profile.requirement_group_progress_with_planned()
 
     ge_mapping = {
@@ -809,7 +833,10 @@ def degree_plan(request):
     total_after_plan = int(float(completed_credits) + float(in_progress_credits) + float(total_planned_units))
 
     remaining_credits = max(0, effective_target_credits - total_now)
-    remaining_after_plan = int(profile.remaining_credits_after_plan())
+    if has_course_data:
+        remaining_after_plan = int(profile.remaining_credits_after_plan())
+    else:
+        remaining_after_plan = max(0, 120 - total_after_plan)
     planned_warning_count = profile.planned_warning_count()
 
     if remaining_after_plan <= 0:
@@ -1678,7 +1705,7 @@ def _build_udge_helper_options(
         })
 
     return options
-def _build_requirement_audit_data(profile, user):
+def _build_requirement_audit_data(profile, user, has_dpr=True):
     completed_courses = list(
         CompletedClass.objects
         .filter(profile=profile)
@@ -1740,7 +1767,7 @@ def _build_requirement_audit_data(profile, user):
             _, _, calc_completed, calc_target = profile.approximate_graduation_term()
             if calc_completed is not None:
                 completed_credits = _safe_float(calc_completed, completed_credits)
-            if calc_target is not None:
+            if calc_target is not None and has_dpr:
                 target_credits = _safe_int(calc_target, 120)
         except Exception:
             pass
@@ -2394,8 +2421,13 @@ def _build_requirement_audit_data(profile, user):
 @profile_required
 def audit(request):
     profile = request.profile
+    has_course_data = (
+        CompletedClass.objects.filter(profile=profile).exists()
+        or InProgressClass.objects.filter(profile=profile).exists()
+        or PlannedCourse.objects.filter(term_plan__profile=profile).exists()
+    )
 
-    shared = _build_requirement_audit_data(profile, request.user)
+    shared = _build_requirement_audit_data(profile, request.user, has_dpr=has_course_data)
 
     context = {
         "profile": profile,
