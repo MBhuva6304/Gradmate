@@ -124,6 +124,11 @@ class StudentProfile(models.Model):
         who = self.user.get_full_name() or self.user.email or self.user.username
         return f"{who} — {self.get_program_display()} ({self.catalog_year})"
 
+    def _get_cache(self) -> dict:
+        if '_runtime_cache' not in self.__dict__:
+            self.__dict__['_runtime_cache'] = {}
+        return self.__dict__['_runtime_cache']
+
     def _parsed_completed_codes(self) -> set[str]:
         raw = (self.completed_codes or "").upper()
         parts = [p.strip() for p in re.split(r"[,\s]+", raw) if p.strip()]
@@ -142,18 +147,24 @@ class StudentProfile(models.Model):
         )
 
     def completed_course_codes(self) -> set[str]:
-        db_codes = set(
-            CompletedClass.objects.filter(profile=self)
-            .values_list("course__code", flat=True)
-        )
-        return {c.upper() for c in (db_codes | self._parsed_completed_codes())}
+        cache = self._get_cache()
+        if 'completed_codes' not in cache:
+            db_codes = set(
+                CompletedClass.objects.filter(profile=self)
+                .values_list("course__code", flat=True)
+            )
+            cache['completed_codes'] = {c.upper() for c in (db_codes | self._parsed_completed_codes())}
+        return cache['completed_codes']
 
     def in_progress_course_codes(self) -> set[str]:
-        return {
-            c.upper()
-            for c in InProgressClass.objects.filter(profile=self)
-            .values_list("course__code", flat=True)
-        }
+        cache = self._get_cache()
+        if 'in_progress_codes' not in cache:
+            cache['in_progress_codes'] = {
+                c.upper()
+                for c in InProgressClass.objects.filter(profile=self)
+                .values_list("course__code", flat=True)
+            }
+        return cache['in_progress_codes']
 
     def taken_course_codes(self) -> set[str]:
         return self.completed_course_codes() | self.in_progress_course_codes()
@@ -273,6 +284,11 @@ class StudentProfile(models.Model):
             program=self.program,
             catalog_year=self.catalog_year,
             code__in=needed_codes,
+        ).prefetch_related(
+            "prerequisites",
+            "corequisites",
+            "prereq_groups__options",
+            "offered_in",
         ).order_by("code").distinct()
 
     def prerequisites_satisfied(self, course):
@@ -1373,19 +1389,26 @@ class StudentProfile(models.Model):
         return total_placed, terms_used
 
     def planned_course_codes(self) -> set[str]:
-        PlannedCourseModel = apps.get_model("users", "PlannedCourse")
-        return {
-            (code or "").upper()
-            for code in PlannedCourseModel.objects.filter(term_plan__profile=self)
-            .values_list("course__code", flat=True)
-        }
+        cache = self._get_cache()
+        if 'planned_codes' not in cache:
+            PlannedCourseModel = apps.get_model("users", "PlannedCourse")
+            cache['planned_codes'] = {
+                (code or "").upper()
+                for code in PlannedCourseModel.objects.filter(term_plan__profile=self)
+                .values_list("course__code", flat=True)
+            }
+        return cache['planned_codes']
 
     def term_plan_total_units(self, term_plan) -> float:
-        return sum(
-            float(pc.course.credits or 0)
-            for pc in term_plan.planned_courses.select_related("course").all()
-            if pc.course
-        )
+        cache = self._get_cache()
+        key = f'term_units_{term_plan.id}'
+        if key not in cache:
+            cache[key] = sum(
+                float(pc.course.credits or 0)
+                for pc in term_plan.planned_courses.select_related("course").all()
+                if pc.course
+            )
+        return cache[key]
 
     def total_planned_units(self) -> float:
         PlannedCourseModel = apps.get_model("users", "PlannedCourse")
@@ -1531,6 +1554,24 @@ class StudentProfile(models.Model):
                 row.save(update_fields=["position"])
 
     
+    def _earlier_planned_codes_for(self, term_plan) -> set:
+        cache = self._get_cache()
+        key = f'earlier_codes_{term_plan.id}'
+        if key not in cache:
+            codes: set[str] = set()
+            earlier_terms = (
+                self.term_plans
+                .filter(position__lt=term_plan.position)
+                .order_by("position")
+                .prefetch_related("planned_courses__course")
+            )
+            for tp in earlier_terms:
+                for pc in tp.planned_courses.all():
+                    if pc.course and pc.course.code:
+                        codes.add(pc.course.code.upper())
+            cache[key] = codes
+        return cache[key]
+
     def planner_prerequisites_satisfied(self, course, target_term_plan) -> bool:
         """
         Planner-aware prerequisite check.
@@ -1542,15 +1583,7 @@ class StudentProfile(models.Model):
         """
         completed_codes = self.completed_course_codes()
         in_progress_codes = self.in_progress_course_codes()
-
-        earlier_planned_codes = set()
-        earlier_terms = self.term_plans.filter(position__lt=target_term_plan.position).order_by("position")
-
-        for tp in earlier_terms:
-            for pc in tp.planned_courses.select_related("course").all():
-                if pc.course and pc.course.code:
-                    earlier_planned_codes.add(pc.course.code.upper())
-
+        earlier_planned_codes = self._earlier_planned_codes_for(target_term_plan)
         available_codes = completed_codes | in_progress_codes | earlier_planned_codes
 
         prereq_codes = {

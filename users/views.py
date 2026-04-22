@@ -837,7 +837,6 @@ def degree_plan(request):
         remaining_after_plan = int(profile.remaining_credits_after_plan())
     else:
         remaining_after_plan = max(0, 120 - total_after_plan)
-    planned_warning_count = profile.planned_warning_count()
 
     if remaining_after_plan <= 0:
         effective_target_with_plan = total_after_plan
@@ -856,7 +855,7 @@ def degree_plan(request):
         )
         planned_courses_flat.extend([pc.course for pc in planned_courses if pc.course])
 
-        units = int(profile.term_plan_total_units(term_plan))
+        units = int(sum(float(pc.course.credits or 0) for pc in planned_courses if pc.course))
         
         saved_terms.append({
             "id": term_plan.id,
@@ -910,6 +909,14 @@ def degree_plan(request):
             for pc in sem["courses"]
             if pc.course
         )
+
+    planned_warning_count = sum(
+        1
+        for sem in saved_terms
+        for pc in sem["courses"]
+        if pc.course and getattr(pc, "is_potentially_unnecessary", False)
+    )
+
     for c in next_list:
         info = count_map.get(c.id, {})
         c.applied_blocks = info.get("applied_names", [])
