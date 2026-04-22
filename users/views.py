@@ -163,6 +163,16 @@ def _parse_dpr_lines(text: str) -> tuple[list[dict], list[dict]]:
 
 
 # ---------------------------
+# Landing page
+# ---------------------------
+
+def home_page(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+    return render(request, "home.html")
+
+
+# ---------------------------
 # Auth / signup etc
 # ---------------------------
 

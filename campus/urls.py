@@ -9,7 +9,8 @@ from users.forms import EmailAuthenticationForm
 urlpatterns = [
     path("admin/", admin.site.urls),
 
-    path("", users_views.dashboard, name="dashboard"),
+    path("", users_views.home_page, name="home"),
+    path("dashboard/", users_views.dashboard, name="dashboard"),
     path("settings/", users_views.settings_page, name="settings"),
     path("degree-plan/", users_views.degree_plan, name="degree_plan"),
     path("degree-plan/auto-suggest/", users_views.auto_suggest_degree_plan, name="auto_suggest_degree_plan"),
@@ -51,7 +52,7 @@ urlpatterns = [
     ),
     path(
         "logout/",
-        auth_views.LogoutView.as_view(next_page="login"),
+        auth_views.LogoutView.as_view(next_page="home"),
         name="logout",
     ),
 

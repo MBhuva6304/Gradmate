@@ -10,8 +10,15 @@
   <main class="min-h-screen flex items-center justify-center p-6">
     <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden">
 
+      <!-- Back to home -->
+      <div class="px-8 pt-6">
+        <a href="{% url 'home' %}" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-indigo-600 transition">
+          &#8592; Back to home
+        </a>
+      </div>
+
       <!-- Header -->
-      <header class="px-8 pt-8">
+      <header class="px-8 pt-4">
         <div class="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-2xl font-extrabold shadow">
           G
         </div>

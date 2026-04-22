@@ -24,8 +24,8 @@ Authentication
 - Logout
 
 Student Profile
-- Program selection (BS CS, BS IT, MS CS, MBA)
-- Catalog year setup
+- Program selection (BS CS)
+- Catalog year (2023)
 - Average and max credits per term
 
 Dashboard
@@ -262,7 +262,7 @@ SETUP INSTRUCTIONS
 
 1. Clone the project
 
-   git clone <your-repo-url>
+   git clone <https://github.com/MBhuva6304/Gradmate>
    cd Gradmate
 
 2. Create and activate a virtual environment
@@ -347,14 +347,3 @@ If totals do not match the DPR, recommended debugging:
 - Print parsed completed_rows and ip_rows
 - Print unique course codes after deduplication
 - Compare saved CompletedClass/InProgressClass counts
-
-==================================================
-FUTURE IMPROVEMENTS
-==================================================
-
-- Restore / re-activate a past DPR from history
-- Compare two DPR uploads side by side
-- Export audit summary as PDF or CSV
-- Multi-program support per profile
-- Audit status snapshots by upload date
-- Stronger parser handling for unusual transcript layouts
