@@ -4,18 +4,19 @@ Gradmate is a Django-based degree progress and planning web app built to help st
 
 It is designed around a student profile, a course catalog, requirement groups/blocks, a planner-aware recommendation engine, and DPR-based import of completed and in-progress courses.
 
-==================================================
+======================================
 QUICK START
-==================================================
+======================================
 
+pip install -r requirements.txt
 python3 manage.py migrate
 python3 manage.py runserver
 
 Open: http://127.0.0.1:8000/
 
-==================================================
+======================================
 FEATURES
-==================================================
+======================================
 
 Authentication
 - User signup with email OTP verification
@@ -75,9 +76,9 @@ Settings Page
 - Download past DPR files
 - Clear current audit data (keeps DPR history)
 
-==================================================
+======================================
 TECH STACK
-==================================================
+======================================
 
 - Python 3
 - Django 4+
@@ -87,9 +88,9 @@ TECH STACK
 - JavaScript for lightweight UI behavior (HTMX-style partial rendering)
 - PyPDF2 for DPR PDF text extraction
 
-==================================================
+======================================
 PROJECT STRUCTURE
-==================================================
+======================================
 
 Gradmate/
 |-- campus/
@@ -134,9 +135,9 @@ Gradmate/
 |-- manage.py
 `-- requirements.txt
 
-==================================================
+======================================
 CORE MODELS
-==================================================
+======================================
 
 Term
 Represents a academic term (season + year). Supports next() chaining for graduation estimates.
@@ -192,9 +193,9 @@ Stores uploaded DPR PDF files with current/archive status.
 EmailOTP
 Stores one-time passwords for email verification and password reset.
 
-==================================================
+======================================
 MAIN VIEWS
-==================================================
+======================================
 
 dashboard           Progress summary, GE/major progress, grad estimate, DPR upload modal
 degree_plan         Interactive semester planner with recommendations and warnings
@@ -219,9 +220,9 @@ Degree Plan AJAX endpoints:
 Course status endpoints:
 - mark_course_completed / mark_course_in_progress / remove_course_status
 
-==================================================
+======================================
 MAIN CONCEPTS
-==================================================
+======================================
 
 1. Requirement Engine
    Requirement progress is calculated by RequirementBlock, not by group totals.
@@ -256,9 +257,9 @@ MAIN CONCEPTS
    but still shown in in-progress totals and displayed in a separate
    below-100 section on the audit page.
 
-==================================================
+======================================
 SETUP INSTRUCTIONS
-==================================================
+======================================
 
 1. Clone the project
 
@@ -287,9 +288,9 @@ SETUP INSTRUCTIONS
 
    python manage.py runserver
 
-==================================================
+======================================
 ADMIN SETUP
-==================================================
+======================================
 
 Use Django admin to configure:
 - Terms (season + year)
@@ -306,9 +307,9 @@ record that contains the relevant blocks and assigned courses.
 If a student is on catalog year 2024, all blocks must be configured
 under the matching 2024 requirement record.
 
-==================================================
+======================================
 SETTINGS PAGE FEATURES
-==================================================
+======================================
 
 Profile
 - Full name, email, catalog year, program
@@ -328,9 +329,9 @@ Audit Data Reset
 - Clears profile.completed_codes
 - Keeps DPR history files and all catalog/requirement data
 
-==================================================
+======================================
 DPR UPLOAD NOTES
-==================================================
+======================================
 
 - Completed and in-progress classes are imported on each upload
 - Missing courses are auto-created in the catalog
