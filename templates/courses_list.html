@@ -40,6 +40,10 @@
         </p>
       {% endif %}
 
+      {% if c.completed_term and c.progress_status == "completed" %}
+        <p class="mt-1 text-xs text-emerald-600">Completed: {{ c.completed_term }}</p>
+      {% endif %}
+
       {% if c.planned_term_label %}
         <p class="mt-2 text-xs text-green-700">
           Planned in: {{ c.planned_term_label }}

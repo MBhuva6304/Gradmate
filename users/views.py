@@ -2886,9 +2886,9 @@ def courses_page(request):
     elif count_type == "multi":
         courses = [c for c in courses if getattr(c, "applied_count", 0) > 1]
 
-    completed_ids = set(
-        CompletedClass.objects.filter(profile=profile).values_list("course_id", flat=True)
-    )
+    completed_qs = CompletedClass.objects.filter(profile=profile).only("course_id", "term")
+    completed_ids = set(cc.course_id for cc in completed_qs)
+    completed_term_map = {cc.course_id: cc.term for cc in completed_qs}
     in_progress_ids = set(
         InProgressClass.objects.filter(profile=profile).values_list("course_id", flat=True)
     )
@@ -2987,6 +2987,7 @@ def courses_page(request):
             }
 
         _apply_course_ui_state(c, state)
+        c.completed_term = completed_term_map.get(c.id, "")
         c.planned_term_label = planned_map.get(c.id, "")
         c.is_planned = c.id in planned_course_ids
         c.is_locked_for_planning = False
@@ -3150,6 +3151,9 @@ def course_detail(request, pk: int):
 
     state = _course_ui_state(profile, course)
 
+    cc_obj = CompletedClass.objects.filter(profile=profile, course=course).first()
+    completed_term = cc_obj.term if cc_obj else ""
+
     term_plans = profile.get_or_create_future_term_plans(count=4)
     semester_choices = [
         {"id": tp.id, "label": str(tp.term)}
@@ -3187,6 +3191,7 @@ def course_detail(request, pk: int):
         "is_multi_count": course.is_multi_count,
         "semester_choices": semester_choices,
         "planned_term_label": planned_term_label,
+        "completed_term": completed_term,
     }
 
     if _wants_partial(request):

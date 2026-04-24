@@ -229,15 +229,25 @@
           {% if completed_courses %}
         <ul id="completedCoursesList" class="divide-y divide-slate-200">
           {% for cc in completed_courses %}
-            <li class="py-3 {% if forloop.counter > 5 %}hidden extra-course{% endif %}">
-          <p class="font-medium">
-            {{ cc.course.code }} — {{ cc.course.title }}
-          </p>
-          <p class="text-sm text-slate-500">
-            {% if cc.course.credits %}
-              {{ cc.course.credits }} credits
-            {% endif %}
-          </p>
+            <li class="py-3 flex items-center justify-between gap-4 {% if forloop.counter > 5 %}hidden extra-course{% endif %}">
+              <div>
+                <p class="font-medium">
+                  {{ cc.course.code }} — {{ cc.course.title }}
+                </p>
+                <p class="text-sm text-slate-500">
+                  {% if cc.course.credits %}{{ cc.course.credits }} credits{% endif %}
+                </p>
+                {% if cc.term %}
+                  <p class="text-xs text-emerald-600 mt-0.5">Completed: {{ cc.term }}</p>
+                {% endif %}
+              </div>
+              <button
+                type="button"
+                class="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100"
+                data-course-url="{% url 'course_detail' cc.course.id %}?partial=1"
+              >
+                Details
+              </button>
             </li>
           {% endfor %}
         </ul>
@@ -285,6 +295,20 @@
           </form>
         </div>
       </section>
+    </div>
+  </div>
+
+  <!-- Course detail slide panel -->
+  <div id="course-detail-backdrop" class="hidden fixed inset-0 bg-black/30 z-40"></div>
+  <div
+    id="course-detail-panel"
+    class="hidden fixed inset-y-0 right-0 z-50 w-full max-w-md border-l border-slate-200 bg-white shadow-xl"
+  >
+    <div class="flex h-full flex-col">
+      <div class="flex items-center px-5 py-3 border-b border-slate-200">
+        <h2 class="text-sm font-semibold text-slate-900">Course details</h2>
+      </div>
+      <div id="course-detail-content" class="flex-1 overflow-y-auto px-5 py-4 text-sm text-slate-800"></div>
     </div>
   </div>
 {% endblock %}
@@ -360,6 +384,35 @@
   fields.forEach(el => {
     el.addEventListener("input", checkDirty);
     el.addEventListener("change", checkDirty);
+  });
+
+  // Course detail panel
+  const backdrop = document.getElementById("course-detail-backdrop");
+  const panel    = document.getElementById("course-detail-panel");
+  const panelContent = document.getElementById("course-detail-content");
+
+  function closePanel() {
+    panel.classList.add("hidden");
+    backdrop.classList.add("hidden");
+    panelContent.innerHTML = "";
+  }
+
+  document.querySelectorAll("[data-course-url]").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const url = this.getAttribute("data-course-url");
+      fetch(url, { headers: { "X-Requested-With": "fetch" } })
+        .then(r => r.text())
+        .then(html => {
+          panelContent.innerHTML = html;
+          panel.classList.remove("hidden");
+          backdrop.classList.remove("hidden");
+        });
+    });
+  });
+
+  backdrop.addEventListener("click", closePanel);
+  document.addEventListener("click", function (e) {
+    if (e.target && e.target.id === "course-detail-close") closePanel();
   });
 </script>
 {% endblock %}
