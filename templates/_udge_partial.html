@@ -1,0 +1,61 @@
+{% if udge_section %}
+<div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="mb-3 flex items-center justify-between">
+    <div>
+      <h2 class="text-sm font-semibold">Upper Division GE</h2>
+      <p class="text-xs text-slate-500 mt-0.5">
+        {{ udge_section.completed }} completed
+        {% if udge_section.in_progress > 0 %}· {{ udge_section.in_progress }} in progress{% endif %}
+        {% if udge_section.planned > 0 %}· {{ udge_section.planned }} planned{% endif %}
+        · {{ udge_section.remaining }} remaining
+      </p>
+    </div>
+    {% if udge_section.done %}
+      <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">✔ Done</span>
+    {% else %}
+      <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">{{ udge_section.remaining }} left</span>
+    {% endif %}
+  </div>
+
+  <div class="mb-4">
+    <div class="mb-1 flex justify-between text-[11px] text-slate-400">
+      <span>{{ udge_section.completed|add:udge_section.in_progress|add:udge_section.planned }} / {{ udge_section.required }} sections</span>
+    </div>
+    <div class="relative h-2 overflow-hidden rounded-full bg-slate-100">
+      {% widthratio udge_section.completed|add:udge_section.in_progress|add:udge_section.planned udge_section.required 100 as udge_plan_pct %}
+      {% widthratio udge_section.completed|add:udge_section.in_progress udge_section.required 100 as udge_ip_pct %}
+      {% widthratio udge_section.completed udge_section.required 100 as udge_done_pct %}
+      {% if udge_section.planned > 0 %}
+        <div class="absolute left-0 top-0 h-2 bg-green-500" style="width: {{ udge_plan_pct }}%;"></div>
+      {% endif %}
+      {% if udge_section.in_progress > 0 %}
+        <div class="absolute left-0 top-0 h-2 bg-amber-500" style="width: {{ udge_ip_pct }}%;"></div>
+      {% endif %}
+      {% if udge_section.completed > 0 %}
+        <div class="absolute left-0 top-0 h-2 bg-blue-600" style="width: {{ udge_done_pct }}%;"></div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if udge_section.sections %}
+    <div class="flex flex-wrap gap-2">
+      {% for sec in udge_section.sections %}
+        {% if sec.status == "done" %}
+          <span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{{ sec.label }} ✓</span>
+        {% elif sec.status == "ip" %}
+          <span class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">{{ sec.label }} ●</span>
+        {% elif sec.status == "planned" %}
+          <span class="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">{{ sec.label }} ○</span>
+        {% else %}
+          <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">{{ sec.label }}</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <p class="mt-2 text-[11px] text-slate-400">Blue = done · Amber = in progress · Green = planned · Grey = not started</p>
+  {% endif %}
+
+  <div class="mt-3 border-t border-slate-100 pt-2">
+    <a href="{% url 'audit' %}#audit-sec-general-education-upper-division" class="text-xs font-medium text-indigo-600 hover:underline">View in audit →</a>
+  </div>
+</div>
+{% endif %}

@@ -8,7 +8,7 @@ It is designed around a student profile, a course catalog, requirement groups/bl
 QUICK START
 ======================================
 
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 python3 manage.py migrate
 python3 manage.py runserver
 

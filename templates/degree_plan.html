@@ -169,6 +169,31 @@
       font-size: 0.75rem;
       color: #475569;
     }
+
+    .plan-section-group {
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .plan-section-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      background: #f8fafc;
+    }
+
+    @media (max-width: 640px) {
+      .plan-section-row,
+      .plan-section-row.locked {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 
   <div class="space-y-6">
@@ -348,13 +373,14 @@
     <section class="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <aside class="space-y-6 xl:col-span-4">
         <div class="plan-card p-5">
-          <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold">Sections Left</h2>
+          <details>
+          <summary class="flex cursor-pointer list-none items-center justify-between">
+            <div>
+              <h2 class="text-xl font-semibold">Sections Left</h2>
+              <p class="mt-1 text-sm text-slate-500">Only unfinished or in-progress sections shown.</p>
+            </div>
             <span class="plan-badge neutral">{{ sections_left|length }}</span>
-          </div>
-          <p class="mt-1 text-sm text-slate-500">
-            Only unfinished or in-progress sections are shown here.
-          </p>
+          </summary>
 
           <div class="mt-4 space-y-3">
             {% if sections_left %}
@@ -419,6 +445,7 @@
               </div>
             {% endif %}
           </div>
+          </details>
         </div>
 
         <div class="plan-card p-5">
@@ -506,81 +533,6 @@
           </div>
         </div>
 
-        <div class="plan-card p-5">
-          <details open>
-          <summary class="flex cursor-pointer list-none items-center justify-between">
-            <h2 class="text-xl font-semibold">Backup Options</h2>
-            <span class="plan-badge neutral">{{ backup_list|length }}</span>
-          </summary>
-
-          <div class="mt-4 space-y-3">
-            {% if backup_list %}
-              {% for c in backup_list %}
-                <div class="plan-course">
-                  <div class="flex items-start justify-between gap-3">
-                    <div>
-                      <p class="font-medium text-slate-900">{{ c.code }}</p>
-                      <p class="mt-1 text-sm text-slate-600">{{ c.title }}</p>
-
-                      {% if c.applied_blocks %}
-                        <p class="mt-2 text-xs text-green-700">
-                          Counts for: {{ c.applied_blocks|join:", " }}
-                        </p>
-                      {% elif c.eligible_blocks %}
-                        <p class="mt-2 text-xs text-slate-500">
-                          Eligible for: {{ c.eligible_blocks|join:", " }}
-                        </p>
-                      {% endif %}
-                    </div>
-                    <div class="text-xs text-slate-500">{{ c.credits }} units</div>
-                  </div>
-
-                  <div class="mt-3 flex flex-col gap-2">
-                    <div class="flex items-center justify-between gap-3">
-                      <a
-                        href="{% url 'course_detail' c.id %}?partial=1"
-                        data-course-url="{% url 'course_detail' c.id %}?partial=1"
-                        class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        Details
-                      </a>
-                    </div>
-
-                    {% if semester_choices %}
-                      <form
-                        method="post"
-                        action="{% url 'add_planned_course_by_form' c.id %}"
-                        class="flex flex-wrap items-center gap-2"
-                      >
-                        {% csrf_token %}
-                        <select
-                          name="term_plan_id"
-                          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700"
-                        >
-                          {% for sem in semester_choices %}
-                            <option value="{{ sem.id }}">{{ sem.label }}</option>
-                          {% endfor %}
-                        </select>
-
-                        <button
-                          type="submit"
-                          class="text-xs font-medium text-indigo-700 hover:underline"
-                        >
-                          Add
-                        </button>
-                      </form>
-                    {% endif %}
-                  </div>
-                </div>
-              {% endfor %}
-            {% else %}
-              <div class="plan-empty text-sm text-slate-500">
-                No extra eligible backup courses right now.
-              </div>
-            {% endif %}
-          </div>
-          </details>
-        </div>
       </aside>
 
       <main class="space-y-6 xl:col-span-8">
@@ -645,6 +597,7 @@
                     {% csrf_token %}
                     <button
                       type="submit"
+                      onclick="return confirm('Remove {{ sem.term }}? All planned courses in this semester will be deleted.')"
                       class="text-xs font-medium text-red-700 hover:underline"
                     >
                       Remove Semester
@@ -751,32 +704,7 @@
                           </div>
                         </div>
 
-                        {% if semester_choices|length > 1 %}
-                        <form
-                          method="post"
-                          action="{% url 'move_planned_course' pc.id %}"
-                          class="flex flex-wrap items-center gap-2"
-                        >
-                          {% csrf_token %}
-                          <select
-                            name="target_term_plan_id"
-                            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700"
-                          >
-                            {% for choice in semester_choices %}
-                              {% if choice.id != sem.id %}
-                                <option value="{{ choice.id }}">{{ choice.label }}</option>
-                              {% endif %}
-                            {% endfor %}
-                          </select>
-
-                          <button
-                            type="submit"
-                            class="text-xs font-medium text-indigo-700 hover:underline"
-                          >
-                            Move
-                          </button>
-                        </form>
-                        {% endif %}
+                        <p class="text-[11px] text-slate-400">Open Details to move this course to another semester.</p>
                       </div>
                     </div>
                   {% endfor %}
@@ -808,9 +736,6 @@
                             </div>
                           {% endif %}
 
-                          <div class="plan-score-line">
-                            Score: {{ item.score }} · Unlocks: {{ item.reasons.unlock }} · Req: {{ item.reasons.scarcity }} · Path: {{ item.reasons.critical_path }} · Timing: {{ item.reasons.timing }}
-                          </div>
                         </div>
                         <div class="text-xs text-slate-500">{{ item.course.credits }} units</div>
                       </div>
@@ -854,9 +779,11 @@
               {% for rec in semester_recommendations %}
                 {% if rec.term_plan_id == sem.id and rec.details %}
                   <div class="plan-mini-list">
-                    <p class="mb-2 text-xs font-semibold text-slate-700">
-                      Recommended for {{ rec.term_label }}
-                    </p>
+                    <details>
+                    <summary class="cursor-pointer mb-2 list-none flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 w-fit hover:bg-indigo-100 transition-colors">
+                      <span class="text-xs font-semibold text-indigo-700">✦ Suggested for {{ rec.term_label }}</span>
+                      <span class="plan-badge info">{{ rec.details|length }}</span>
+                    </summary>
 
                     <div class="space-y-2">
                       {% for item in rec.details|slice:":3" %}
@@ -914,6 +841,7 @@
                         </div>
                       {% endfor %}
                     </div>
+                    </details>
                   </div>
                 {% endif %}
               {% endfor %}
@@ -921,44 +849,88 @@
             </section>
           {% endfor %}
 
-          <section class="plan-card p-5 lg:col-span-2">
-            <div class="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h3 class="text-base font-semibold text-slate-900">Locked Until Prerequisites</h3>
-                <p class="mt-1 text-sm text-slate-500">These are not ready for planning yet</p>
+          <!-- Backup Options + Locked — audit-style sections -->
+          <section class="lg:col-span-2 space-y-4">
+
+            <!-- Backup Options -->
+            <div class="plan-section-group">
+              <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-semibold text-slate-800">Backup Options</h3>
+                  <p class="text-xs text-slate-500 mt-0.5">Eligible courses not yet placed in a semester</p>
+                </div>
+                <span class="plan-badge neutral">{{ backup_list|length }}</span>
               </div>
-              <span class="plan-badge warn">{{ locked_list|length }}</span>
+
+              <div class="p-4 space-y-2">
+                {% if backup_list %}
+                  {% for c in backup_list %}
+                    <div class="plan-section-row">
+                      <div class="min-w-0">
+                        <span class="font-semibold text-sm text-slate-900">{{ c.code }}</span>
+                        <span class="text-slate-400 mx-1">—</span>
+                        <span class="text-sm text-slate-600">{{ c.title }}</span>
+                        {% if c.applied_blocks %}
+                          <p class="text-xs text-green-700 mt-0.5">Counts for: {{ c.applied_blocks|join:", " }}</p>
+                        {% elif c.eligible_blocks %}
+                          <p class="text-xs text-slate-400 mt-0.5">Eligible for: {{ c.eligible_blocks|join:", " }}</p>
+                        {% endif %}
+                      </div>
+                      <span class="text-xs text-slate-400 text-right">{{ c.credits }} units</span>
+                      <div class="flex items-center gap-2 justify-end">
+                        <a href="{% url 'course_detail' c.id %}?partial=1" data-course-url="{% url 'course_detail' c.id %}?partial=1"
+                          class="text-xs font-medium text-slate-500 hover:text-slate-800">Details</a>
+                        {% if semester_choices %}
+                          <form method="post" action="{% url 'add_planned_course_by_form' c.id %}" class="flex items-center gap-1">
+                            {% csrf_token %}
+                            <select name="term_plan_id" title="Select semester" class="rounded border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-700">
+                              {% for sem in semester_choices %}<option value="{{ sem.id }}">{{ sem.label }}</option>{% endfor %}
+                            </select>
+                            <button type="submit" class="text-xs font-medium text-indigo-700 hover:underline">Add</button>
+                          </form>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <p class="text-sm text-slate-400 px-1">No backup courses right now.</p>
+                {% endif %}
+              </div>
             </div>
 
-            {% if locked_list %}
-              <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {% for c in locked_list %}
-                  <div class="plan-course">
-                    <div class="flex items-start justify-between gap-3">
-                      <div>
-                        <p class="font-medium text-slate-900">{{ c.code }}</p>
-                        <p class="mt-1 text-sm text-slate-600">{{ c.title }}</p>
-                        <p class="mt-2 text-xs text-red-600">{{ c.lock_reason|default:"Not ready for planning yet." }}</p>
+            <!-- Locked Until Prerequisites -->
+            <div class="plan-section-group">
+              <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-semibold text-slate-800">Locked Until Prerequisites</h3>
+                  <p class="text-xs text-slate-500 mt-0.5">These courses are not ready for planning yet</p>
+                </div>
+                <span class="plan-badge warn">{{ locked_list|length }}</span>
+              </div>
+
+              <div class="p-4 space-y-2">
+                {% if locked_list %}
+                  {% for c in locked_list %}
+                    <div class="plan-section-row locked">
+                      <div class="min-w-0">
+                        <span class="font-semibold text-sm text-slate-900">{{ c.code }}</span>
+                        <span class="text-slate-400 mx-1">—</span>
+                        <span class="text-sm text-slate-600">{{ c.title }}</span>
+                        <p class="text-xs text-red-500 mt-0.5">{{ c.lock_reason|default:"Missing prerequisites" }}</p>
                       </div>
-                      <div class="text-xs text-slate-500">{{ c.credits }} units</div>
+                      <span class="text-xs text-slate-400 text-right">{{ c.credits }} units</span>
+                      <div class="flex justify-end">
+                        <a href="{% url 'course_detail' c.id %}?partial=1" data-course-url="{% url 'course_detail' c.id %}?partial=1"
+                          class="text-xs font-medium text-slate-500 hover:text-slate-800">Details</a>
+                      </div>
                     </div>
-                    <div class="mt-3">
-                      <a
-                        href="{% url 'course_detail' c.id %}?partial=1"
-                        data-course-url="{% url 'course_detail' c.id %}?partial=1"
-                        class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        Details
-                      </a>
-                    </div>
-                  </div>
-                {% endfor %}
+                  {% endfor %}
+                {% else %}
+                  <p class="text-sm text-slate-400 px-1">No locked courses right now.</p>
+                {% endif %}
               </div>
-            {% else %}
-              <div class="plan-empty text-sm text-slate-500">
-                No locked courses right now.
-              </div>
-            {% endif %}
+            </div>
+
           </section>
         </div>
       </main>

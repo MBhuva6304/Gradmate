@@ -52,7 +52,7 @@ urlpatterns = [
     ),
     path(
         "logout/",
-        auth_views.LogoutView.as_view(next_page="home"),
+        auth_views.LogoutView.as_view(next_page="login"),
         name="logout",
     ),
 

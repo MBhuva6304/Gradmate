@@ -62,7 +62,26 @@
           </form>
         {% endif %}
 
-        {% if semester_choices %}
+        {% if planned_course_id and semester_choices %}
+          <form method="post" action="{% url 'move_planned_course' planned_course_id %}" class="flex flex-wrap items-center gap-2">
+            {% csrf_token %}
+            <select
+              name="target_term_plan_id"
+              title="Move to semester"
+              class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+            >
+              {% for sem in semester_choices %}
+                <option value="{{ sem.id }}">{{ sem.label }}</option>
+              {% endfor %}
+            </select>
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+            >
+              Move to Semester
+            </button>
+          </form>
+        {% elif semester_choices and not planned_term_label %}
           <form method="post" action="{% url 'add_planned_course_by_form' c.id %}" class="flex flex-wrap items-center gap-2">
             {% csrf_token %}
             <input type="hidden" name="next" value="{% url 'courses' %}">
@@ -75,7 +94,6 @@
                 <option value="{{ sem.id }}">{{ sem.label }}</option>
               {% endfor %}
             </select>
-
             <button
               type="submit"
               class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"

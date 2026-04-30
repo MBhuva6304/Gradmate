@@ -710,6 +710,7 @@ def dashboard(request):
         "dashboard_plan_units": dashboard_plan_units,
         "dashboard_plan_term": dashboard_first_term_plan.term if dashboard_first_term_plan else next_term,
         "dashboard_plan_is_saved": bool(dashboard_plan_courses),
+        "udge_section": _build_udge_dashboard_section(profile),
     }
 
     return render(request, "dashboard.html", context)
@@ -1615,6 +1616,78 @@ def _collect_block_course_rows(profile, block_names: list[str]):
                     seen_codes.add(code)
 
     return rows
+def _build_udge_dashboard_section(profile):
+    group_progress = profile.requirement_group_progress_with_planned()
+
+    udge_block_names = {
+        "B5 Upper Division Scientific Inquiry",
+        "C Upper Division Arts and Humanities",
+        "D Upper Division Social Sciences",
+        "F Upper Division Comparative Cultural Studies",
+        "F Upper Division Comparative Cultural Studies 2",
+    }
+
+    udge_items = [g for g in group_progress if g.get("name") in udge_block_names]
+    parent = next((g for g in group_progress if g.get("name") == "General Education Upper Division"), None)
+
+    if not udge_items and not parent:
+        return None
+
+    if parent:
+        completed = int(float(parent.get("completed") or 0))
+        in_progress = int(float(parent.get("in_progress") or 0))
+        planned = int(float(parent.get("planned") or 0))
+        required = int(float(parent.get("min_required") or 3))
+    else:
+        completed = sum(int(float(g.get("completed") or 0)) for g in udge_items)
+        in_progress = sum(int(float(g.get("in_progress") or 0)) for g in udge_items)
+        planned = sum(int(float(g.get("planned") or 0)) for g in udge_items)
+        required = 3
+
+    course_rows = _collect_block_course_rows(profile, list(udge_block_names))
+
+    completed_codes = {(r["code"] or "").upper() for r in course_rows if r["status"] == "ok" and r.get("code") and r["code"] != "—"}
+    ip_codes = {(r["code"] or "").upper() for r in course_rows if r["status"] == "ip" and r.get("code") and r["code"] != "—"}
+    planned_codes = {(r["code"] or "").upper() for r in course_rows if r["status"] == "planned" and r.get("code") and r["code"] != "—"}
+
+    helper_options = _build_udge_helper_options(profile, completed_codes, ip_codes, planned_codes)
+    done = (completed + in_progress + planned) >= required
+
+    section_defs = [
+        ("B5", "B5 Upper Division Scientific Inquiry", "Section B5 Upper Division Scientific Inquiry"),
+        ("C", "C Upper Division Arts and Humanities", "Section C Upper Division Arts and Humanities"),
+        ("D", "D Upper Division Social Sciences", "Section D Upper Division Social Sciences"),
+        ("F", "F Upper Division Comparative Cultural Studies", "Section F Upper Division Comparative Cultural Studies"),
+    ]
+    sections = []
+    for short, block_name, section_label in section_defs:
+        block_rows = [r for r in course_rows if r.get("title", "").startswith(section_label + ":")]
+        has_done = any(r["status"] == "ok" for r in block_rows)
+        has_ip = any(r["status"] == "ip" for r in block_rows)
+        has_planned = any(r["status"] == "planned" for r in block_rows)
+        if has_done:
+            status = "done"
+        elif has_ip:
+            status = "ip"
+        elif has_planned:
+            status = "planned"
+        else:
+            status = "missing"
+        sections.append({"label": short, "status": status})
+
+    return {
+        "completed": completed,
+        "in_progress": in_progress,
+        "planned": planned,
+        "required": required,
+        "remaining": max(0, required - completed - in_progress - planned),
+        "done": done,
+        "helper_options": helper_options,
+        "courses": course_rows,
+        "sections": sections,
+    }
+
+
 def _build_udge_helper_options(
     profile,
     assigned_completed_codes: set[str],
@@ -3191,6 +3264,7 @@ def course_detail(request, pk: int):
         "is_multi_count": course.is_multi_count,
         "semester_choices": semester_choices,
         "planned_term_label": planned_term_label,
+        "planned_course_id": planned_pc.id if planned_pc else None,
         "completed_term": completed_term,
     }
 
