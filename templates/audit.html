@@ -144,6 +144,20 @@
   </style>
 
   <div class="space-y-6">
+    {% if graduation_ready %}
+    <div class="rounded-2xl border border-yellow-300 bg-gradient-to-r from-yellow-50 to-amber-50 px-5 py-4 shadow-sm flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🎓</span>
+        <div>
+          <p class="font-semibold text-amber-900">Graduation Ready!</p>
+          <p class="text-sm text-amber-700">All your requirements are fulfilled. You're on track to graduate!</p>
+        </div>
+      </div>
+      <a href="{% url 'dashboard' %}" class="shrink-0 rounded-xl bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600">
+        Dashboard
+      </a>
+    </div>
+    {% endif %}
     <div>
       <h1 class="text-3xl font-bold text-slate-900">Audit</h1>
       <p class="mt-1 text-slate-600">
@@ -230,7 +244,21 @@
               These planned courses do not currently satisfy any remaining requirement section.
             </p>
           </div>
-          <span class="audit-tag planned">○ Warning</span>
+          <div class="flex items-center gap-2">
+            <span class="audit-tag planned">○ Warning</span>
+            <form method="post" action="{% url 'remove_all_additional_planned' %}"
+                  onsubmit="return confirm('Remove all {{ additional_planned|length }} additional planned course{{ additional_planned|length|pluralize }}?')">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              {% for r in additional_planned %}
+                <input type="hidden" name="ids" value="{{ r.id }}">
+              {% endfor %}
+              <button type="submit"
+                      class="inline-flex items-center rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700">
+                Remove All
+              </button>
+            </form>
+          </div>
         </div>
 
         <div class="mt-4 space-y-2">

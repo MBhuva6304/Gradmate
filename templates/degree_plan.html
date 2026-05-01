@@ -197,6 +197,20 @@
   </style>
 
   <div class="space-y-6">
+    {% if graduation_ready %}
+    <div class="rounded-2xl border border-yellow-300 bg-gradient-to-r from-yellow-50 to-amber-50 px-5 py-4 shadow-sm flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🎓</span>
+        <div>
+          <p class="font-semibold text-amber-900">Graduation Ready!</p>
+          <p class="text-sm text-amber-700">All your requirements are fulfilled. You're on track to graduate!</p>
+        </div>
+      </div>
+      <a href="{% url 'audit' %}" class="shrink-0 rounded-xl bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600">
+        View Audit
+      </a>
+    </div>
+    {% endif %}
     <section>
       <h1 class="text-3xl font-bold text-slate-900">Degree Plan</h1>
       <p class="mt-1 text-slate-600">

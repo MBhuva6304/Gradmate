@@ -708,20 +708,19 @@ class StudentProfile(models.Model):
     
     def all_sections_satisfied(self, include_planned=False):
         rows = self._normalized_requirement_rows(include_planned=include_planned)
-
+        # Trust the done flag computed by the audit engine for each row.
+        # For rows without a done flag, fall back to numeric comparison.
         for row in rows:
+            if row.get("done"):
+                continue
             required = float(row.get("min_required") or 0)
+            if required <= 0:
+                continue
             completed = float(row.get("completed") or 0)
             in_progress = float(row.get("in_progress") or 0)
-            planned = float(row.get("planned") or 0)
-
-            progress_value = completed + in_progress
-            if include_planned:
-                progress_value += planned
-
-            if progress_value < required:
+            planned = float(row.get("planned") or 0) if include_planned else 0.0
+            if completed + in_progress + planned < required:
                 return False
-
         return True
     
     def _remaining_requirement_units(self, include_planned=False):
@@ -1214,87 +1213,33 @@ class StudentProfile(models.Model):
     def build_full_plan(self, term_plans=None):
         """Fill term_plans sequentially using smart scoring.
         Prereqs from earlier terms are treated as satisfied for later terms.
+        Existing manually-planned courses are preserved; only missing gaps are filled.
         Returns (total_courses_placed, terms_actually_used)."""
         PlannedCourseModel = apps.get_model("users", "PlannedCourse")
 
         if term_plans is None:
             term_plans = self.get_or_create_future_term_plans(count=4)
 
-        # Clear all existing planned courses for these terms
-        PlannedCourseModel.objects.filter(term_plan__in=term_plans).delete()
+        # Authoritative check first — same logic the audit page uses.
+        # If all sections are already satisfied, do nothing.
+        if self.all_sections_satisfied(include_planned=True):
+            return 0, 0
 
-        # Cache expensive queries that don't change across terms
+        # Run all expensive queries once up-front
         actual_taken = self.taken_course_codes()
         completed_units = self._completed_units_for_planning()
         all_pool = list(self._required_course_pool())
         block_code_map = self._requirement_block_code_map()
 
-        # simulated_taken grows as we place courses — used for prereq checks
-        simulated_taken = set(actual_taken)
-        total_placed = 0
-        terms_used = 0
+        # Build block_remaining as a fast local tracker (done flag drives it)
+        progress_by_name = self._requirement_progress_map()
 
-        for term_plan in term_plans:
-            # Stop early if all requirement sections are already satisfied
-            if self.all_sections_satisfied(include_planned=True):
-                break
-
-            # Recalculate per-term state from DB (includes courses placed in prior iterations)
-            planned_codes = self.planned_course_codes()
-            progress_by_name = self._requirement_progress_map()
-
-            already_used = actual_taken | planned_codes
-
-            candidates = [
-                c for c in all_pool
-                if (c.code or "").upper() not in already_used
-                and self.course_still_useful_for_requirements(
-                    c, progress_by_name=progress_by_name, block_code_map=block_code_map
-                )
-            ]
-
-            if not candidates:
-                break
-
-            term = term_plan.term
-            offered = [
-                c for c in candidates
-                if not c.offered_in.all() or term in c.offered_in.all()
-            ]
-
-            eligible = [
-                c for c in offered
-                if self._prereqs_satisfied_with(c, simulated_taken)
-                and not (
-                    completed_units < 60
-                    and self._is_udge_course(c, block_code_map=block_code_map)
-                )
-            ]
-
-            if not eligible:
-                continue
-
-            scored = [
-                self._score_course_for_recommendation(
-                    c,
-                    taken_codes=actual_taken,
-                    planned_codes=planned_codes,
-                    progress_by_name=progress_by_name,
-                    block_code_map=block_code_map,
-                    completed_units=completed_units,
-                )
-                for c in eligible
-            ]
-            scored.sort(key=lambda x: (-x["score"], x["course"].code))
-
-            # Local tracker: how many more slots each block still needs within this term.
-            # Only track real blocks (those in block_code_map) so synthetic rows
-            # like "General Education Upper Division" don't prevent early exit.
-            block_remaining = {}
+        def _build_block_remaining():
+            br = {}
             for bname in block_code_map:
                 row = progress_by_name.get(bname)
                 if not row or row.get("done"):
-                    block_remaining[bname] = 0.0
+                    br[bname] = 0.0
                 else:
                     min_req = float(row.get("min_required") or 0)
                     done_so_far = (
@@ -1302,42 +1247,112 @@ class StudentProfile(models.Model):
                         + float(row.get("in_progress") or 0)
                         + float(row.get("planned") or 0)
                     )
-                    block_remaining[bname] = max(0.0, min_req - done_so_far)
+                    br[bname] = max(0.0, min_req - done_so_far)
+            return br
 
-            def _block_still_needs(course):
-                code = (course.code or "").upper()
-                return any(
-                    code in block_code_map.get(bname, set())
-                    and block_remaining.get(bname, 0) > 0
-                    for bname in block_remaining
+        block_remaining = _build_block_remaining()
+
+        # simulated_taken starts with already taken + already planned courses
+        # so existing planned courses are respected and never duplicated
+        existing_planned = self.planned_course_codes()
+        simulated_taken = set(actual_taken) | existing_planned
+
+        # Per-term unit caps: count units already in each term plan
+        term_existing_units = {
+            tp.id: float(
+                PlannedCourseModel.objects.filter(term_plan=tp)
+                .aggregate(s=models.Sum("course__credits"))
+                .get("s") or 0
+            )
+            for tp in term_plans
+        }
+
+        # Per-term next position
+        term_next_position = {
+            tp.id: (
+                PlannedCourseModel.objects.filter(term_plan=tp)
+                .aggregate(mx=models.Max("position"))
+                .get("mx") or 0
+            ) + 1
+            for tp in term_plans
+        }
+
+        def _block_still_needs(course):
+            code = (course.code or "").upper()
+            return any(
+                code in block_code_map.get(bname, set())
+                and block_remaining.get(bname, 0) > 0
+                for bname in block_remaining
+            )
+
+        def _consume_block(course):
+            code = (course.code or "").upper()
+            credits = float(course.credits or 0)
+            for bname, bcodes in block_code_map.items():
+                if code in bcodes and block_remaining.get(bname, 0) > 0:
+                    if bname == "Senior Electives":
+                        block_remaining[bname] = max(0.0, block_remaining[bname] - credits)
+                    else:
+                        block_remaining[bname] = max(0.0, block_remaining[bname] - 1)
+
+        # Pre-fetch offered_in for all pool courses to avoid N+1
+        offered_cache = {}
+        for c in all_pool:
+            offered_cache[c.id] = set(c.offered_in.all())
+
+        unit_limit = float(self.avg_credits_per_term or 15)
+        total_placed = 0
+        terms_used = 0
+
+        for term_plan in term_plans:
+            if self.all_sections_satisfied(include_planned=True):
+                break
+
+            # Refresh local tracker from DB after each term's placements
+            progress_by_name = self._requirement_progress_map()
+            block_remaining = _build_block_remaining()
+
+            if all(v <= 0 for v in block_remaining.values()):
+                break
+
+            term = term_plan.term
+            # Use existing units as starting point but allow filling up to unit_limit
+            term_units = term_existing_units[term_plan.id]
+            position = term_next_position[term_plan.id]
+
+            # Filter candidates using simulated_taken (includes prior placements)
+            candidates = [
+                c for c in all_pool
+                if (c.code or "").upper() not in simulated_taken
+                and _block_still_needs(c)
+                and (not offered_cache[c.id] or term in offered_cache[c.id])
+                and self._prereqs_satisfied_with(c, simulated_taken)
+                and not (
+                    completed_units < 60
+                    and self._is_udge_course(c, block_code_map=block_code_map)
                 )
+            ]
 
-            def _consume_block(course):
-                """Decrement ALL blocks this course satisfies (not just the first)."""
-                code = (course.code or "").upper()
-                credits = float(course.credits or 0)
-                for bname, bcodes in block_code_map.items():
-                    if code in bcodes and block_remaining.get(bname, 0) > 0:
-                        if bname == "Senior Electives":
-                            block_remaining[bname] = max(0.0, block_remaining[bname] - credits)
-                        else:
-                            block_remaining[bname] = max(0.0, block_remaining[bname] - 1)
+            if not candidates:
+                continue
 
-            unit_limit = float(self.avg_credits_per_term or 15)
-            term_units = 0.0
-            position = 1
+            scored = [
+                self._score_course_for_recommendation(
+                    c,
+                    taken_codes=actual_taken,
+                    planned_codes=simulated_taken,
+                    progress_by_name=progress_by_name,
+                    block_code_map=block_code_map,
+                    completed_units=completed_units,
+                )
+                for c in candidates
+            ]
+            scored.sort(key=lambda x: (-x["score"], x["course"].code))
 
-            all_done = False
+            new_this_term = []
             for item in scored:
-                if all_done:
-                    break
-                # Fast local check: stop if every real block is locally satisfied
                 if all(v <= 0 for v in block_remaining.values()):
-                    # Confirm with DB (local tracker can be optimistic due to count_group rules)
-                    if self.all_sections_satisfied(include_planned=True):
-                        all_done = True
-                        break
-
+                    break
                 c = item["course"]
                 code = (c.code or "").upper()
                 if code in simulated_taken:
@@ -1347,11 +1362,14 @@ class StudentProfile(models.Model):
                 units = float(c.credits or 0)
                 if term_units + units > unit_limit:
                     continue
-                PlannedCourseModel.objects.create(
-                    term_plan=term_plan,
-                    course=c,
-                    position=position,
-                    status="planned",
+
+                new_this_term.append(
+                    PlannedCourseModel(
+                        term_plan=term_plan,
+                        course=c,
+                        position=position,
+                        status="planned",
+                    )
                 )
                 simulated_taken.add(code)
                 _consume_block(c)
@@ -1359,32 +1377,31 @@ class StudentProfile(models.Model):
                 total_placed += 1
                 position += 1
 
-                # DB-accurate check after each placement
-                if self.all_sections_satisfied(include_planned=True):
-                    all_done = True
-
-                if not all_done:
-                    # Force-pair corequisites into the same term
-                    for coreq in c.corequisites.all():
-                        if coreq.program != self.program or coreq.catalog_year != self.catalog_year:
-                            continue
-                        coreq_code = (coreq.code or "").upper()
-                        if coreq_code in simulated_taken:
-                            continue
-                        PlannedCourseModel.objects.get_or_create(
+                # Corequisites
+                for coreq in c.corequisites.all():
+                    if coreq.program != self.program or coreq.catalog_year != self.catalog_year:
+                        continue
+                    coreq_code = (coreq.code or "").upper()
+                    if coreq_code in simulated_taken:
+                        continue
+                    new_this_term.append(
+                        PlannedCourseModel(
                             term_plan=term_plan,
                             course=coreq,
-                            defaults={"position": position, "status": "planned"},
+                            position=position,
+                            status="planned",
                         )
-                        simulated_taken.add(coreq_code)
-                        _consume_block(coreq)
-                        term_units += float(coreq.credits or 0)
-                        total_placed += 1
-                        position += 1
+                    )
+                    simulated_taken.add(coreq_code)
+                    _consume_block(coreq)
+                    term_units += float(coreq.credits or 0)
+                    total_placed += 1
+                    position += 1
 
-            if position > 1:
+            if new_this_term:
+                PlannedCourseModel.objects.bulk_create(new_this_term, ignore_conflicts=True)
                 terms_used += 1
-                completed_units += term_units
+                completed_units += (term_units - term_existing_units[term_plan.id])
 
         return total_placed, terms_used
 

@@ -452,20 +452,11 @@ def dashboard(request):
     else:
         effective_target_with_plan = total_after_plan + remaining_after_plan
 
-    ring_total = max(1, effective_target_with_plan)
+    ring_total = max(1, effective_target_credits)
 
-    current_done_pct = min(
-        100,
-        int((float(completed_credits) / ring_total) * 100)
-    )
-    current_ip_pct = min(
-        100,
-        int(((float(completed_credits) + float(in_progress_credits)) / ring_total) * 100)
-    )
-    current_plan_pct = min(
-        100,
-        int(((float(completed_credits) + float(in_progress_credits) + float(planned_credits)) / ring_total) * 100)
-    )
+    current_done_pct = min(100, int((float(completed_credits) / ring_total) * 100))
+    current_ip_pct = min(100, int(((float(completed_credits) + float(in_progress_credits)) / ring_total) * 100))
+    current_plan_pct = min(100, int(((float(completed_credits) + float(in_progress_credits) + float(planned_credits)) / ring_total) * 100))
 
     ge_mapping = {
         "A1 Oral Communication": "A1",
@@ -569,16 +560,13 @@ def dashboard(request):
         )
     )
 
-    denom = effective_target_with_plan or 1
-    progress_percent = min(
-        100,
-        int(
-            (
-                completed_credits
-                + float(in_progress_credits)
-                + float(planned_credits)
-            ) / denom * 100
-        )
+    denom = effective_target_credits or 1
+    progress_percent = int(
+        (
+            completed_credits
+            + float(in_progress_credits)
+            + float(planned_credits)
+        ) / denom * 100
     )
 
     show_upper_alert = any(
@@ -675,6 +663,8 @@ def dashboard(request):
             "level": "info",
         })
 
+    graduation_ready = _is_graduation_ready(profile, request.user)
+
     context = {
         "profile": profile,
         "current_term": Term.from_date(),
@@ -711,6 +701,7 @@ def dashboard(request):
         "dashboard_plan_term": dashboard_first_term_plan.term if dashboard_first_term_plan else next_term,
         "dashboard_plan_is_saved": bool(dashboard_plan_courses),
         "udge_section": _build_udge_dashboard_section(profile),
+        "graduation_ready": graduation_ready,
     }
 
     return render(request, "dashboard.html", context)
@@ -1086,6 +1077,7 @@ def degree_plan(request):
         "planned_warning_count": planned_warning_count,
         "alternative_options": alternative_options,
         "all_sections_done_with_plan": all_sections_done_with_plan,
+        "graduation_ready": _is_graduation_ready(profile, request.user),
     }
 
     return render(request, "degree_plan.html", context)
@@ -1095,6 +1087,10 @@ def auto_suggest_degree_plan(request):
         return redirect("degree_plan")
 
     profile = request.profile
+
+    if _is_graduation_ready(profile, request.user):
+        messages.info(request, "All your requirements are already covered — nothing left to plan!")
+        return redirect("degree_plan")
 
     term_plans = profile.get_or_create_future_term_plans(count=4)
     if not term_plans:
@@ -1281,6 +1277,19 @@ def add_planned_course_by_form(request, course_id):
         messages.success(request, f"Added to {term_plan.term}: {', '.join(added_codes)}.")
 
     return redirect(next_url)
+@profile_required
+@require_POST
+@profile_required
+@require_POST
+def remove_all_additional_planned(request):
+    profile = request.profile
+    ids = request.POST.getlist("ids")
+    if ids:
+        count = PlannedCourse.objects.filter(id__in=ids, term_plan__profile=profile).delete()[0]
+        messages.success(request, f"Removed {count} additional planned course{'s' if count != 1 else ''}.")
+    next_url = request.POST.get("next") or reverse("audit")
+    return redirect(next_url)
+
 @profile_required
 @require_POST
 def remove_planned_course(request, planned_course_id):
@@ -1616,6 +1625,25 @@ def _collect_block_course_rows(profile, block_names: list[str]):
                     seen_codes.add(code)
 
     return rows
+def _is_graduation_ready(profile, user):
+    """Single source of truth for graduation readiness — uses audit logic."""
+    has_data = (
+        CompletedClass.objects.filter(profile=profile).exists()
+        or InProgressClass.objects.filter(profile=profile).exists()
+        or PlannedCourse.objects.filter(term_plan__profile=profile).exists()
+    )
+    if not has_data:
+        return False
+    req_missing = not ProgramRequirement.objects.filter(
+        program=profile.program,
+        catalog_year=profile.catalog_year,
+    ).exists()
+    if req_missing:
+        return False
+    shared = _build_requirement_audit_data(profile, user)
+    return shared.get("graduation_ready", False)
+
+
 def _build_udge_dashboard_section(profile):
     group_progress = profile.requirement_group_progress_with_planned()
 
@@ -2480,8 +2508,15 @@ def _build_requirement_audit_data(profile, user, has_dpr=True):
         and pc.course.numeric_level() >= 100
     ]
 
+    graduation_ready = bool(audit_groups) and all(
+        sec.get("done", False)
+        for group in audit_groups
+        for sec in group.get("sections", [])
+    )
+
     return {
         "audit_groups": audit_groups,
+        "graduation_ready": graduation_ready,
         "audit_summary": {
             "completed": int(completed_credits),
             "in_progress": int(in_progress_credits),

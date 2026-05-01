@@ -29,6 +29,7 @@ urlpatterns = [
 
     path("degree-plan/course/<int:course_id>/remove/", users_views.remove_course_from_plan, name="remove_course_from_plan"),
     path("audit/", users_views.audit, name="audit"),
+    path("audit/additional-planned/remove-all/", users_views.remove_all_additional_planned, name="remove_all_additional_planned"),
 
     path("courses/", users_views.courses_page, name="courses"),
     path("courses/<int:pk>/", users_views.course_detail, name="course_detail"),
