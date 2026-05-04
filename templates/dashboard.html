@@ -113,7 +113,7 @@
   </div>
 
   <script>
-    (function () {
+    document.addEventListener("DOMContentLoaded", function () {
       const root = document.getElementById("add-courses-menu");
       const btn = document.getElementById("add-courses-btn");
       const dd = document.getElementById("add-courses-dropdown");
@@ -231,7 +231,7 @@
           submitBtn.disabled = false;
         }
       });
-    })();
+    });
   </script>
 {% endblock %}
 
@@ -662,7 +662,7 @@
 {% if graduation_ready %}
 <script>
 (function () {
-  var KEY = "gradmate_confetti_fired_{{ request.user.id }}";
+  var KEY = "gradmate_confetti_fired_{{ request.user.id }}_v2";
   if (localStorage.getItem(KEY)) return;
   localStorage.setItem(KEY, "1");
 

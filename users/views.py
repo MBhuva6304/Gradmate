@@ -663,7 +663,7 @@ def dashboard(request):
             "level": "info",
         })
 
-    graduation_ready = _is_graduation_ready(profile, request.user)
+    graduation_ready = has_course_data and current_plan_pct >= 100
 
     context = {
         "profile": profile,
@@ -867,7 +867,7 @@ def degree_plan(request):
             "notes": term_plan.notes,
             "courses": planned_courses,
             "units": units,
-            "is_over_limit": units > int(profile.max_credits_next_term or 15),
+            "is_over_limit": units > (13 if getattr(term_plan.term, "season", None) == "SU" else 19),
         })
     
     all_sections_done_with_plan = profile.all_sections_satisfied(include_planned=True)
@@ -1131,6 +1131,8 @@ def add_suggested_course_to_term(request, term_plan_id, course_id):
     if not ok:
         messages.error(request, reason)
         return redirect("degree_plan")
+    if reason.startswith("warning:"):
+        messages.warning(request, reason[len("warning:"):].strip())
 
     missing_coreqs = profile.missing_corequisites_for_term(course, term_plan)
 
@@ -1189,6 +1191,8 @@ def add_planned_course(request, term_plan_id, course_id):
     if not ok:
         messages.error(request, reason)
         return redirect("degree_plan")
+    if reason.startswith("warning:"):
+        messages.warning(request, reason[len("warning:"):].strip())
 
     next_position = (
         term_plan.planned_courses.aggregate(mx=Sum("position")).get("mx") or 0
@@ -1232,6 +1236,8 @@ def add_planned_course_by_form(request, course_id):
     if not ok:
         messages.error(request, reason)
         return redirect(next_url)
+    if reason.startswith("warning:"):
+        messages.warning(request, reason[len("warning:"):].strip())
 
     missing_coreqs = profile.missing_corequisites_for_term(course, term_plan)
 
@@ -1336,6 +1342,8 @@ def move_planned_course(request, planned_course_id):
     if not ok:
         messages.error(request, reason)
         return redirect("degree_plan")
+    if reason.startswith("warning:"):
+        messages.warning(request, reason[len("warning:"):].strip())
 
     old_term = str(planned_course.term_plan.term)
 
@@ -2511,7 +2519,7 @@ def _build_requirement_audit_data(profile, user, has_dpr=True):
     graduation_ready = bool(audit_groups) and all(
         sec.get("done", False)
         for group in audit_groups
-        for sec in group.get("sections", [])
+        for sec in group.get("subsections", [])
     )
 
     return {

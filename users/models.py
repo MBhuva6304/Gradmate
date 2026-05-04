@@ -387,7 +387,9 @@ class StudentProfile(models.Model):
             c = item["course"]
             units = float(c.credits or 0)
 
-            if total_units + units <= float(self.max_credits_next_term or 15):
+            is_summer_rec = getattr(next_term, "season", None) == "SU"
+            rec_limit = 13.0 if is_summer_rec else 19.0
+            if total_units + units <= rec_limit:
                 selected.append(c)
                 recommendation_details.append(item)
                 total_units += units
@@ -1300,7 +1302,6 @@ class StudentProfile(models.Model):
         for c in all_pool:
             offered_cache[c.id] = set(c.offered_in.all())
 
-        unit_limit = float(self.avg_credits_per_term or 15)
         total_placed = 0
         terms_used = 0
 
@@ -1316,6 +1317,8 @@ class StudentProfile(models.Model):
                 break
 
             term = term_plan.term
+            is_summer = getattr(term, "season", None) == "SU"
+            unit_limit = 13.0 if is_summer else 19.0
             # Use existing units as starting point but allow filling up to unit_limit
             term_units = term_existing_units[term_plan.id]
             position = term_next_position[term_plan.id]
@@ -1514,8 +1517,11 @@ class StudentProfile(models.Model):
         current_units = self.term_plan_total_units(term_plan)
         next_units = current_units + float(course.credits or 0)
 
-        if next_units > float(self.max_credits_next_term or 15):
-            return False, "Adding this course would exceed your term unit limit."
+        is_summer = getattr(term_plan.term, "season", None) == "SU"
+        unit_limit = 13 if is_summer else 19
+        if next_units > unit_limit:
+            limit_label = "13" if is_summer else "19"
+            return True, f"warning:Over credit limit — {term_plan.term} allows {limit_label} units but you'd have {int(next_units)}."
 
         return True, ""
 
@@ -1552,8 +1558,11 @@ class StudentProfile(models.Model):
 
         current_units = self.term_plan_total_units(target_term_plan)
         next_units = current_units + float(course.credits or 0)
-        if next_units > float(self.max_credits_next_term or 15):
-            return False, "Moving this course would exceed the target semester unit limit."
+        is_summer = getattr(target_term_plan.term, "season", None) == "SU"
+        unit_limit = 13 if is_summer else 19
+        if next_units > unit_limit:
+            limit_label = "13" if is_summer else "19"
+            return True, f"warning:Over credit limit — {target_term_plan.term} allows {limit_label} units but you'd have {int(next_units)}."
 
         if not self.planner_prerequisites_satisfied(course, target_term_plan):
             return False, "Prerequisites are not satisfied for the target semester."
