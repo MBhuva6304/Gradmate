@@ -662,13 +662,8 @@
 {% if graduation_ready %}
 <script>
 (function () {
-  var KEY = "gradmate_confetti_fired_{{ request.user.id }}_v2";
-  if (localStorage.getItem(KEY)) return;
-  localStorage.setItem(KEY, "1");
-
   var duration = 3000;
   var end = Date.now() + duration;
-
   (function frame() {
     confetti({ particleCount: 6, angle: 60, spread: 55, origin: { x: 0 }, colors: ["#f59e0b","#4f46e5","#22c55e","#ec4899"] });
     confetti({ particleCount: 6, angle: 120, spread: 55, origin: { x: 1 }, colors: ["#f59e0b","#4f46e5","#22c55e","#ec4899"] });

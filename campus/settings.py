@@ -98,3 +98,5 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # ✅ MEDIA (file uploads)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+CSRF_FAILURE_VIEW = "users.views.csrf_failure"

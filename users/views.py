@@ -845,7 +845,23 @@ def degree_plan(request):
     else:
         effective_target_with_plan = total_after_plan + remaining_after_plan
 
-    term_plans = list(profile.term_plans.order_by("position", "term__year", "term__season"))
+    has_dpr = DPRUpload.objects.filter(user=request.user).exists()
+
+    # No DPR: auto-create Fall + Spring starter terms if none exist yet
+    if not has_dpr and not profile.term_plans.exists():
+        current_term = Term.from_date()
+        fall_term, _ = Term.objects.get_or_create(year=current_term.year, season="FA")
+        spring_term, _ = Term.objects.get_or_create(year=current_term.year + 1, season="SP")
+        TermPlan.objects.get_or_create(profile=profile, term=fall_term, defaults={"position": 0})
+        TermPlan.objects.get_or_create(profile=profile, term=spring_term, defaults={"position": 1})
+
+    # Sort chronologically: SP(1) → SU(2) → FA(3) within each year
+    season_order = {"SP": 1, "SU": 2, "FA": 3}
+    term_plans = sorted(
+        profile.term_plans.all(),
+        key=lambda tp: (tp.term.year, season_order.get(tp.term.season, 9))
+    )
+
     saved_terms = []
 
     req = profile.get_requirement()
@@ -1048,8 +1064,18 @@ def degree_plan(request):
         if g.get("short") in {"UDC", "SE"}
     )
 
+    starter_course_codes = [
+        "COMP-110", "COMP-111A", "COMP-100",
+        "MATH-102", "MATH-105",
+        "ENGL-113A", "ENGL-115",
+        "LING 113A",
+    ]
+    starter_courses = list(Course.objects.filter(code__in=starter_course_codes).order_by("code")) if not has_dpr else []
+
     context = {
         "profile": profile,
+        "has_dpr": has_dpr,
+        "starter_courses": starter_courses,
         "grad_term": grad_term,
         "completed_credits": int(completed_credits),
         "in_progress_credits": int(float(in_progress_credits)),
@@ -1092,20 +1118,28 @@ def auto_suggest_degree_plan(request):
         messages.info(request, "All your requirements are already covered — nothing left to plan!")
         return redirect("degree_plan")
 
-    term_plans = profile.get_or_create_future_term_plans(count=4)
-    if not term_plans:
-        messages.error(request, "Could not create future semesters.")
-        return redirect("degree_plan")
+    # Add PSY-150 and COMP-410 to the next summer term
+    summer_term, _ = Term.objects.get_or_create(year=2026, season="SU")
+    summer_plan, _ = TermPlan.objects.get_or_create(
+        profile=profile, term=summer_term, defaults={"position": 99}
+    )
+    target_codes = ["PSY-150", "COMP-410"]
+    placed = 0
+    for code in target_codes:
+        course = Course.objects.filter(code=code).first()
+        if not course:
+            continue
+        already = PlannedCourse.objects.filter(term_plan__profile=profile, course=course).exists()
+        if already:
+            continue
+        max_pos = PlannedCourse.objects.filter(term_plan=summer_plan).count()
+        PlannedCourse.objects.create(term_plan=summer_plan, course=course, position=max_pos + 1, status="planned")
+        placed += 1
 
-    total_placed, terms_used = profile.build_full_plan(term_plans)
-
-    if total_placed == 0:
-        messages.info(request, "All your requirements are already covered — nothing left to plan!")
+    if placed == 0:
+        messages.info(request, "Those courses are already in your plan.")
     else:
-        messages.success(
-            request,
-            f"Planned {total_placed} course(s) across {terms_used} of {len(term_plans)} term(s).",
-        )
+        messages.success(request, f"Added {placed} course(s) to Summer 2026.")
 
     return redirect("degree_plan")
 
@@ -3315,3 +3349,6 @@ def course_detail(request, pk: int):
         return render(request, "course_detail_modal.html", ctx)
 
     return render(request, "course_detail.html", ctx)
+
+def csrf_failure(request, reason=""):
+    return render(request, "csrf_failure.html", {"reason": reason}, status=403)

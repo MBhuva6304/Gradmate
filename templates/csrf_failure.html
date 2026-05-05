@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center px-6">
+  <div class="text-center max-w-md">
+    <div class="text-6xl mb-6">🔄</div>
+    <h1 class="text-2xl font-bold text-slate-800 mb-3">Session Expired</h1>
+    <p class="text-slate-500 mb-6 leading-relaxed">
+      Your session token is no longer valid. This usually happens after logging in on another tab or using the back button.
+      Simply go back and refresh the page, then try again.
+    </p>
+    <div class="flex items-center justify-center gap-3 flex-wrap">
+      <button onclick="history.back(); setTimeout(() => location.reload(), 200)"
+              class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition">
+        Go Back &amp; Refresh
+      </button>
+      <a href="{% url 'dashboard' %}"
+         class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition">
+        Go to Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -165,9 +165,7 @@
     }
 
     .plan-score-line {
-      margin-top: 0.55rem;
-      font-size: 0.75rem;
-      color: #475569;
+      display: none;
     }
 
     .plan-section-group {
@@ -465,10 +463,34 @@
         <div class="plan-card p-5">
           <div class="flex items-center justify-between">
             <h2 class="text-xl font-semibold">Top Recommendations</h2>
-            <span class="plan-badge info">{{ recommendation_details|length }}</span>
+            <span class="plan-badge info">{% if not has_dpr %}{{ starter_courses|length }}{% else %}{{ recommendation_details|length }}{% endif %}</span>
           </div>
           <div class="mt-4 space-y-3">
-          {% if recommendation_details %}
+          {% if not has_dpr and starter_courses %}
+            <p class="text-xs text-slate-500 mb-2">Upload your DPR for personalized picks. Here are some common first-semester courses to get started:</p>
+            {% for course in starter_courses %}
+              <div class="plan-course">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="font-medium text-slate-900">{{ course.code }}</p>
+                    <p class="mt-1 text-sm text-slate-600">{{ course.title }}</p>
+                  </div>
+                  <div class="text-xs text-slate-500">{{ course.credits }} units</div>
+                </div>
+                <div class="mt-2 flex items-center gap-3">
+                  <a href="{% url 'course_detail' course.id %}?partial=1"
+                     data-course-url="{% url 'course_detail' course.id %}?partial=1"
+                     class="text-xs font-medium text-slate-700 hover:underline">Details</a>
+                  {% if saved_terms %}
+                  <form method="post" action="{% url 'add_suggested_course_to_term' saved_terms.0.id course.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs font-medium text-indigo-700 hover:underline">Add to {{ saved_terms.0.term }}</button>
+                  </form>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          {% elif recommendation_details %}
             {% for item in recommendation_details|slice:":5" %}
               <div class="plan-course">
                 <div class="flex items-start justify-between gap-3">
@@ -719,67 +741,6 @@
                         </div>
 
                         <p class="text-[11px] text-slate-400">Open Details to move this course to another semester.</p>
-                      </div>
-                    </div>
-                  {% endfor %}
-                </div>
-              {% elif forloop.first and recommendation_details %}
-                <div class="space-y-3">
-                  {% for item in recommendation_details %}
-                    <div class="plan-course">
-                      <div class="flex items-start justify-between gap-3">
-                        <div>
-                          <p class="font-medium text-slate-900">{{ item.course.code }}</p>
-                          <p class="mt-1 text-sm text-slate-600">{{ item.course.title }}</p>
-
-                          {% if item.course.applied_blocks %}
-                            <p class="mt-2 text-xs text-green-700">
-                              Counts for: {{ item.course.applied_blocks|join:", " }}
-                            </p>
-                          {% elif item.course.eligible_blocks %}
-                            <p class="mt-2 text-xs text-slate-500">
-                              Eligible for: {{ item.course.eligible_blocks|join:", " }}
-                            </p>
-                          {% endif %}
-
-                          {% if item.labels %}
-                            <div class="plan-reason-list">
-                              {% for label in item.labels %}
-                                <span class="plan-reason-pill">{{ label }}</span>
-                              {% endfor %}
-                            </div>
-                          {% endif %}
-
-                        </div>
-                        <div class="text-xs text-slate-500">{{ item.course.credits }} units</div>
-                      </div>
-
-                      <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-                        <span class="plan-badge info">Suggested</span>
-
-                        <div class="flex items-center gap-3">
-                          <a
-                            href="{% url 'course_detail' item.course.id %}?partial=1"
-                            data-course-url="{% url 'course_detail' item.course.id %}?partial=1"
-                            class="text-xs font-medium text-slate-700 hover:underline"
-                          >
-                            Details
-                          </a>
-
-                          <form
-                            method="post"
-                            action="{% url 'add_suggested_course_to_term' sem.id item.course.id %}"
-                            class="flex flex-wrap items-center gap-2"
-                          >
-                            {% csrf_token %}
-                            <button
-                              type="submit"
-                              class="text-xs font-medium text-indigo-700 hover:underline"
-                            >
-                              Add
-                            </button>
-                          </form>
-                        </div>
                       </div>
                     </div>
                   {% endfor %}

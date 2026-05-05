@@ -1237,9 +1237,13 @@ class StudentProfile(models.Model):
         progress_by_name = self._requirement_progress_map()
 
         def _build_block_remaining():
+            # Use _normalized_requirement_rows (same source as all_sections_satisfied)
+            # so that the done flag is consistent with the audit engine.
+            rows = self._normalized_requirement_rows(include_planned=True)
+            norm_map = {(row.get("name") or "").strip(): row for row in rows}
             br = {}
             for bname in block_code_map:
-                row = progress_by_name.get(bname)
+                row = norm_map.get(bname) or progress_by_name.get(bname)
                 if not row or row.get("done"):
                     br[bname] = 0.0
                 else:
@@ -1405,6 +1409,9 @@ class StudentProfile(models.Model):
                 PlannedCourseModel.objects.bulk_create(new_this_term, ignore_conflicts=True)
                 terms_used += 1
                 completed_units += (term_units - term_existing_units[term_plan.id])
+                self._get_cache().clear()
+                if self.all_sections_satisfied(include_planned=True):
+                    break
 
         return total_placed, terms_used
 
@@ -1642,7 +1649,16 @@ class StudentProfile(models.Model):
             self.term_plans.values_list("term_id", flat=True)
         )
 
-        term = Term.from_date().next()
+        season_order = {"SP": 1, "SU": 2, "FA": 3}
+        last_plan = sorted(
+            self.term_plans.select_related("term").all(),
+            key=lambda tp: (tp.term.year, season_order.get(tp.term.season, 9)),
+        )
+        if last_plan:
+            term = last_plan[-1].term.next()
+        else:
+            term = Term.from_date().next()
+
         while term.id in existing_term_ids:
             term = term.next()
         return term
