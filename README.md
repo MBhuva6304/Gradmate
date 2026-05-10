@@ -4,6 +4,8 @@ Gradmate is a Django-based degree progress and planning web app built to help st
 
 It is designed around a student profile, a course catalog, requirement groups/blocks, a planner-aware recommendation engine, and DPR-based import of completed and in-progress courses.
 
+> **Note:** Recommendation engine is functional but actively being improved.
+
 ======================================
 QUICK START
 ======================================

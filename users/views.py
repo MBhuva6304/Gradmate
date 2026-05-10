@@ -1118,28 +1118,13 @@ def auto_suggest_degree_plan(request):
         messages.info(request, "All your requirements are already covered — nothing left to plan!")
         return redirect("degree_plan")
 
-    # Add PSY-150 and COMP-410 to the next summer term
-    summer_term, _ = Term.objects.get_or_create(year=2026, season="SU")
-    summer_plan, _ = TermPlan.objects.get_or_create(
-        profile=profile, term=summer_term, defaults={"position": 99}
-    )
-    target_codes = ["PSY-150", "COMP-410"]
-    placed = 0
-    for code in target_codes:
-        course = Course.objects.filter(code=code).first()
-        if not course:
-            continue
-        already = PlannedCourse.objects.filter(term_plan__profile=profile, course=course).exists()
-        if already:
-            continue
-        max_pos = PlannedCourse.objects.filter(term_plan=summer_plan).count()
-        PlannedCourse.objects.create(term_plan=summer_plan, course=course, position=max_pos + 1, status="planned")
-        placed += 1
+    term_plans = profile.get_or_create_future_term_plans(count=6)
+    placed, terms_used = profile.build_full_plan(term_plans=term_plans)
 
     if placed == 0:
-        messages.info(request, "Those courses are already in your plan.")
+        messages.info(request, "Your degree plan is already complete — no additional courses needed.")
     else:
-        messages.success(request, f"Added {placed} course(s) to Summer 2026.")
+        messages.success(request, f"Added {placed} course(s) across {terms_used} term(s) to complete your degree.")
 
     return redirect("degree_plan")
 

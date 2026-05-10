@@ -578,6 +578,17 @@ class StudentProfile(models.Model):
         )
         multi_block_score = max(0, (multi_block_count - 1) * 4)
 
+        # Prefer lower-level courses (take foundational classes before upper-division)
+        course_num = self._course_number_value(course)
+        if course_num < 200:
+            level_preference_score = 3
+        elif course_num < 300:
+            level_preference_score = 2
+        elif course_num < 400:
+            level_preference_score = 1
+        else:
+            level_preference_score = 0
+
         # Detect if taking this course would complete any requirement block
         block_completer = False
         for block_name, block_codes in (block_code_map or {}).items():
@@ -602,7 +613,7 @@ class StudentProfile(models.Model):
             for coreq in course.corequisites.all()
         )
 
-        total_score = unlock_score + scarcity_score + critical_path_score + timing_score + multi_block_score
+        total_score = unlock_score + scarcity_score + critical_path_score + timing_score + multi_block_score + level_preference_score
 
         if self.program == "BS_CS" and self.catalog_year == 2023:
             if code.startswith("COMP-4") or code.startswith("COMP-5"):
@@ -614,6 +625,7 @@ class StudentProfile(models.Model):
             "critical_path": critical_path_score,
             "timing": timing_score,
             "multi_block": multi_block_score,
+            "level_preference": level_preference_score,
             "block_completer": block_completer,
             "coreq_warning": coreq_warning,
         }
