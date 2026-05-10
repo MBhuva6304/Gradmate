@@ -9,7 +9,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-%$9##wstmion_fqugbk!f+fx7-0t*#xjd@w55*bhp4c&x5#rz#'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-%$9##wstmion_fqugbk!f+fx7-0t*#xjd@w55*bhp4c&x5#rz#')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['*']
 
@@ -77,6 +77,11 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = 1800
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
